@@ -22,6 +22,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 option(OCTOTIGER_WITH_GRAV_PAR "Enable parallelism in gravitational solver" OFF)
 option(OCTOTIGER_WITH_RADIATION "Enable radiation transport solver" OFF)
 option(OCTOTIGER_WITH_CUDA "Enable CUDA fmm kernels" OFF)
+option(OCTOTIGER_WITH_KOKKOS "Enable Kokkos integration" OFF)
 option(OCTOTIGER_WITH_BLAST_TEST "Enable the Blast test" ON)
 option(OCTOTIGER_WITH_BOOST_MULTIPRECISION
   "Use Boost.Multiprecision Instead of GCC Quad-Precision Math Library" OFF)
@@ -50,6 +51,12 @@ if(OCTOTIGER_WITH_CUDA)
   #set(MY_CUDA_FLAGS -Xptxas=-fmad=true,-dlcm=cg,--opt-level=4)
   #string(APPEND HPX_CUDA_CLANG_FLAGS " -fast-math -Xcuda-ptxas -v")
   string(APPEND CUDA_NVCC_FLAGS ";-Xptxas=-v,-fmad=true,--opt-level=4")
+endif()
+
+if(OCTOTIGER_WITH_KOKKOS)
+  # you may be required to create an empty directory in 
+  # ${HPX_DIR}/include/hpx/external for now
+  find_package(Kokkos REQUIRED)
 endif()
 
 ################################################################################
@@ -218,6 +225,7 @@ add_hpx_library(
     octotiger/unitiger/hydro_impl/hydro.hpp
     octotiger/unitiger/hydro_impl/reconstruct.hpp
     octotiger/unitiger/hydro_impl/flux.hpp
+    octotiger/unitiger/hydro_impl/flux_kokkos.hpp
     octotiger/test_problems/exact_sod.hpp
 )
 
@@ -350,6 +358,10 @@ if(OCTOTIGER_WITH_CUDA)
   target_compile_definitions(octolib PUBLIC OCTOTIGER_HAVE_CUDA)
   set_property(TARGET octolib PROPERTY CUDA_SEPARABLE_COMPILATION ON)
   set_property(TARGET octolib PROPERTY INTERFACE_COMPILE_OPTIONS "${MY_CUDA_FLAGS}")
+endif()
+
+if(OCTOTIGER_WITH_KOKKOS)
+  target_link_libraries(hydrolib Kokkos::kokkos)
 endif()
 
 # Handle other options
