@@ -225,7 +225,7 @@ add_hpx_library(
     octotiger/unitiger/hydro_impl/hydro.hpp
     octotiger/unitiger/hydro_impl/reconstruct.hpp
     octotiger/unitiger/hydro_impl/flux.hpp
-    octotiger/unitiger/hydro_impl/flux_kokkos.hpp
+#    octotiger/unitiger/hydro_impl/flux_kokkos.hpp
     octotiger/test_problems/exact_sod.hpp
 )
 
@@ -426,3 +426,25 @@ if(OCTOTIGER_WITH_TESTS)
 
   add_subdirectory(test_problems)
 endif()
+
+if (OCTOTIGER_WITH_KOKKOS)
+    ################################################################################
+    # Set up flux_kokkos target
+    ################################################################################
+#    add_executable(flux_kokkos test_problems/flux_kokkos.cpp)
+#    target_compile_options(flux_kokkos PRIVATE
+#        -Wno-ignored-attributes -Wno-attributes -Wno-deprecated-declarations
+#        -Wno-unused-result -ffast-math -O3)
+#    target_link_libraries(flux_kokkos Kokkos::kokkos)
+
+  add_hpx_executable(
+    flux_kokkos
+    DEPENDENCIES
+      Kokkos::kokkos hydrolib
+    SOURCES
+      test_problems/flux_kokkos.cpp
+    HEADERS
+      test_problems/flux_kokkos.hpp
+  )
+endif()
+

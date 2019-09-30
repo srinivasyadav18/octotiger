@@ -73,8 +73,24 @@ struct hydro_computer: public cell_geometry<NDIM, INX> {
 		bc_ = std::move(bc);
 	}
 
-private:
+	// get the number of fields
+	const int& getNF(){
+		return nf_;
+	}
 
+	// get the indices of number of angular momentum pairs 
+	// is one (with hydrodynamics) or zero (if we turn off angular momentum correction) 
+	const int& getAngMomCount(){
+		return angmom_count_;
+	}
+
+	// get the indices of angular moments 
+	const int& getAngMomIndex(){
+		return angmom_index_;
+	}
+	
+
+private:
 	int nf_;
 	int angmom_index_;
 	int angmom_count_;
