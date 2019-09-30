@@ -58,7 +58,7 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 	while (t < tmax) {
 		U0 = U;
 		auto q = computer.reconstruct(U, X, omega);
-		auto a = computer.flux(U, q, F, X, omega);
+		auto a = octotiger::flux_kokkos(computer, U, q, F, X, omega);
 		safe_real dt = CFL * dx / a;
 		dt = std::min(double(dt), tmax - t + 1.0e-20);
 		computer.advance(U0, U, F, X, dx, dt, 1.0, omega);
