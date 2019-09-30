@@ -64,11 +64,11 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 		computer.advance(U0, U, F, X, dx, dt, 1.0, omega);
 		computer.boundaries(U);
 		q = computer.reconstruct(U, X, omega);
-		computer.flux(U, q, F, X, omega);
+		octotiger::flux_kokkos(computer, U, q, F, X, omega);
 		computer.advance(U0, U, F, X, dx, dt, 0.25, omega);
 		computer.boundaries(U);
 		q = computer.reconstruct(U, X, omega);
-		computer.flux(U, q, F, X, omega);
+		octotiger::flux_kokkos(computer, U, q, F, X, omega);
 		computer.advance(U0, U, F, X, dx, dt, 2.0 / 3.0, omega);
 		computer.boundaries(U);
 		computer.post_process(U, dx);
