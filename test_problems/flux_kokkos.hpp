@@ -12,15 +12,16 @@
 
 namespace octotiger{
 	template<int NDIM, int INX>
-	safe_real flux_kokkos(hydro_computer<NDIM, INX>& hydroComputer, const hydro::state_type &U, const hydro::recon_type<NDIM> &Q, hydro::flux_type &F, hydro::x_type &X,
-			safe_real omega) {
+	// safe_real flux_kokkos(hydro_computer<NDIM, INX>& hydroComputer, const hydro::state_type &U, const hydro::recon_type<NDIM> &Q, hydro::flux_type &F, hydro::x_type &X,
+	// 		safe_real omega) {
+	safe_real flux_kokkos(hydro_computer<NDIM, INX>& hydroComputer, const Kokkos::View<safe_real**> U, const Kokkos::View<safe_real***> Q, Kokkos::View<safe_real***> F, Kokkos::View<safe_real**> X, safe_real omega) {
 		
 		// using cGeo = cell_geometry<NDIM,INX>;
 		static const cell_geometry<NDIM, INX> geo;
 
-		auto& nf = hydroComputer.getNF();
-		auto& angmom_count = hydroComputer.getAngMomCount();
-		auto& angmom_index = hydroComputer.getAngMomIndex();
+		const auto& nf = hydroComputer.getNF();
+		const auto& angmom_count = hydroComputer.getAngMomCount();
+		const auto& angmom_index = hydroComputer.getAngMomIndex();
 
 		static thread_local auto fluxes = std::vector < std::vector
 				< std::vector<std::array<safe_real, geo.NFACEDIR>>
@@ -33,7 +34,7 @@ namespace octotiger{
 		static constexpr auto xloc = geo.xloc();
 		static constexpr auto kdelta = geo.kronecker_delta();
 
-		const auto dx = X[0][geo.H_DNX] - X[0][0];
+		const auto dx = X(0,geo.H_DNX) - X(0,0);
 
 		safe_real amax = 0.0;
 		for (int dim = 0; dim < NDIM; dim++) {
@@ -48,15 +49,15 @@ namespace octotiger{
 				for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 					const auto d = faces[dim][fi];
 					for (int f = 0; f < nf; f++) {
-						UR0[f] = U[f][i];
-						UL0[f] = U[f][i - geo.H_DN[dim]];
-						UR[f] = Q[f][i][d];
-						UL[f] = Q[f][i - geo.H_DN[dim]][geo.flip_dim(d, dim)];
+						UR0[f] = U(f,i);
+						UL0[f] = U(f,i - geo.H_DN[dim]);
+						UR[f] = Q(f,i,d);
+						UL[f] = Q(f,i - geo.H_DN[dim],geo.flip_dim(d, dim));
 					}
 					std::array < safe_real, NDIM > vg;
 					if CONSTEXPR (NDIM > 1) {
-						vg[0] = -omega * (X[1][i] + 0.5 * xloc[d][1] * dx);
-						vg[1] = +omega * (X[0][i] + 0.5 * xloc[d][0] * dx);
+						vg[0] = -omega * (X(1,i) + 0.5 * xloc[d][1] * dx);
+						vg[1] = +omega * (X(0,i) + 0.5 * xloc[d][0] * dx);
 						if CONSTEXPR (NDIM == 3) {
 							vg[2] = 0.0;
 						}
@@ -77,10 +78,10 @@ namespace octotiger{
 			}
 			for (int f = 0; f < nf; f++) {
 				for (const auto &i : indices) {
-					F[dim][f][i] = 0.0;
+					F(dim,f,i) = 0.0;
 					for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 						const auto &w = weights[fi];
-						F[dim][f][i] += w * fluxes[dim][f][i][fi];
+						F(dim,f,i) += w * fluxes[dim][f][i][fi];
 					}
 				}
 			}
@@ -89,7 +90,7 @@ namespace octotiger{
 				const int zx_i = sx_i + NDIM;
 				for (int n = 0; n < geo.NANGMOM; n++) {
 					for (const auto &i : indices) {
-						F[dim][zx_i + n][i] = fluxes[dim][zx_i + n][i][0];
+						F(dim,zx_i + n,i) = fluxes[dim][zx_i + n][i][0];
 					}
 					for (int m = 0; m < NDIM; m++) {
 						if (dim != m) {
@@ -97,7 +98,7 @@ namespace octotiger{
 								for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 									const auto d = faces[dim][fi];
 									for (const auto &i : indices) {
-										F[dim][zx_i + n][i] += weights[fi] * kdelta[n][m][l] * xloc[d][m] * 0.5 * dx * fluxes[dim][sx_i + l][i][fi];
+										F(dim,zx_i + n,i) += weights[fi] * kdelta[n][m][l] * xloc[d][m] * 0.5 * dx * fluxes[dim][sx_i + l][i][fi];
 									}
 								}
 							}
