@@ -18,7 +18,7 @@
 #include "octotiger/unitiger/unitiger.hpp"
 #include "octotiger/unitiger/safe_real.hpp"
 
-static constexpr double tmax = 2.49;
+static constexpr double tmax = 2.49e-5;
 static constexpr safe_real dt_out = tmax / 249;
 
 // #define H_BW 3
@@ -183,7 +183,7 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 		{
 			
 			// do this iteration in the kokkosified version
-			Kokkos::View<safe_real ***> kokkosF("flux", NDIM, nf, H_N3);
+			Kokkos::View<safe_real ***> kokkosF(Kokkos::ViewAllocateWithoutInitializing("flux"), NDIM, nf, H_N3);
 			Kokkos::parallel_for( "init_F", 
 								  Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0,0,0}, {NDIM, nf, H_N3}),
 								  KOKKOS_LAMBDA (int i, int j, int k){
@@ -191,8 +191,8 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 								  }
 								);
 
-			Kokkos::View<safe_real **> kokkosU("state", nf, H_N3);
-			Kokkos::View<safe_real **> kokkosU0("initial state", nf, H_N3);
+			Kokkos::View<safe_real **> kokkosU(Kokkos::ViewAllocateWithoutInitializing("state"), nf, H_N3);
+			Kokkos::View<safe_real **> kokkosU0(Kokkos::ViewAllocateWithoutInitializing("initial state"), nf, H_N3);
 			Kokkos::parallel_for( "init_U", 
 								  Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {nf, H_N3}),
 								  KOKKOS_LAMBDA (int j, int k){
@@ -201,8 +201,8 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 								  }
 								);
 
-			Kokkos::View<safe_real **> kokkosX("state", NDIM, H_N3);
-			Kokkos::parallel_for( "init_U", 
+			Kokkos::View<safe_real **> kokkosX(Kokkos::ViewAllocateWithoutInitializing("cell center coordinates"), NDIM, H_N3);
+			Kokkos::parallel_for( "init_X", 
 								  Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {NDIM, H_N3}),
 								  KOKKOS_LAMBDA (int i, int k){
 									kokkosX(i,k) = X[i][k];
@@ -211,15 +211,27 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 
 			static constexpr auto q_lowest_dimension_length =  NDIM == 1 ? 3 : (NDIM == 2 ? 9 : 27);
 			// std::cout << typeid(decltype(q)).name() << std::endl;
-			Kokkos::View<safe_real **[q_lowest_dimension_length]> kokkosQ("reconstruction", nf, H_N3);
+			Kokkos::View<safe_real **[q_lowest_dimension_length]> kokkosQ(Kokkos::ViewAllocateWithoutInitializing("reconstruction"), nf, H_N3);
 			Kokkos::parallel_for( "init_Q", 
 								  Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0,0,0}, {nf, H_N3, q_lowest_dimension_length}),
 								  KOKKOS_LAMBDA (int i, int j, int k){
 									kokkosQ(i,j,k) = q[i][j][k];
 								  }
 								);
+			Kokkos::fence();
 
+			// computer.flux(U, q, F, X, omega);
 			octotiger::flux_kokkos(computer, kokkosU, kokkosQ, kokkosF, kokkosX, omega);
+			
+			Kokkos::fence();
+			// copy back the values obtained for F
+			for(int i = 0; i < NDIM; ++i){
+				for(int j = 0; j < nf; ++j){
+					for(int k = 0; k < H_N3; ++k){
+						F[i][j][k] = kokkosF(i,j,k);
+					}
+				}
+			}
 		}
 		computer.advance(U0, U, F, X, dx, dt, 0.25, omega);
 		computer.boundaries(U);
@@ -257,9 +269,9 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 		L2[f] /= INX * INX;
 	}
 
-	FILE *fp1 = fopen("L1.dat", "at");
-	FILE *fp2 = fopen("L2.dat", "at");
-	FILE *fpinf = fopen("Linf.dat", "at");
+	FILE *fp1 = fopen("L1_k.dat", "at");
+	FILE *fp2 = fopen("L2_k.dat", "at");
+	FILE *fpinf = fopen("Linf_k.dat", "at");
 	fprintf(fp1, "%i ", INX);
 	fprintf(fp2, "%i ", INX);
 	fprintf(fpinf, "%i ", INX);
@@ -287,8 +299,8 @@ int main(int argc, char** argv) {
 	feenableexcept(FE_INVALID);
 	feenableexcept(FE_OVERFLOW);
 
-	run_test_kokkos<2, 200>(physics<2>::KH, false);
-	run_test<2, 200>(physics<2>::KH, false);
+	run_test_kokkos<2, 200>(physics<2>::BLAST, true);
+	run_test<2, 200>(physics<2>::BLAST, true);
 
     Kokkos::finalize();
 	return 0;
