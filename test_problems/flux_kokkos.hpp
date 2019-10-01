@@ -14,7 +14,8 @@ namespace octotiger{
 	template<int NDIM, int INX>
 	// safe_real flux_kokkos(hydro_computer<NDIM, INX>& hydroComputer, const hydro::state_type &U, const hydro::recon_type<NDIM> &Q, hydro::flux_type &F, hydro::x_type &X,
 	// 		safe_real omega) {
-	safe_real flux_kokkos(hydro_computer<NDIM, INX>& hydroComputer, const Kokkos::View<safe_real**> U, const Kokkos::View<safe_real***> Q, Kokkos::View<safe_real***> F, Kokkos::View<safe_real**> X, safe_real omega) {
+	safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer, const Kokkos::View<safe_real**> U, const Kokkos::View<safe_real***> Q, 
+						Kokkos::View<safe_real***> F, const Kokkos::View<safe_real**> X, safe_real omega) {
 		
 		// using cGeo = cell_geometry<NDIM,INX>;
 		static const cell_geometry<NDIM, INX> geo;
