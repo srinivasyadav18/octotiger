@@ -31,7 +31,7 @@ struct physics {
 		SOD, BLAST, KH, CONTACT
 	};
 
-	static int field_count() {
+	static constexpr int field_count() {
 		return nf_;
 	}
 
@@ -39,7 +39,7 @@ struct physics {
 		fgamma_ = fg;
 	}
 
-	static void to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v, int dim, safe_real dx) {
+	static void to_prim(const std::vector<safe_real>& u, safe_real &p, safe_real &v, int dim, safe_real dx) {
 		const auto rho = u[rho_i];
 		const auto rhoinv = safe_real(1.) / rho;
 		safe_real ek = 0.0;
@@ -56,7 +56,7 @@ struct physics {
 	}
 
 	static void physical_flux(const std::vector<safe_real> &U, std::vector<safe_real> &F, int dim, safe_real &am, safe_real &ap,
-			std::array<safe_real, NDIM> &vg, safe_real dx) {
+			const std::array<safe_real, NDIM> &vg, safe_real dx) {
 		safe_real p, v, v0, c;
 		to_prim(U, p, v0, dim, dx);
 		v = v0 - vg[dim];
@@ -310,8 +310,8 @@ static void set_angmom() {
 }
 
 private:
-static int nf_;
-static int n_species_;
+static constexpr int n_species_ = 5;
+static constexpr int nf_ = (4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2))) + n_species_;
 static safe_real fgamma_;
 
 };
@@ -453,12 +453,6 @@ return bc;
 
 template<int NDIM>
 bool physics<NDIM>::angmom_ = false;
-
-template<int NDIM>
-int physics<NDIM>::nf_ = (4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2))) + physics<NDIM>::n_species_;
-
-template<int NDIM>
-int physics<NDIM>::n_species_ = 5;
 
 template<int NDIM>
 safe_real physics<NDIM>::fgamma_ = 7. / 5.;
