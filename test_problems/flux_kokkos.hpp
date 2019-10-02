@@ -12,7 +12,7 @@
 
 #include <hpx/util/high_resolution_timer.hpp>
 
-class scoped_timer
+class [[nodiscard]] scoped_timer
 {
 public:
     scoped_timer(std::string const& label)
@@ -36,10 +36,14 @@ namespace octotiger {
 template <int NDIM, int INX>
 // safe_real flux_kokkos(hydro_computer<NDIM, INX>& hydroComputer, const hydro::state_type &U, const
 // hydro::recon_type<NDIM> &Q, hydro::flux_type &F, hydro::x_type &X, 		safe_real omega) {
+
+// F should be 0-initialized, things will be added to it and returned
+// all other arguments are read-only
 safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
     const Kokkos::View<safe_real**> U, const Kokkos::View<safe_real***> Q,
     Kokkos::View<safe_real***> F, const Kokkos::View<safe_real**> X, safe_real omega) {
-		scoped_timer("flux_kokkos");
+
+    auto sTimer = scoped_timer("flux_kokkos");
 
 		static const cell_geometry<NDIM, INX> geo;
 
