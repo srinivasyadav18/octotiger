@@ -67,12 +67,16 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 	// which we can do according to Dominic
     const auto indices_size = geo.get_indexes(3, geo.face_pts()[0][0]).size();
 	
-	// auto policy = Kokkos::MDRangePolicy<Kokkos::Experimental::HPX, Kokkos::Rank<2>>({0, 0}, {NDIM, static_cast<int>(indices_size)});
-	auto policy = Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {NDIM, static_cast<int>(indices_size)});
+    // auto policy = Kokkos::MDRangePolicy<Kokkos::Experimental::HPX, Kokkos::Rank<2>>
+    auto policy =
+        Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {static_cast<int>(indices_size), NDIM});
+        // Kokkos::MDRangePolicy<Kokkos::Serial, Kokkos::Rank<2>>({0, 0}, {static_cast<int>(indices_size), NDIM});
+
+    Kokkos::fence();
+
     Kokkos::parallel_reduce("process dimensions", policy,
         // "process dimensions", NDIM,
-        KOKKOS_LAMBDA(const int dim, const int indexIteration, safe_real& maxAmax) {
-
+        KOKKOS_LAMBDA(const int indexIteration, const int dim, safe_real& maxAmax) {
 			// printf("%d", hpx::get_worker_thread_num());
             std::array<safe_real, nf> this_flux;
 
@@ -139,8 +143,7 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 				}
 			}
         },
-        Kokkos::Max<safe_real>(amax)
-		);
+    Kokkos::fence();
 		return amax;
 }    // flux_kokkos
 }    // namespace octotiger
