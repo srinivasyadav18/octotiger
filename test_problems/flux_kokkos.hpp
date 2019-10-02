@@ -29,13 +29,10 @@ private:
     hpx::util::high_resolution_timer timer;
 };
 
-namespace octotiger{
-	template<int NDIM, int INX>
-	// safe_real flux_kokkos(hydro_computer<NDIM, INX>& hydroComputer, const hydro::state_type &U, const hydro::recon_type<NDIM> &Q, hydro::flux_type &F, hydro::x_type &X,
-	// 		safe_real omega) {
-	safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer, const Kokkos::View<safe_real**> U, const Kokkos::View<safe_real***> Q, 
-						Kokkos::View<safe_real***> F, const Kokkos::View<safe_real**> X, safe_real omega) {
+template <typename...>
+struct WhichType;
 		
+
 namespace octotiger {
 template <int NDIM, int INX>
 // safe_real flux_kokkos(hydro_computer<NDIM, INX>& hydroComputer, const hydro::state_type &U, const
@@ -45,17 +42,12 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
     Kokkos::View<safe_real***> F, const Kokkos::View<safe_real**> X, safe_real omega) {
 		scoped_timer("flux_kokkos");
 
-		// using cGeo = cell_geometry<NDIM,INX>;
 		static const cell_geometry<NDIM, INX> geo;
 
 		static constexpr auto nf = physics<NDIM>::field_count();
 		const auto& angmom_count = hydroComputer.getAngMomCount();
 		const auto& angmom_index = hydroComputer.getAngMomIndex();
 
-		// static thread_local auto fluxes = std::vector < std::vector
-		// 		< std::vector<std::array<safe_real, geo.NFACEDIR>>
-		// 				>> (NDIM, std::vector < std::vector<std::array<safe_real, geo.NFACEDIR>>
-		// 						> (nf, std::vector<std::array<safe_real, geo.NFACEDIR>>(geo.H_N3)));
     Kokkos::View<safe_real****> fluxes(
         Kokkos::ViewAllocateWithoutInitializing("fluxes"), NDIM, nf, geo.H_N3, geo.NFACEDIR);
 
@@ -67,15 +59,22 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
     const auto dx = X(0, geo.H_DNX) - X(0, 0);
 
 		safe_real amax = 0.0;
-    Kokkos::parallel_reduce(
-        // "process dimensions", Kokkos::MDRangePolicy<Kokkos::Rank<1>>({0}, {NDIM}),
-        "process dimensions", NDIM,
-        KOKKOS_LAMBDA(const int dim, safe_real& maxAmax) {
+
+	// this is assuming that the indeces have the same length for each dimension
+	// which we can do according to Dominic
+    const auto indices_size = geo.get_indexes(3, geo.face_pts()[0][0]).size();
+	
+	// auto policy = Kokkos::MDRangePolicy<Kokkos::Experimental::HPX, Kokkos::Rank<2>>({0, 0}, {NDIM, static_cast<int>(indices_size)});
+	auto policy = Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {NDIM, static_cast<int>(indices_size)});
+    Kokkos::parallel_reduce("process dimensions", policy,
+        // "process dimensions", NDIM,
+        KOKKOS_LAMBDA(const int dim, const int indexIteration, safe_real& maxAmax) {
+
+			// printf("%d", hpx::get_worker_thread_num());
             std::array<safe_real, nf> this_flux;
 
-			const auto indices = geo.get_indexes(3, geo.face_pts()[dim][0]);
-
-            for (const auto& i : indices) {
+            const auto& indices = geo.get_indexes(3, geo.face_pts()[dim][0]);
+            const auto& i = indices[indexIteration];
 				safe_real ap = 0.0, am = 0.0;
 				safe_real this_ap, this_am;
 				for (int fi = 0; fi < geo.NFACEDIR; fi++) {
@@ -83,8 +82,7 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
                     auto UR0 = Kokkos::subview(U, Kokkos::ALL, i);
                     auto UL0 = Kokkos::subview(U, Kokkos::ALL, i - geo.H_DN[dim]);
                     auto UR = Kokkos::subview(Q, Kokkos::ALL, i, d);
-                    auto UL =
-                        Kokkos::subview(Q, Kokkos::ALL, i - geo.H_DN[dim], geo.flip_dim(d, dim));
+                auto UL = Kokkos::subview(Q, Kokkos::ALL, i - geo.H_DN[dim], geo.flip_dim(d, dim));
                     std::array<safe_real, NDIM> vg;
                     if
                         CONSTEXPR(NDIM > 1) {
@@ -109,29 +107,24 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
                 if (this_amax > maxAmax) {
                     maxAmax = this_amax;
 				}
-			}
 			for (int f = 0; f < nf; f++) {
-                for (const auto& i : indices) {
                     F(dim, f, i) = 0.0;
 					for (int fi = 0; fi < geo.NFACEDIR; fi++) {
                         const auto& w = weights[fi];
                         F(dim, f, i) += w * fluxes(dim, f, i, fi);
 					}
 				}
-			}
 			for (int angmom_pair = 0; angmom_pair < angmom_count; angmom_pair++) {
 				const int sx_i = angmom_index + angmom_pair * (NDIM + geo.NANGMOM);
 				const int zx_i = sx_i + NDIM;
 				for (int n = 0; n < geo.NANGMOM; n++) {
-                    for (const auto& i : indices) {
                         F(dim, zx_i + n, i) = fluxes(dim, zx_i + n, i, 0);
-					}
+
 					for (int m = 0; m < NDIM; m++) {
 						if (dim != m) {
 							for (int l = 0; l < NDIM; l++) {
 								for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 									const auto d = faces[dim][fi];
-                                    for (const auto& i : indices) {
                                         F(dim, zx_i + n, i) += weights[fi] * kdelta[n][m][l] *
                                             xloc[d][m] * 0.5 * dx * fluxes(dim, sx_i + l, i, fi);
 								}
@@ -140,10 +133,9 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 					}
 				}
 			}
-		}
-            // }
         },
-        Kokkos::Max<safe_real>(amax));
+        Kokkos::Max<safe_real>(amax)
+		);
 		return amax;
-	}
+}    // flux_kokkos
 }    // namespace octotiger
