@@ -357,9 +357,9 @@ static void analytic_solution(test_type test, hydro::state_type &U, const hydro:
 	}
 }
 
-static void set_n_species(int n) {
-	n_species_ = n;
-}
+// static void set_n_species(int n) {
+// 	n_species_ = n;
+// }
 
 static void set_angmom() {
 	angmom_ = true;
