@@ -8,6 +8,8 @@
 #include "../test_problems/blast.hpp"
 #include "../test_problems/exact_sod.hpp"
 
+#include <Kokkos_Core.hpp> // TODO guard this
+
 #ifndef OCTOTIGER_UNITIGER_PHYSICS_HPP_
 #define OCTOTIGER_UNITIGER_PHYSICS_HPP_
 
@@ -76,6 +78,60 @@ struct physics {
 		safe_real pr, vr, pl, vl, vr0, vl0, amr, apr, aml, apl;
 
 		static thread_local std::vector<safe_real> FR(nf_), FL(nf_);
+		
+		physical_flux(UR, FR, dim, amr, apr, vg, dx);
+		physical_flux(UL, FL, dim, aml, apl, vg, dx);
+		ap = std::max(std::max(apr, apl), safe_real(0.0));
+		am = std::min(std::min(amr, aml), safe_real(0.0));
+		for (int f = 0; f < nf_; f++) {
+			F[f] = (ap * FL[f] - am * FR[f] + ap * am * (UR[f] - UL[f])) / (ap - am);
+		}
+	}
+
+	// copy of the above three functions for kokkos view data type 
+	template <typename ViewSlice>
+	static inline void to_prim(const ViewSlice u, safe_real &p, safe_real &v, int dim, safe_real dx) {
+		const auto rho = u[rho_i];
+		const auto rhoinv = safe_real(1.) / rho;
+		safe_real ek = 0.0;
+		for (int dim = 0; dim < NDIM; dim++) {
+			ek += pow(u[sx_i + dim], 2) * rhoinv * safe_real(0.5);
+		}
+		auto ein = u[egas_i] - ek;
+		if (ein < safe_real(0.001) * u[egas_i]) {
+			ein = pow(u[tau_i], fgamma_);
+		}
+
+		v = u[sx_i + dim] * rhoinv;
+		p = (fgamma_ - 1.0) * ein;
+	}
+
+	template <typename ViewSlice>
+	static inline void physical_flux(const ViewSlice U, std::array < safe_real, field_count() > &F, int dim, safe_real &am, safe_real &ap,
+			const std::array < safe_real, NDIM > &vg, safe_real dx) {
+		safe_real p, v, v0, c;
+		to_prim(U, p, v0, dim, dx);
+		v = v0 - vg[dim];
+		c = std::sqrt(fgamma_ * p / U[rho_i]);
+		am = v - c;
+		ap = v + c;
+		for (int f = 0; f < nf_; f++) {
+			F[f] = v * U[f];
+		}
+		F[sx_i + dim] += p;
+		F[egas_i] += v0 * p;
+	}
+
+	
+	template <typename ViewSlice> 
+	static inline void flux(const ViewSlice UL, const ViewSlice UR, const ViewSlice UL0, const ViewSlice UR0, 
+			std::array < safe_real, field_count() > & F, int dim, safe_real &am, 
+			safe_real &ap, std::array < safe_real, NDIM > &vg, safe_real dx) {
+
+		safe_real pr, vr, pl, vl, vr0, vl0, amr, apr, aml, apl;
+
+		// fill fr and fl
+		static thread_local typename std::remove_reference<decltype(F)>::type FR, FL;
 
 		physical_flux(UR, FR, dim, amr, apr, vg, dx);
 		physical_flux(UL, FL, dim, aml, apl, vg, dx);
