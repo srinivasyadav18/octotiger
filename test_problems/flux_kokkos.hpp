@@ -51,8 +51,8 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 		const auto& angmom_count = hydroComputer.getAngMomCount();
 		const auto& angmom_index = hydroComputer.getAngMomIndex();
 
-    Kokkos::View<safe_real****> fluxes(
-        Kokkos::ViewAllocateWithoutInitializing("fluxes"), NDIM, nf, geo.H_N3, geo.NFACEDIR);
+    Kokkos::View<safe_real**[nf][NDIM]> fluxes(
+        Kokkos::ViewAllocateWithoutInitializing("fluxes"), geo.H_N3, geo.NFACEDIR);
 
 		static constexpr auto faces = geo.face_pts();
 		static constexpr auto weights = geo.face_weight();
