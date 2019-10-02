@@ -124,7 +124,7 @@ struct physics {
 
 	
 	template <typename ViewSlice> 
-	static inline void flux(const ViewSlice UL, const ViewSlice UR, const ViewSlice UL0, const ViewSlice UR0, 
+	static inline void flux(const ViewSlice UL, const ViewSlice UR, // const ViewSlice UL0, const ViewSlice UR0, 
 			std::array < safe_real, field_count() > & F, int dim, safe_real &am, 
 			safe_real &ap, std::array < safe_real, NDIM > &vg, safe_real dx) {
 

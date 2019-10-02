@@ -32,7 +32,6 @@ private:
 template <typename...>
 struct WhichType;
 		
-
 namespace octotiger {
 template <int NDIM, int INX>
 // safe_real flux_kokkos(hydro_computer<NDIM, INX>& hydroComputer, const hydro::state_type &U, const
@@ -79,8 +78,9 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 				safe_real this_ap, this_am;
 				for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 					const auto d = faces[dim][fi];
-                    auto UR0 = Kokkos::subview(U, Kokkos::ALL, i);
-                    auto UL0 = Kokkos::subview(U, Kokkos::ALL, i - geo.H_DN[dim]);
+                // UR0, UL0 are not needed for now
+                // auto UR0 = Kokkos::subview(U, Kokkos::ALL, i);
+                // auto UL0 = Kokkos::subview(U, Kokkos::ALL, i - geo.H_DN[dim]);
                     auto UR = Kokkos::subview(Q, Kokkos::ALL, i, d);
                 auto UL = Kokkos::subview(Q, Kokkos::ALL, i - geo.H_DN[dim], geo.flip_dim(d, dim));
                     std::array<safe_real, NDIM> vg;
@@ -96,7 +96,8 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
                     else {
 						vg[0] = 0.0;
 					}
-					physics<NDIM>::flux(UL, UR, UL0, UR0, this_flux, dim, this_am, this_ap, vg, dx);
+                // physics<NDIM>::flux(UL, UR, UL0, UR0, this_flux, dim, this_am, this_ap, vg, dx);
+                physics<NDIM>::flux(UL, UR, this_flux, dim, this_am, this_ap, vg, dx);
 					am = std::min(am, this_am);
 					ap = std::max(ap, this_ap);
 					for (int f = 0; f < nf; f++) {
