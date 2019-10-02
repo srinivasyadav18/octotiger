@@ -3,20 +3,19 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-
 #include <fenv.h>
 #include <time.h>
 #include <type_traits>
 #include <typeinfo>
 
-#define OCTOTIGER_GRIDDIM 8 // usually set in build scripts
+#define OCTOTIGER_GRIDDIM 8    // usually set in build scripts
 
 #include "flux_kokkos.hpp"
 
-//#include <hpx/hpx_init.hpp>
+#include <hpx/hpx_main.hpp>
 
-#include "octotiger/unitiger/unitiger.hpp"
 #include "octotiger/unitiger/safe_real.hpp"
+#include "octotiger/unitiger/unitiger.hpp"
 
 static constexpr double tmax = 2.49e-5;
 static constexpr safe_real dt_out = tmax / 249;
@@ -130,11 +129,97 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 	fclose(fp);
 }
 
-template<int NDIM, int INX>
+static constexpr auto q_lowest_dimension_length = NDIM == 1 ? 3 : (NDIM == 2 ? 9 : 27);
+
+template <int NDIM, int INX>
+safe_real compute_flux_kokkos(const hydro_computer<NDIM, INX>& computer,
+    const std::vector<std::vector<safe_real>>& U0, const std::vector<std::vector<safe_real>>& U,
+    const std::vector<std::vector<std::array<safe_real, q_lowest_dimension_length>>>& q,
+    std::vector<std::vector<std::vector<safe_real>>>& F,
+    const std::vector<std::vector<safe_real>>& X, const safe_real omega, const int nf,
+    const int H_N3) {
+    // do this iteration in the kokkosified version
+    // F is an output of the flux kernel, zero-initialize
+    Kokkos::View<safe_real***> kokkosF(
+        "flux", NDIM, nf, H_N3);    // TODO ask dominic if these are the right dimensions
+
+    Kokkos::View<safe_real**> kokkosU(Kokkos::ViewAllocateWithoutInitializing("state"), nf, H_N3);
+    Kokkos::View<safe_real**> kokkosU0(
+        Kokkos::ViewAllocateWithoutInitializing("initial state"), nf, H_N3);
+    Kokkos::parallel_for("init_U", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {nf, H_N3}),
+        KOKKOS_LAMBDA(int j, int k) {
+            kokkosU(j, k) = U[j][k];
+            kokkosU0(j, k) = U0[j][k];
+        });
+
+    Kokkos::View<safe_real**> kokkosX(
+        Kokkos::ViewAllocateWithoutInitializing("cell center coordinates"), NDIM, H_N3);
+    Kokkos::parallel_for("init_X", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {NDIM, H_N3}),
+        KOKKOS_LAMBDA(int i, int k) { kokkosX(i, k) = X[i][k]; });
+
+    // std::cout << typeid(decltype(q)).name() << std::endl;
+    Kokkos::View<safe_real* * [q_lowest_dimension_length]> kokkosQ(
+        Kokkos::ViewAllocateWithoutInitializing("reconstruction"), nf, H_N3);
+    Kokkos::parallel_for("init_Q",
+        Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {nf, H_N3, q_lowest_dimension_length}),
+        KOKKOS_LAMBDA(int i, int j, int k) { kokkosQ(i, j, k) = q[i][j][k]; });
+
+    Kokkos::fence();
+
+    // computer.flux(U, q, F, X, omega);
+    auto amax = octotiger::flux_kokkos(computer, kokkosU, kokkosQ, kokkosF, kokkosX, omega);
+
+    Kokkos::fence();
+    // copy back the values obtained for F
+    for (int i = 0; i < NDIM; ++i) {
+        for (int j = 0; j < nf; ++j) {
+            for (int k = 0; k < H_N3; ++k) {
+                F[i][j][k] = kokkosF(i, j, k);
+            }
+        }
+    }
+    return amax;
+}
+
+// for timing purposes, test with random numbers
+template <int NDIM, int INX>
+void test_random_numbers() {
+    static constexpr auto H_N3 = static_cast<int>(std::pow(INX + 2 * H_BW, NDIM));
+    const auto nf = physics<NDIM>::field_count();
+    hydro_computer<NDIM, INX> computer;
+    computer.use_angmom_correction(physics<NDIM>::sx_i, 1);
+    const safe_real omega = 0.0;
+
+    // use random data for the view fields
+    hydro::x_type X(NDIM);
+    for (int dim = 0; dim < NDIM; dim++) {
+        X[dim].resize(H_N3);
+    }
+    std::vector<std::vector<std::vector<safe_real>>> F(
+        NDIM, std::vector<std::vector<safe_real>>(nf, std::vector<safe_real>(H_N3)));
+    std::vector<std::vector<safe_real>> U(nf, std::vector<safe_real>(H_N3));
+    std::vector<std::vector<safe_real>> U0(nf, std::vector<safe_real>(H_N3));
+    std::vector<std::vector<std::array<safe_real, q_lowest_dimension_length>>> Q(nf,
+        std::vector<std::array<safe_real, q_lowest_dimension_length>>(
+            H_N3, std::array<safe_real, q_lowest_dimension_length>()));
+
+    // fill with non-zero entries to avoid divide by 0 error
+    for (auto& vec : Q) {
+        for (auto& arr : vec) {
+            arr.fill(1.0);
+        }
+    }
+
+    for (int i = 0; i < 10; ++i) {
+        compute_flux_kokkos(computer, U0, U, Q, F, X, omega, nf, H_N3);
+    }
+}
+
+template <int NDIM, int INX>
 void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correction) {
 	static constexpr auto H_BW = 3;
 	static constexpr auto H_NX = INX + 2 * H_BW;
-	static constexpr auto H_N3 = static_cast<int>(std::pow(INX+2*H_BW,NDIM));
+    static constexpr auto H_N3 = static_cast<int>(std::pow(INX + 2 * H_BW, NDIM));
 
 	static constexpr safe_real CFL = (0.4 / NDIM);
 	hydro_computer<NDIM, INX> computer;
@@ -147,7 +232,8 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 	static_assert(std::is_integral<decltype(nf)>::value);
 	static_assert(std::is_integral<decltype(H_N3)>::value);
 	
-	std::vector<std::vector<std::vector<safe_real>>> F(NDIM, std::vector<std::vector<safe_real>>(nf, std::vector<safe_real>(H_N3)));
+    std::vector<std::vector<std::vector<safe_real>>> F(
+        NDIM, std::vector<std::vector<safe_real>>(nf, std::vector<safe_real>(H_N3)));
 	std::vector<std::vector<safe_real>> U(nf, std::vector<safe_real>(H_N3));
 	std::vector<std::vector<safe_real>> U0(nf, std::vector<safe_real>(H_N3));
 
@@ -180,59 +266,7 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 		computer.advance(U0, U, F, X, dx, dt, 1.0, omega);
 		computer.boundaries(U);
 		q = computer.reconstruct(U, X, omega);
-		{
-			
-			// do this iteration in the kokkosified version
-			Kokkos::View<safe_real ***> kokkosF(Kokkos::ViewAllocateWithoutInitializing("flux"), NDIM, nf, H_N3);
-			Kokkos::parallel_for( "init_F", 
-								  Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0,0,0}, {NDIM, nf, H_N3}),
-								  KOKKOS_LAMBDA (int i, int j, int k){
-									kokkosF(i,j,k) = F[i][j][k];
-								  }
-								);
-
-			Kokkos::View<safe_real **> kokkosU(Kokkos::ViewAllocateWithoutInitializing("state"), nf, H_N3);
-			Kokkos::View<safe_real **> kokkosU0(Kokkos::ViewAllocateWithoutInitializing("initial state"), nf, H_N3);
-			Kokkos::parallel_for( "init_U", 
-								  Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {nf, H_N3}),
-								  KOKKOS_LAMBDA (int j, int k){
-									kokkosU(j,k) = U[j][k];
-									kokkosU0(j,k) = U0[j][k];
-								  }
-								);
-
-			Kokkos::View<safe_real **> kokkosX(Kokkos::ViewAllocateWithoutInitializing("cell center coordinates"), NDIM, H_N3);
-			Kokkos::parallel_for( "init_X", 
-								  Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {NDIM, H_N3}),
-								  KOKKOS_LAMBDA (int i, int k){
-									kokkosX(i,k) = X[i][k];
-								  }
-								);
-
-			static constexpr auto q_lowest_dimension_length =  NDIM == 1 ? 3 : (NDIM == 2 ? 9 : 27);
-			// std::cout << typeid(decltype(q)).name() << std::endl;
-			Kokkos::View<safe_real **[q_lowest_dimension_length]> kokkosQ(Kokkos::ViewAllocateWithoutInitializing("reconstruction"), nf, H_N3);
-			Kokkos::parallel_for( "init_Q", 
-								  Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0,0,0}, {nf, H_N3, q_lowest_dimension_length}),
-								  KOKKOS_LAMBDA (int i, int j, int k){
-									kokkosQ(i,j,k) = q[i][j][k];
-								  }
-								);
-			Kokkos::fence();
-
-			// computer.flux(U, q, F, X, omega);
-			octotiger::flux_kokkos(computer, kokkosU, kokkosQ, kokkosF, kokkosX, omega);
-			
-			Kokkos::fence();
-			// copy back the values obtained for F
-			for(int i = 0; i < NDIM; ++i){
-				for(int j = 0; j < nf; ++j){
-					for(int k = 0; k < H_N3; ++k){
-						F[i][j][k] = kokkosF(i,j,k);
-					}
-				}
-			}
-		}
+        compute_flux_kokkos(computer, U0, U, q, F, X, omega, nf, H_N3);
 		computer.advance(U0, U, F, X, dx, dt, 0.25, omega);
 		computer.boundaries(U);
 		q = computer.reconstruct(U, X, omega);
@@ -291,9 +325,9 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 	fclose(fp);
 }
 
-
 int main(int argc, char** argv) {
-    Kokkos::initialize( argc, argv );
+    Kokkos::initialize(argc, argv);
+    Kokkos::print_configuration(std::cout);
 
 	feenableexcept(FE_DIVBYZERO);
 	feenableexcept(FE_INVALID);
