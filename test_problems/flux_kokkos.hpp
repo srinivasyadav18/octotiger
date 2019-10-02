@@ -38,14 +38,18 @@ namespace octotiger{
 		// using cGeo = cell_geometry<NDIM,INX>;
 		static const cell_geometry<NDIM, INX> geo;
 
-		const auto& nf = hydroComputer.getNF();
+		static constexpr auto nf = physics<NDIM>::field_count();
 		const auto& angmom_count = hydroComputer.getAngMomCount();
 		const auto& angmom_index = hydroComputer.getAngMomIndex();
 
-		static thread_local auto fluxes = std::vector < std::vector
-				< std::vector<std::array<safe_real, geo.NFACEDIR>>
-						>> (NDIM, std::vector < std::vector<std::array<safe_real, geo.NFACEDIR>>
-								> (nf, std::vector<std::array<safe_real, geo.NFACEDIR>>(geo.H_N3)));
+		// static thread_local auto fluxes = std::vector < std::vector
+		// 		< std::vector<std::array<safe_real, geo.NFACEDIR>>
+		// 				>> (NDIM, std::vector < std::vector<std::array<safe_real, geo.NFACEDIR>>
+		// 						> (nf, std::vector<std::array<safe_real, geo.NFACEDIR>>(geo.H_N3)));
+		Kokkos::View<safe_real ****> fluxes(
+											Kokkos::ViewAllocateWithoutInitializing("fluxes"), 
+											NDIM, nf, geo.H_N3, geo.NFACEDIR
+											);
 
 
 		static constexpr auto faces = geo.face_pts();
@@ -57,8 +61,9 @@ namespace octotiger{
 
 		safe_real amax = 0.0;
 		for (int dim = 0; dim < NDIM; dim++) {
-			std::vector<safe_real> UR(nf), UL(nf), this_flux(nf);
-			std::vector<safe_real> UR0(nf), UL0(nf);
+			// std::vector<safe_real> UR(nf), UL(nf), this_flux(nf);
+			// std::vector<safe_real> UR0(nf), UL0(nf);
+			std::array < safe_real, nf > this_flux;
 
 			const auto indices = geo.get_indexes(3, geo.face_pts()[dim][0]);
 
@@ -67,12 +72,16 @@ namespace octotiger{
 				safe_real this_ap, this_am;
 				for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 					const auto d = faces[dim][fi];
-					for (int f = 0; f < nf; f++) {
-						UR0[f] = U(f,i);
-						UL0[f] = U(f,i - geo.H_DN[dim]);
-						UR[f] = Q(f,i,d);
-						UL[f] = Q(f,i - geo.H_DN[dim],geo.flip_dim(d, dim));
-					}
+					// for (int f = 0; f < nf; f++) {
+					// 	UR0[f] = U(f,i);
+					// 	UL0[f] = U(f,i - geo.H_DN[dim]);
+					// 	UR[f] = Q(f,i,d);
+					// 	UL[f] = Q(f,i - geo.H_DN[dim],geo.flip_dim(d, dim));
+					// }
+					auto UR0 = Kokkos::subview (U , Kokkos::ALL, i);
+					auto UL0 = Kokkos::subview (U , Kokkos::ALL, i - geo.H_DN[dim]);
+					auto UR  = Kokkos::subview (Q , Kokkos::ALL, i, d);
+					auto UL  = Kokkos::subview (Q , Kokkos::ALL, i - geo.H_DN[dim], geo.flip_dim(d, dim));
 					std::array < safe_real, NDIM > vg;
 					if CONSTEXPR (NDIM > 1) {
 						vg[0] = -omega * (X(1,i) + 0.5 * xloc[d][1] * dx);
@@ -83,11 +92,12 @@ namespace octotiger{
 					} else {
 						vg[0] = 0.0;
 					}
-					physics < NDIM > ::flux(UL, UR, UL0, UR0, this_flux, dim, this_am, this_ap, vg, dx);
+					// auto type = whichtype<decltype(UR)>();
+					physics<NDIM>::flux(UL, UR, UL0, UR0, this_flux, dim, this_am, this_ap, vg, dx);
 					am = std::min(am, this_am);
 					ap = std::max(ap, this_ap);
 					for (int f = 0; f < nf; f++) {
-						fluxes[dim][f][i][fi] = this_flux[f];
+						fluxes(dim,f,i,fi) = this_flux[f];
 					}
 				}
 				const auto this_amax = std::max(ap, safe_real(-am));
@@ -100,7 +110,7 @@ namespace octotiger{
 					F(dim,f,i) = 0.0;
 					for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 						const auto &w = weights[fi];
-						F(dim,f,i) += w * fluxes[dim][f][i][fi];
+						F(dim,f,i) += w * fluxes(dim,f,i,fi);
 					}
 				}
 			}
@@ -109,7 +119,7 @@ namespace octotiger{
 				const int zx_i = sx_i + NDIM;
 				for (int n = 0; n < geo.NANGMOM; n++) {
 					for (const auto &i : indices) {
-						F(dim,zx_i + n,i) = fluxes[dim][zx_i + n][i][0];
+						F(dim,zx_i + n,i) = fluxes(dim,zx_i + n,i,0);
 					}
 					for (int m = 0; m < NDIM; m++) {
 						if (dim != m) {
@@ -117,7 +127,7 @@ namespace octotiger{
 								for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 									const auto d = faces[dim][fi];
 									for (const auto &i : indices) {
-										F(dim,zx_i + n,i) += weights[fi] * kdelta[n][m][l] * xloc[d][m] * 0.5 * dx * fluxes[dim][sx_i + l][i][fi];
+										F(dim,zx_i + n,i) += weights[fi] * kdelta[n][m][l] * xloc[d][m] * 0.5 * dx * fluxes(dim,sx_i + l,i,fi);
 									}
 								}
 							}
