@@ -361,6 +361,8 @@ if(OCTOTIGER_WITH_CUDA)
 endif()
 
 if(OCTOTIGER_WITH_KOKKOS)
+  target_link_libraries(octolib Kokkos::kokkos)
+  target_link_libraries(unitiger Kokkos::kokkos)
   target_link_libraries(hydrolib Kokkos::kokkos)
 endif()
 
@@ -405,7 +407,7 @@ if(OCTOTIGER_WITH_BLAST_TEST)
       message(FATAL_ERROR "GCC Quad-Precision Math Library is not available with MSVC")
     endif()
     target_compile_definitions(octolib PUBLIC OCTOTIGER_HAVE_QUADMATH)
-    target_link_libraries(octolib PRIVATE quadmath)
+    target_link_libraries(octolib quadmath)
 
   else()
       message(FATAL_ERROR "Octotiger with OCTOTIGER_WITH_BLAST_TEST=ON cannot "
