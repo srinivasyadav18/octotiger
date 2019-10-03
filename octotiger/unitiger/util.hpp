@@ -6,6 +6,8 @@
 #ifndef OCTOTIGER_UNITIGER_UTI1L_HPP_
 #define OCTOTIGER_UNITIGER_UTI1L_HPP_
 
+#include "octotiger/unitiger/safe_real.hpp"
+
 template<int NDIM, int NX>
 std::array<int, NDIM> index_to_dims(int i) {
 	std::array<int, NDIM> dims;
