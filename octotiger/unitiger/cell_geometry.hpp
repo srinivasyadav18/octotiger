@@ -9,6 +9,7 @@
 #include <mutex>
 
 #include "./util.hpp"
+#include "octotiger/unitiger/safe_real.hpp"
 
 template<int NDIM, int INX>
 struct cell_geometry {
