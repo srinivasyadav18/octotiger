@@ -64,9 +64,9 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 
 	// one ghost cell less for the flux calculation in one direction, 
 	// assert all assumptions
-	assert( dim == 3 && indices_size == (INX+1)*INX*INX || dim == 2 && indices_size == (INX+1)*INX );
+	assert( NDIM == 3 && indices_size == (INX+1)*INX*INX || NDIM == 2 && indices_size == (INX+1)*INX );
 	// if (indices_size > geo.H_N3) throw std::runtime_error("indices size mismatch");
-	static_assert(geo.H_N3 == (geo.H_NX * geo.H_NX * geo.H_NX));
+	static_assert(( NDIM==3 && geo.H_N3 == (geo.H_NX * geo.H_NX * geo.H_NX)) || ( NDIM==2 && geo.H_N3 == (geo.H_NX * geo.H_NX)));
 	static_assert((INX+1) == (geo.H_NX - numGhostCellsUnitiger - numGhostCellsUnitiger + 1));
 	
 	// make it one larger, to allow for easier indexing

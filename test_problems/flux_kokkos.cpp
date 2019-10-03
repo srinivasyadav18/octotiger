@@ -129,12 +129,13 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 	fclose(fp);
 }
 
+template <int NDIM>
 static constexpr auto q_lowest_dimension_length = NDIM == 1 ? 3 : (NDIM == 2 ? 9 : 27);
 
 template <int NDIM, int INX>
 safe_real compute_flux_kokkos(const hydro_computer<NDIM, INX>& computer,
     const std::vector<std::vector<safe_real>>& U0, const std::vector<std::vector<safe_real>>& U,
-    const std::vector<std::vector<std::array<safe_real, q_lowest_dimension_length>>>& q,
+    const std::vector<std::vector<std::array<safe_real, q_lowest_dimension_length<NDIM>>>>& q,
     std::vector<std::vector<std::vector<safe_real>>>& F,
     const std::vector<std::vector<safe_real>>& X, const safe_real omega, const int nf,
     const int H_N3) {
@@ -158,10 +159,10 @@ safe_real compute_flux_kokkos(const hydro_computer<NDIM, INX>& computer,
         KOKKOS_LAMBDA(int i, int k) { kokkosX(i, k) = X[i][k]; });
 
     // std::cout << typeid(decltype(q)).name() << std::endl;
-    Kokkos::View<safe_real* * [q_lowest_dimension_length]> kokkosQ(
+    Kokkos::View<safe_real* * [q_lowest_dimension_length<NDIM>]> kokkosQ(
         Kokkos::ViewAllocateWithoutInitializing("reconstruction"), nf, H_N3);
     Kokkos::parallel_for("init_Q",
-        Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {nf, H_N3, q_lowest_dimension_length}),
+        Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {nf, H_N3, q_lowest_dimension_length<NDIM>}),
         KOKKOS_LAMBDA(int i, int j, int k) { kokkosQ(i, j, k) = q[i][j][k]; });
 
     Kokkos::fence();
@@ -199,9 +200,9 @@ void test_random_numbers() {
         NDIM, std::vector<std::vector<safe_real>>(nf, std::vector<safe_real>(H_N3)));
     std::vector<std::vector<safe_real>> U(nf, std::vector<safe_real>(H_N3));
     std::vector<std::vector<safe_real>> U0(nf, std::vector<safe_real>(H_N3));
-    std::vector<std::vector<std::array<safe_real, q_lowest_dimension_length>>> Q(nf,
-        std::vector<std::array<safe_real, q_lowest_dimension_length>>(
-            H_N3, std::array<safe_real, q_lowest_dimension_length>()));
+    std::vector<std::vector<std::array<safe_real, q_lowest_dimension_length<NDIM>>>> Q(nf,
+        std::vector<std::array<safe_real, q_lowest_dimension_length<NDIM>>>(
+            H_N3, std::array<safe_real, q_lowest_dimension_length<NDIM>>()));
 
     // fill with non-zero entries to avoid divide by 0 error
     for (auto& vec : Q) {
