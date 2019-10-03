@@ -112,10 +112,10 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
                         fluxes(dim, f, i, fi) = this_flux[f];
 					}
 				}
-				const auto this_amax = std::max(ap, safe_real(-am));
-                if (this_amax > maxAmax) {
-                    maxAmax = this_amax;
-				}
+            
+
+            maxAmax = std::max(ap, safe_real(-am));
+
 			for (int f = 0; f < nf; f++) {
                     F(dim, f, i) = 0.0;
 					for (int fi = 0; fi < geo.NFACEDIR; fi++) {
@@ -143,6 +143,8 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 				}
 			}
         },
+        Kokkos::Max<safe_real>(amax));
+
     Kokkos::fence();
 		return amax;
 }    // flux_kokkos
