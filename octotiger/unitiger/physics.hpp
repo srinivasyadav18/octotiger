@@ -8,8 +8,6 @@
 #include "../test_problems/blast.hpp"
 #include "../test_problems/exact_sod.hpp"
 
-#include <Kokkos_Core.hpp> // TODO guard this
-
 #ifndef OCTOTIGER_UNITIGER_PHYSICS_HPP_
 #define OCTOTIGER_UNITIGER_PHYSICS_HPP_
 
