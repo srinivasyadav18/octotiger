@@ -73,7 +73,7 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 	auto flux_size_dim_3 = static_cast<int>(std::pow(INX + 1, NDIM));
     //--------------------------------------------------------------------------------------------
 
-    Kokkos::View<safe_real[NDIM][nf][geo.H_N3][geo.NFACEDIR]> fluxes(
+    Kokkos::View<safe_real[NDIM][geo.H_N3][nf][geo.NFACEDIR]> fluxes(
         Kokkos::ViewAllocateWithoutInitializing("fluxes"));
 
 		static constexpr auto faces = geo.face_pts();
@@ -128,11 +128,10 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 					am = std::min(am, this_am);
 					ap = std::max(ap, this_ap);
 					for (int f = 0; f < nf; f++) {
-                        fluxes(dim, f, i, fi) = this_flux[f];
+                    fluxes(dim, i, f, fi) = this_flux[f];
 					}
 				}
             
-
             maxAmax = std::max(ap, safe_real(-am));
 
                 // field update from fluxes
@@ -140,7 +139,7 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
                     F(dim, f, i) = 0.0;
 					for (int fi = 0; fi < geo.NFACEDIR; fi++) {
                         const auto& w = weights[fi];
-                        F(dim, f, i) += w * fluxes(dim, f, i, fi);
+                    F(dim, f, i) += w * fluxes(dim, i, f, fi);
 					}
 				}
                 // angular momentum update from linear momentum
@@ -148,7 +147,7 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 				const int sx_i = angmom_index + angmom_pair * (NDIM + geo.NANGMOM);
 				const int zx_i = sx_i + NDIM;
 				for (int n = 0; n < geo.NANGMOM; n++) {
-                        F(dim, zx_i + n, i) = fluxes(dim, zx_i + n, i, 0);
+                    F(dim, zx_i + n, i) = fluxes(dim, i, zx_i + n, 0);
 
 					for (int m = 0; m < NDIM; m++) {
 						if (dim != m) {
@@ -156,7 +155,7 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 								for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 									const auto d = faces[dim][fi];
                                         F(dim, zx_i + n, i) += weights[fi] * kdelta[n][m][l] *
-                                            xloc[d][m] * 0.5 * dx * fluxes(dim, sx_i + l, i, fi);
+                                        xloc[d][m] * 0.5 * dx * fluxes(dim, i, sx_i + l, fi);
 								}
 							}
 						}
