@@ -51,6 +51,28 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 		const auto& angmom_count = hydroComputer.getAngMomCount();
 		const auto& angmom_index = hydroComputer.getAngMomIndex();
 
+    // this is assuming that the indeces have the same length for each dimension
+    // which we can do according to Dominic
+    auto indices_size = geo.get_indexes(3, geo.face_pts()[0][0]).size();
+
+    // -------------------------------------------------------------------------------------------
+    // this was asserts and preparations for reducing the size of the third dimension for fluxes and F
+    // currently unused - third dimension is still == geo.H_N3
+    //
+	static constexpr auto numGhostCellsUnitiger = geo.H_BW; // in each direction
+	static_assert(geo.H_BW == 3);
+
+	// one ghost cell less for the flux calculation in one direction, 
+	// assert all assumptions
+	assert( dim == 3 && indices_size == (INX+1)*INX*INX || dim == 2 && indices_size == (INX+1)*INX );
+	// if (indices_size > geo.H_N3) throw std::runtime_error("indices size mismatch");
+	static_assert(geo.H_N3 == (geo.H_NX * geo.H_NX * geo.H_NX));
+	static_assert((INX+1) == (geo.H_NX - numGhostCellsUnitiger - numGhostCellsUnitiger + 1));
+	
+	// make it one larger, to allow for easier indexing
+	auto flux_size_dim_3 = static_cast<int>(std::pow(INX + 1, NDIM));
+    //--------------------------------------------------------------------------------------------
+
     Kokkos::View<safe_real**[nf][NDIM]> fluxes(
         Kokkos::ViewAllocateWithoutInitializing("fluxes"), geo.H_N3, geo.NFACEDIR);
 
@@ -63,9 +85,6 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 
 		safe_real amax = 0.0;
 
-	// this is assuming that the indeces have the same length for each dimension
-	// which we can do according to Dominic
-    const auto indices_size = geo.get_indexes(3, geo.face_pts()[0][0]).size();
 	
     // auto policy = Kokkos::MDRangePolicy<Kokkos::Experimental::HPX, Kokkos::Rank<2>>
     auto policy =
@@ -116,6 +135,7 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 
             maxAmax = std::max(ap, safe_real(-am));
 
+                // field update from fluxes
 			for (int f = 0; f < nf; f++) {
                     F(dim, f, i) = 0.0;
 					for (int fi = 0; fi < geo.NFACEDIR; fi++) {
@@ -123,6 +143,7 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
                         F(dim, f, i) += w * fluxes(dim, f, i, fi);
 					}
 				}
+                // angular momentum update from linear momentum
 			for (int angmom_pair = 0; angmom_pair < angmom_count; angmom_pair++) {
 				const int sx_i = angmom_index + angmom_pair * (NDIM + geo.NANGMOM);
 				const int zx_i = sx_i + NDIM;
