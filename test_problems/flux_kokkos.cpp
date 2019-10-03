@@ -158,12 +158,14 @@ safe_real compute_flux_kokkos(const hydro_computer<NDIM, INX>& computer,
     Kokkos::parallel_for("init_X", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {NDIM, H_N3}),
         KOKKOS_LAMBDA(int i, int k) { kokkosX(i, k) = X[i][k]; });
 
-    // std::cout << typeid(decltype(q)).name() << std::endl;
     Kokkos::View<safe_real* * [q_lowest_dimension_length<NDIM>]> kokkosQ(
         Kokkos::ViewAllocateWithoutInitializing("reconstruction"), nf, H_N3);
+	// have this run in serial, takes forever otherwise
     Kokkos::parallel_for("init_Q",
-        Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {nf, H_N3, q_lowest_dimension_length<NDIM>}),
+        Kokkos::MDRangePolicy<Kokkos::Serial, Kokkos::Rank<3>>({0, 0, 0}, {nf, H_N3, q_lowest_dimension_length<NDIM>}),
         KOKKOS_LAMBDA(int i, int j, int k) { kokkosQ(i, j, k) = q[i][j][k]; });
+
+    // std::cout << kokkosQ.extent(0) << " " << kokkosQ.extent(1) << " " << kokkosQ.extent(2) << "Q" << std::endl;
 
     Kokkos::fence();
 
