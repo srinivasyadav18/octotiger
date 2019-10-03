@@ -336,8 +336,9 @@ int main(int argc, char** argv) {
 	feenableexcept(FE_INVALID);
 	feenableexcept(FE_OVERFLOW);
 
-	run_test_kokkos<2, 200>(physics<2>::BLAST, true);
-	run_test<2, 200>(physics<2>::BLAST, true);
+	test_random_numbers<3, 50>();
+	run_test_kokkos<3, 50>(physics<3>::BLAST, true);
+	// run_test<2, 200>(physics<2>::BLAST, true);
 
     Kokkos::finalize();
 	return 0;
