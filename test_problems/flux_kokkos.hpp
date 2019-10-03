@@ -73,8 +73,8 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 	auto flux_size_dim_3 = static_cast<int>(std::pow(INX + 1, NDIM));
     //--------------------------------------------------------------------------------------------
 
-    Kokkos::View<safe_real**[nf][NDIM]> fluxes(
-        Kokkos::ViewAllocateWithoutInitializing("fluxes"), geo.H_N3, geo.NFACEDIR);
+    Kokkos::View<safe_real[NDIM][nf][geo.H_N3][geo.NFACEDIR]> fluxes(
+        Kokkos::ViewAllocateWithoutInitializing("fluxes"));
 
 		static constexpr auto faces = geo.face_pts();
 		static constexpr auto weights = geo.face_weight();
