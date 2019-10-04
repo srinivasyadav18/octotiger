@@ -191,6 +191,39 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 
 template <int NDIM, int INX>
 safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
+    const Kokkos::View<safe_real**> kokkosUhost, const Kokkos::View<safe_real***> kokkosQhost,
+    Kokkos::View<safe_real***> kokkosFhost, const Kokkos::View<safe_real**> kokkosXhost, safe_real omega) {
+
+    auto kokkosF = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosFhost);
+    auto kokkosU = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosUhost);
+    auto kokkosX = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosXhost);
+    auto kokkosQ = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosQhost);
+
+    Kokkos::fence();
+
+    Kokkos::deep_copy(kokkosUhost, kokkosU);
+    Kokkos::deep_copy(kokkosXhost, kokkosX);
+    Kokkos::deep_copy(kokkosQhost, kokkosQ);
+
+    Kokkos::fence();
+    
+    auto amax = octotiger::flux_kokkos<NDIM, INX>(computer.getAngMomCount(),
+        computer.getAngMomIndex(), kokkosU, kokkosQ, kokkosF, kokkosX, omega);
+
+    Kokkos::fence();
+
+    Kokkos::deep_copy(kokkosF, kokkosFhost);
+
+    Kokkos::fence();
+
+    return amax;
+}
+
+
+#if !defined(__CUDA_ARCH__)
+
+template <int NDIM, int INX>
+safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
     const std::vector<std::vector<safe_real>>& U0, const std::vector<std::vector<safe_real>>& U,
     const std::vector<std::vector<std::array<safe_real, q_lowest_dimension_length<NDIM>>>>& q,
     std::vector<std::vector<std::vector<safe_real>>>& F,
@@ -198,15 +231,11 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
     const int H_N3) {
     // do this iteration in the kokkosified version
     // F is an output of the flux kernel, zero-initialize
-    Kokkos::View<safe_real***> kokkosF(
-        "flux", NDIM, nf, H_N3);    // TODO ask dominic if these are the right dimensions
-    auto kokkosFhost = Kokkos::create_mirror_view(kokkosF);
+    Kokkos::View<safe_real***, Kokkos::HostSpace> kokkosFhost("flux", NDIM, nf, H_N3);    
 
-    Kokkos::View<safe_real**> kokkosU(Kokkos::ViewAllocateWithoutInitializing("state"), nf, H_N3);
-    Kokkos::View<safe_real**> kokkosU0(
+    Kokkos::View<safe_real**, Kokkos::HostSpace> kokkosUhost(Kokkos::ViewAllocateWithoutInitializing("state"), nf, H_N3);
+    Kokkos::View<safe_real**, Kokkos::HostSpace> kokkosU0host(
         Kokkos::ViewAllocateWithoutInitializing("initial state"), nf, H_N3);
-    auto kokkosUhost = Kokkos::create_mirror_view(kokkosU);
-    auto kokkosU0host = Kokkos::create_mirror_view(kokkosU0);
     Kokkos::parallel_for("init_U",
         Kokkos::MDRangePolicy<Kokkos::DefaultHostExecutionSpace, Kokkos::Rank<2>>(
             {0, 0}, {nf, H_N3}),
@@ -215,17 +244,15 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
             kokkosU0host(j, k) = U0[j][k];
         });
 
-    Kokkos::View<safe_real**> kokkosX(
+    Kokkos::View<safe_real**, Kokkos::HostSpace> kokkosXhost(
         Kokkos::ViewAllocateWithoutInitializing("cell center coordinates"), NDIM, H_N3);
-    auto kokkosXhost = Kokkos::create_mirror_view(kokkosX);
     Kokkos::parallel_for("init_X",
         Kokkos::MDRangePolicy<Kokkos::DefaultHostExecutionSpace, Kokkos::Rank<2>>(
             {0, 0}, {NDIM, H_N3}),
         KOKKOS_LAMBDA(int i, int k) { kokkosXhost(i, k) = X[i][k]; });
 
-    Kokkos::View<safe_real* * [q_lowest_dimension_length<NDIM>]> kokkosQ(
+    Kokkos::View<safe_real* * [q_lowest_dimension_length<NDIM>], Kokkos::HostSpace> kokkosQhost(
         Kokkos::ViewAllocateWithoutInitializing("reconstruction"), nf, H_N3);
-    auto kokkosQhost = Kokkos::create_mirror_view(kokkosQ);
     // have this run in serial, takes forever otherwise
     Kokkos::parallel_for("init_Q",
         Kokkos::MDRangePolicy<Kokkos::Serial, Kokkos::Rank<3>>(
@@ -236,22 +263,10 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
     // << std::endl;
     Kokkos::fence();
 
-    Kokkos::deep_copy(kokkosUhost, kokkosU);
-    Kokkos::deep_copy(kokkosU0host, kokkosU0);
-    Kokkos::deep_copy(kokkosXhost, kokkosX);
-    Kokkos::deep_copy(kokkosQhost, kokkosQ);
+    auto amax = compute_flux_kokkos(computer, kokkosUhost, kokkosQhost, kokkosFhost, kokkosXhost, omega);
 
     Kokkos::fence();
 
-    // computer.flux(U, q, F, X, omega);
-    auto amax = octotiger::flux_kokkos<NDIM, INX>(computer.getAngMomCount(),
-        computer.getAngMomIndex(), kokkosU, kokkosQ, kokkosF, kokkosX, omega);
-
-    Kokkos::fence();
-
-    Kokkos::deep_copy(kokkosF, kokkosFhost);
-
-    Kokkos::fence();
     // copy back the values obtained for F
     for (int i = 0; i < NDIM; ++i) {
         for (int j = 0; j < nf; ++j) {
@@ -260,7 +275,10 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
             }
         }
     }
+
     return amax;
 }
+
+#endif    // not defined __CUDA_ARCH__
 
 }    // namespace octotiger
