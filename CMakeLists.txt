@@ -360,12 +360,6 @@ if(OCTOTIGER_WITH_CUDA)
   set_property(TARGET octolib PROPERTY INTERFACE_COMPILE_OPTIONS "${MY_CUDA_FLAGS}")
 endif()
 
-if(OCTOTIGER_WITH_KOKKOS)
-  target_link_libraries(octolib Kokkos::kokkos)
-  target_link_libraries(unitiger Kokkos::kokkos)
-  target_link_libraries(hydrolib Kokkos::kokkos)
-endif()
-
 # Handle other options
 if(OCTOTIGER_WITH_GRAV_PAR)
   target_compile_definitions(octolib PUBLIC OCTOTIGER_HAVE_GRAV_PAR)
