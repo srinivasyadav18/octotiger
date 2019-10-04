@@ -601,6 +601,10 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 		}
 	}
 	for (integer s = 0; s != nspec; ++s) {
+		if( std::isnan(rc.m[s])) {
+			rc.failed = true;
+			return rc;
+		}
 		if (rc.m[s] > 0.0) {
 			const auto tmp = INVERSE(rc.m[s]);
 			rc.com[s][XDIM] *= tmp;
