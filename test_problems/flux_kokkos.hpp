@@ -10,7 +10,7 @@
 #include "octotiger/unitiger/hydro.hpp"    // todo reasonably include this from physics
 #include "octotiger/unitiger/physics.hpp"
 
-#include <hpx/util/high_resolution_timer.hpp>
+#include <hpx/timing/high_resolution_timer.hpp>
 
 class [[nodiscard]] scoped_timer
 {

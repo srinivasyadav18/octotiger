@@ -47,7 +47,7 @@ endif()
 
 if(OCTOTIGER_WITH_CUDA)
   enable_language(CUDA)
-
+  #find_package(CUDA 9.2 REQUIRED)
   #set(MY_CUDA_FLAGS -Xptxas=-fmad=true,-dlcm=cg,--opt-level=4)
   #string(APPEND HPX_CUDA_CLANG_FLAGS " -fast-math -Xcuda-ptxas -v")
   string(APPEND CUDA_NVCC_FLAGS ";-Xptxas=-v,-fmad=true,--opt-level=4")

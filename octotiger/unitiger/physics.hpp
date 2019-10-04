@@ -3,10 +3,14 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+
+#if !defined(__CUDA_ARCH__)
+
 #include "./safe_real.hpp"
 #include "./util.hpp"
 #include "../test_problems/blast.hpp"
 #include "../test_problems/exact_sod.hpp"
+
 
 #ifndef OCTOTIGER_UNITIGER_PHYSICS_HPP_
 #define OCTOTIGER_UNITIGER_PHYSICS_HPP_
@@ -38,6 +42,8 @@ struct physics {
 	static void set_fgamma(safe_real fg) {
 		fgamma_ = fg;
 	}
+
+#if !defined(__CUDA_ARCH__)
 
 	static void to_prim(const std::vector<safe_real>& u, safe_real &p, safe_real &v, int dim, safe_real dx) {
 		const auto rho = u[rho_i];
@@ -85,6 +91,7 @@ struct physics {
 			F[f] = (ap * FL[f] - am * FR[f] + ap * am * (UR[f] - UL[f])) / (ap - am);
 		}
 	}
+#endif    // not defined __CUDA_ARCH__
 
 	// copy of the above three functions for kokkos view data type 
 	template <typename ViewSlice>
@@ -141,6 +148,7 @@ struct physics {
 		}
 	}
 
+#if !defined(__CUDA_ARCH__)
 	template<int INX>
 	static void post_process(hydro::state_type &U, safe_real dx) {
 		static const cell_geometry<NDIM, INX> geo;
@@ -363,13 +371,17 @@ static void analytic_solution(test_type test, hydro::state_type &U, const hydro:
 static void set_angmom() {
 	angmom_ = true;
 }
+#endif    // not defined __CUDA_ARCH__
 
 private:
-static constexpr int n_species_ = 5;
-static constexpr int nf_ = (4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2))) + n_species_;
+static const int n_species_ = 5;
+static const int nf_ = (4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2))) + n_species_;
 static safe_real fgamma_;
 
 };
+
+
+#if !defined(__CUDA_ARCH__)
 
 template<int NDIM>
 template<int INX>
@@ -512,4 +524,7 @@ bool physics<NDIM>::angmom_ = false;
 template<int NDIM>
 safe_real physics<NDIM>::fgamma_ = 7. / 5.;
 
+#endif    // not defined __CUDA_ARCH__
 #endif /* OCTOTIGER_UNITIGER_PHYSICS_HPP_ */
+
+#endif    // not defined __CUDA_ARCH__

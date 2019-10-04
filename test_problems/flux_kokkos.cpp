@@ -3,6 +3,8 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#if !defined(__CUDA_ARCH__)
+
 #include <fenv.h>
 #include <time.h>
 #include <type_traits>
@@ -11,11 +13,13 @@
 #define OCTOTIGER_GRIDDIM 8    // usually set in build scripts
 
 #include "flux_kokkos.hpp"
+#include <Kokkos_Core.hpp>
 
 #include <hpx/hpx_main.hpp>
 
 #include "octotiger/unitiger/safe_real.hpp"
 #include "octotiger/unitiger/unitiger.hpp"
+#include "octotiger/unitiger/hydro.hpp"
 
 static constexpr double tmax = 2.49e-5;
 static constexpr safe_real dt_out = tmax / 249;
@@ -28,6 +32,9 @@ static constexpr safe_real dt_out = tmax / 249;
 // one is constexpr in hydro_defs.hpp - used with unitiger
 // one the template parameter used here 
 // ask Dominic again - how are they different?
+
+
+#if !defined(__CUDA_ARCH__)
 
 template<int NDIM, int INX>
 void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
@@ -128,7 +135,10 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 	fprintf( fp, "%i %li\n", INX, tstop -tstart);
 	fclose(fp);
 }
+#endif    // not defined __CUDA_ARCH__
 
+
+#if !defined(__CUDA_ARCH__)
 
 // for timing purposes, test with random numbers
 template <int NDIM, int INX>
@@ -273,10 +283,13 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 	fprintf( fp, "%i %li\n", INX, tstop -tstart);
 	fclose(fp);
 }
+#endif    // not defined __CUDA_ARCH__
 
 int main(int argc, char** argv) {
     Kokkos::initialize(argc, argv);
     Kokkos::print_configuration(std::cout);
+
+#if !defined(__CUDA_ARCH__)
 
 	feenableexcept(FE_DIVBYZERO);
 	feenableexcept(FE_INVALID);
@@ -286,6 +299,10 @@ int main(int argc, char** argv) {
 	run_test_kokkos<3, 50>(physics<3>::BLAST, true);
 	// run_test<2, 200>(physics<2>::BLAST, true);
 
+#endif    // not defined __CUDA_ARCH__
+
     Kokkos::finalize();
 	return 0;
 }
+
+#endif    // not defined __CUDA_ARCH__

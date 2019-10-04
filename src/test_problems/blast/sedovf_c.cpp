@@ -5,6 +5,7 @@
 
 // Original Fortran source: http://cococubed.asu.edu/research_pages/sedov.shtml
 
+#if !defined(__CUDA_ARCH__)
 
 
 /* sedov3.f -- translated by f2c (version 20160102).
@@ -1254,3 +1255,4 @@ void solution(double time, double r, double rmax, double& d, double& v, double& 
 }
 
 }
+#endif
