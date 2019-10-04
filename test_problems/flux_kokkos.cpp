@@ -149,7 +149,7 @@ safe_real compute_flux_kokkos(const int angmom_count, const int angmom_index,
         Kokkos::ViewAllocateWithoutInitializing("initial state"), nf, H_N3);
 	auto kokkosUhost = Kokkos::create_mirror_view(kokkosU);
 	auto kokkosU0host = Kokkos::create_mirror_view(kokkosU0);
-    Kokkos::parallel_for("init_U", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {nf, H_N3}),
+    Kokkos::parallel_for("init_U", Kokkos::MDRangePolicy<Kokkos::DefaultHostExecutionSpace, Kokkos::Rank<2>>({0, 0}, {nf, H_N3}),
         KOKKOS_LAMBDA(int j, int k) {
             kokkosUhost(j, k) = U[j][k];
             kokkosU0host(j, k) = U0[j][k];
@@ -158,7 +158,7 @@ safe_real compute_flux_kokkos(const int angmom_count, const int angmom_index,
     Kokkos::View<safe_real**> kokkosX(
         Kokkos::ViewAllocateWithoutInitializing("cell center coordinates"), NDIM, H_N3);
 	auto kokkosXhost = Kokkos::create_mirror_view(kokkosX);
-    Kokkos::parallel_for("init_X", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {NDIM, H_N3}),
+    Kokkos::parallel_for("init_X", Kokkos::MDRangePolicy<Kokkos::DefaultHostExecutionSpace, Kokkos::Rank<2>>({0, 0}, {NDIM, H_N3}),
         KOKKOS_LAMBDA(int i, int k) { kokkosXhost(i, k) = X[i][k]; });
 
     Kokkos::View<safe_real* * [q_lowest_dimension_length<NDIM>]> kokkosQ(

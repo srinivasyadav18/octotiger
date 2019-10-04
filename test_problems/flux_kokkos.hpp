@@ -42,41 +42,54 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 
     auto sTimer = scoped_timer("flux_kokkos");
 
-		static const cell_geometry<NDIM, INX> geo;
+    using geo = const cell_geometry<NDIM, INX>;
 
     static const auto nf = physics<NDIM>::field_count();
 
     // this is assuming that the indeces have the same length for each dimension
     // which we can do according to Dominic
-    auto indices_size = geo.get_indexes(3, geo.face_pts()[0][0]).size();
+    auto indices_size = static_cast<long int>(geo().get_indexes(3, geo::face_pts()[0][0]).size());
 
     // -------------------------------------------------------------------------------------------
-    // this was asserts and preparations for reducing the size of the third dimension for fluxes and F
-    // currently unused - third dimension is still == geo.H_N3
+    // this was asserts and preparations for reducing the size of the third dimension for fluxes and
+    // F currently unused - third dimension is still == geo.H_N3
     //
-	static constexpr auto numGhostCellsUnitiger = geo.H_BW; // in each direction
-	static_assert(geo.H_BW == 3);
+    static const auto numGhostCellsUnitiger = geo::H_BW;    // in each direction
+    static_assert(geo::H_BW == 3);
 
 	// one ghost cell less for the flux calculation in one direction, 
 	// assert all assumptions
-	assert( NDIM == 3 && indices_size == (INX+1)*INX*INX || NDIM == 2 && indices_size == (INX+1)*INX );
-	// if (indices_size > geo.H_N3) throw std::runtime_error("indices size mismatch");
-	static_assert(( NDIM==3 && geo.H_N3 == (geo.H_NX * geo.H_NX * geo.H_NX)) || ( NDIM==2 && geo.H_N3 == (geo.H_NX * geo.H_NX)));
-	static_assert((INX+1) == (geo.H_NX - numGhostCellsUnitiger - numGhostCellsUnitiger + 1));
+    assert(NDIM == 3 && indices_size == (INX + 1) * INX * INX ||
+        NDIM == 2 && indices_size == (INX + 1) * INX);
+    // if (indices_size > geo::H_N3) throw std::runtime_error("indices size mismatch");
+    static_assert((NDIM == 3 && geo::H_N3 == (geo::H_NX * geo::H_NX * geo::H_NX)) ||
+        (NDIM == 2 && geo::H_N3 == (geo::H_NX * geo::H_NX)));
+    static_assert((INX + 1) == (geo::H_NX - numGhostCellsUnitiger - numGhostCellsUnitiger + 1));
 	
 	// make it one larger, to allow for easier indexing
 	auto flux_size_dim_3 = static_cast<int>(std::pow(INX + 1, NDIM));
     //--------------------------------------------------------------------------------------------
 
-    Kokkos::View<safe_real[NDIM][geo.H_N3][nf][geo.NFACEDIR]> fluxes(
+    Kokkos::View<safe_real[NDIM][geo::H_N3][nf][geo::NFACEDIR]> fluxes(
         Kokkos::ViewAllocateWithoutInitializing("fluxes"));
 
-		static constexpr auto faces = geo.face_pts();
-		static constexpr auto weights = geo.face_weight();
-		static constexpr auto xloc = geo.xloc();
-		static constexpr auto kdelta = geo.kronecker_delta();
+    static constexpr auto faces = geo::face_pts();
+    static constexpr auto weights = geo::face_weight();
+    static constexpr auto xloc = geo::xloc();
+    static constexpr auto kdelta = geo::kronecker_delta();
 
-    const auto dx = X(0, geo.H_DNX) - X(0, 0);
+    const auto dx = X(0, geo::H_DNX) - X(0, 0);
+
+    Kokkos::View<int**> kokkosIndices(
+        Kokkos::ViewAllocateWithoutInitializing("indices"), NDIM, indices_size);
+	auto kokkosIhost = Kokkos::create_mirror_view(kokkosIndices);
+
+#if !defined(__CUDA_ARCH__)
+    Kokkos::parallel_for("init_I", Kokkos::MDRangePolicy<Kokkos::DefaultHostExecutionSpace, Kokkos::Rank<2>>({0, 0}, {indices_size, NDIM}),
+        KOKKOS_LAMBDA(const int i, const int dim) { kokkosIhost(dim, i) = geo().get_indexes(3, geo::face_pts()[dim][0])[i]; });
+#endif
+    Kokkos::fence();
+	Kokkos::deep_copy(kokkosIhost, kokkosIndices);
 
 		safe_real amax = 0.0;
 
@@ -88,23 +101,22 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 
     Kokkos::fence();
 
-    Kokkos::parallel_reduce("process dimensions", policy,
-        // "process dimensions", NDIM,
+    Kokkos::parallel_reduce("compute fluxes", policy,
         KOKKOS_LAMBDA(const int indexIteration, const int dim, safe_real& maxAmax) {
 			// printf("%d", hpx::get_worker_thread_num());
             std::array<safe_real, nf> this_flux;
 
-            const auto& indices = geo.get_indexes(3, geo.face_pts()[dim][0]);
-            const auto& i = indices[indexIteration];
+            // const auto& indices = geo::get_indexes(3, geo::face_pts()[dim][0]);
+            const auto& i = kokkosIndices(dim,indexIteration);
 				safe_real ap = 0.0, am = 0.0;
 				safe_real this_ap, this_am;
-				for (int fi = 0; fi < geo.NFACEDIR; fi++) {
+            for (int fi = 0; fi < geo::NFACEDIR; fi++) {
 					const auto d = faces[dim][fi];
                 // UR0, UL0 are not needed for now
                 // auto UR0 = Kokkos::subview(U, Kokkos::ALL, i);
-                // auto UL0 = Kokkos::subview(U, Kokkos::ALL, i - geo.H_DN[dim]);
+                // auto UL0 = Kokkos::subview(U, Kokkos::ALL, i - geo::H_DN[dim]);
                     auto UR = Kokkos::subview(Q, Kokkos::ALL, i, d);
-                auto UL = Kokkos::subview(Q, Kokkos::ALL, i - geo.H_DN[dim], geo.flip_dim(d, dim));
+                auto UL = Kokkos::subview(Q, Kokkos::ALL, i - geo::H_DN[dim], geo::flip_dim(d, dim));
                     std::array<safe_real, NDIM> vg;
                     if
                         CONSTEXPR(NDIM > 1) {
@@ -132,22 +144,22 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
                 // field update from fluxes
 			for (int f = 0; f < nf; f++) {
                     F(dim, f, i) = 0.0;
-					for (int fi = 0; fi < geo.NFACEDIR; fi++) {
+                for (int fi = 0; fi < geo::NFACEDIR; fi++) {
                         const auto& w = weights[fi];
                     F(dim, f, i) += w * fluxes(dim, i, f, fi);
 					}
 				}
                 // angular momentum update from linear momentum
 			for (int angmom_pair = 0; angmom_pair < angmom_count; angmom_pair++) {
-				const int sx_i = angmom_index + angmom_pair * (NDIM + geo.NANGMOM);
+                const int sx_i = angmom_index + angmom_pair * (NDIM + geo::NANGMOM);
 				const int zx_i = sx_i + NDIM;
-				for (int n = 0; n < geo.NANGMOM; n++) {
+                for (int n = 0; n < geo::NANGMOM; n++) {
                     F(dim, zx_i + n, i) = fluxes(dim, i, zx_i + n, 0);
 
 					for (int m = 0; m < NDIM; m++) {
 						if (dim != m) {
 							for (int l = 0; l < NDIM; l++) {
-								for (int fi = 0; fi < geo.NFACEDIR; fi++) {
+                                for (int fi = 0; fi < geo::NFACEDIR; fi++) {
 									const auto d = faces[dim][fi];
                                         F(dim, zx_i + n, i) += weights[fi] * kdelta[n][m][l] *
                                         xloc[d][m] * 0.5 * dx * fluxes(dim, i, sx_i + l, fi);
