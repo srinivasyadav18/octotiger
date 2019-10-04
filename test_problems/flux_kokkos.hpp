@@ -34,9 +34,6 @@ struct WhichType;
 		
 namespace octotiger {
 template <int NDIM, int INX>
-// safe_real flux_kokkos(hydro_computer<NDIM, INX>& hydroComputer, const hydro::state_type &U, const
-// hydro::recon_type<NDIM> &Q, hydro::flux_type &F, hydro::x_type &X, 		safe_real omega) {
-
 // F should be 0-initialized, things will be added to it and returned
 // all other arguments are read-only
 safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
@@ -168,4 +165,14 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
     Kokkos::fence();
 		return amax;
 }    // flux_kokkos
-}    // namespace octotiger
+
+template <int NDIM, int INX>
+safe_real flux_kokkos_hpx(const hydro_computer<NDIM, INX>& hydroComputer,
+    const Kokkos::View<safe_real**> U, const Kokkos::View<safe_real***> Q,
+    Kokkos::View<safe_real***> F, const Kokkos::View<safe_real**> X, safe_real omega) {
+    auto a =
+        hpx::async([=, &hydroComputer]() -> safe_real { return flux_kokkos(hydroComputer, U, Q, F, X, omega); });
+    return a.get();
+}
+
+}    // namespace 
