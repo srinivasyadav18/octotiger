@@ -129,74 +129,6 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 	fclose(fp);
 }
 
-template <int NDIM>
-static constexpr auto q_lowest_dimension_length = NDIM == 1 ? 3 : (NDIM == 2 ? 9 : 27);
-
-template <int NDIM, int INX>
-safe_real compute_flux_kokkos(const hydro_computer<NDIM, INX>& computer,
-    const std::vector<std::vector<safe_real>>& U0, const std::vector<std::vector<safe_real>>& U,
-    const std::vector<std::vector<std::array<safe_real, q_lowest_dimension_length<NDIM>>>>& q,
-    std::vector<std::vector<std::vector<safe_real>>>& F,
-    const std::vector<std::vector<safe_real>>& X, const safe_real omega, const int nf,
-    const int H_N3) {
-    // do this iteration in the kokkosified version
-    // F is an output of the flux kernel, zero-initialize
-    Kokkos::View<safe_real***> kokkosF("flux", NDIM, nf, H_N3);    // TODO ask dominic if these are the right dimensions
-	auto kokkosFhost = Kokkos::create_mirror_view(kokkosF);
-
-    Kokkos::View<safe_real**> kokkosU(Kokkos::ViewAllocateWithoutInitializing("state"), nf, H_N3);
-    Kokkos::View<safe_real**> kokkosU0(
-        Kokkos::ViewAllocateWithoutInitializing("initial state"), nf, H_N3);
-	auto kokkosUhost = Kokkos::create_mirror_view(kokkosU);
-	auto kokkosU0host = Kokkos::create_mirror_view(kokkosU0);
-    Kokkos::parallel_for("init_U", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {nf, H_N3}),
-        KOKKOS_LAMBDA(int j, int k) {
-            kokkosUhost(j, k) = U[j][k];
-            kokkosU0host(j, k) = U0[j][k];
-        });
-
-    Kokkos::View<safe_real**> kokkosX(
-        Kokkos::ViewAllocateWithoutInitializing("cell center coordinates"), NDIM, H_N3);
-	auto kokkosXhost = Kokkos::create_mirror_view(kokkosX);
-    Kokkos::parallel_for("init_X", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {NDIM, H_N3}),
-        KOKKOS_LAMBDA(int i, int k) { kokkosXhost(i, k) = X[i][k]; });
-
-    Kokkos::View<safe_real* * [q_lowest_dimension_length<NDIM>]> kokkosQ(
-        Kokkos::ViewAllocateWithoutInitializing("reconstruction"), nf, H_N3);
-	auto kokkosQhost = Kokkos::create_mirror_view(kokkosQ);
-	// have this run in serial, takes forever otherwise
-    Kokkos::parallel_for("init_Q",
-        Kokkos::MDRangePolicy<Kokkos::Serial, Kokkos::Rank<3>>({0, 0, 0}, {nf, H_N3, q_lowest_dimension_length<NDIM>}),
-        KOKKOS_LAMBDA(int i, int j, int k) { kokkosQhost(i, j, k) = q[i][j][k]; });
-
-    // std::cout << kokkosQ.extent(0) << " " << kokkosQ.extent(1) << " " << kokkosQ.extent(2) << "Q" << std::endl;
-	Kokkos::fence();
-
-	Kokkos::deep_copy(kokkosUhost, kokkosU);
-	Kokkos::deep_copy(kokkosU0host, kokkosU0);
-	Kokkos::deep_copy(kokkosXhost, kokkosX);
-	Kokkos::deep_copy(kokkosQhost, kokkosQ);
-
-    Kokkos::fence();
-
-    // computer.flux(U, q, F, X, omega);
-    auto amax = octotiger::flux_kokkos_hpx(computer, kokkosU, kokkosQ, kokkosF, kokkosX, omega);
-
-	Kokkos::fence();
-	
-	Kokkos::deep_copy (kokkosF, kokkosFhost);
-
-    Kokkos::fence();
-    // copy back the values obtained for F
-    for (int i = 0; i < NDIM; ++i) {
-        for (int j = 0; j < nf; ++j) {
-            for (int k = 0; k < H_N3; ++k) {
-                F[i][j][k] = kokkosFhost(i, j, k);
-            }
-        }
-    }
-    return amax;
-}
 
 // for timing purposes, test with random numbers
 template <int NDIM, int INX>
@@ -216,9 +148,9 @@ void test_random_numbers() {
         NDIM, std::vector<std::vector<safe_real>>(nf, std::vector<safe_real>(H_N3)));
     std::vector<std::vector<safe_real>> U(nf, std::vector<safe_real>(H_N3));
     std::vector<std::vector<safe_real>> U0(nf, std::vector<safe_real>(H_N3));
-    std::vector<std::vector<std::array<safe_real, q_lowest_dimension_length<NDIM>>>> Q(nf,
-        std::vector<std::array<safe_real, q_lowest_dimension_length<NDIM>>>(
-            H_N3, std::array<safe_real, q_lowest_dimension_length<NDIM>>()));
+    std::vector<std::vector<std::array<safe_real, octotiger::q_lowest_dimension_length<NDIM>>>> Q(nf,
+        std::vector<std::array<safe_real, octotiger::q_lowest_dimension_length<NDIM>>>(
+            H_N3, std::array<safe_real, octotiger::q_lowest_dimension_length<NDIM>>()));
 
     // fill with non-zero entries to avoid divide by 0 error
     for (auto& vec : Q) {
@@ -228,7 +160,7 @@ void test_random_numbers() {
     }
 
     for (int i = 0; i < 10; ++i) {
-        compute_flux_kokkos(computer, U0, U, Q, F, X, omega, nf, H_N3);
+        octotiger::compute_flux_kokkos<NDIM, INX>(computer, U0, U, Q, F, X, omega, nf, H_N3);
     }
 }
 
@@ -283,7 +215,7 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 		computer.advance(U0, U, F, X, dx, dt, 1.0, omega);
 		computer.boundaries(U);
 		q = computer.reconstruct(U, X, omega);
-        compute_flux_kokkos(computer, U0, U, q, F, X, omega, nf, H_N3);
+        octotiger::compute_flux_kokkos<NDIM, INX>(computer, U0, U, q, F, X, omega, nf, H_N3);
 		computer.advance(U0, U, F, X, dx, dt, 0.25, omega);
 		computer.boundaries(U);
 		q = computer.reconstruct(U, X, omega);
