@@ -485,7 +485,10 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 				if (diags.stage > 1) {
 					const real R2 = x * x + y * y;
 					const real phi_g = G[iiig][phi_i];
-					if (diags.omega < 0.0) {
+					if (std::isnan(diags.omega)) {
+						rc.failed = true;
+						return rc;
+					} else if (diags.omega < 0.0) {
 						rc.failed = true;
 						return rc;
 					}
