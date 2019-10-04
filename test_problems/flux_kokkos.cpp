@@ -133,7 +133,7 @@ template <int NDIM>
 static constexpr auto q_lowest_dimension_length = NDIM == 1 ? 3 : (NDIM == 2 ? 9 : 27);
 
 template <int NDIM, int INX>
-safe_real compute_flux_kokkos(const hydro_computer<NDIM, INX>& computer,
+safe_real compute_flux_kokkos(const int angmom_count, const int angmom_index,
     const std::vector<std::vector<safe_real>>& U0, const std::vector<std::vector<safe_real>>& U,
     const std::vector<std::vector<std::array<safe_real, q_lowest_dimension_length<NDIM>>>>& q,
     std::vector<std::vector<std::vector<safe_real>>>& F,
@@ -180,7 +180,7 @@ safe_real compute_flux_kokkos(const hydro_computer<NDIM, INX>& computer,
     Kokkos::fence();
 
     // computer.flux(U, q, F, X, omega);
-    auto amax = octotiger::flux_kokkos_hpx(computer, kokkosU, kokkosQ, kokkosF, kokkosX, omega);
+    auto amax = octotiger::flux_kokkos<NDIM, INX>(angmom_count, angmom_index, kokkosU, kokkosQ, kokkosF, kokkosX, omega);
 
 	Kokkos::fence();
 	
@@ -228,7 +228,8 @@ void test_random_numbers() {
     }
 
     for (int i = 0; i < 10; ++i) {
-        compute_flux_kokkos(computer, U0, U, Q, F, X, omega, nf, H_N3);
+        compute_flux_kokkos<NDIM, INX>(
+            computer.getAngMomCount(), computer.getAngMomIndex(), U0, U, Q, F, X, omega, nf, H_N3);
     }
 }
 
@@ -283,7 +284,8 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 		computer.advance(U0, U, F, X, dx, dt, 1.0, omega);
 		computer.boundaries(U);
 		q = computer.reconstruct(U, X, omega);
-        compute_flux_kokkos(computer, U0, U, q, F, X, omega, nf, H_N3);
+        compute_flux_kokkos<NDIM, INX>(
+			computer.getAngMomCount(), computer.getAngMomIndex(), U0, U, q, F, X, omega, nf, H_N3);
 		computer.advance(U0, U, F, X, dx, dt, 0.25, omega);
 		computer.boundaries(U);
 		q = computer.reconstruct(U, X, omega);

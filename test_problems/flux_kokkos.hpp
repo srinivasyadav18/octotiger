@@ -36,7 +36,7 @@ namespace octotiger {
 template <int NDIM, int INX>
 // F should be 0-initialized, things will be added to it and returned
 // all other arguments are read-only
-safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
+safe_real flux_kokkos(const int angmom_count, const int angmom_index,
     const Kokkos::View<safe_real**> U, const Kokkos::View<safe_real***> Q,
     Kokkos::View<safe_real***> F, const Kokkos::View<safe_real**> X, safe_real omega) {
 
@@ -44,9 +44,7 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 
 		static const cell_geometry<NDIM, INX> geo;
 
-		static constexpr auto nf = physics<NDIM>::field_count();
-		const auto& angmom_count = hydroComputer.getAngMomCount();
-		const auto& angmom_index = hydroComputer.getAngMomIndex();
+    static const auto nf = physics<NDIM>::field_count();
 
     // this is assuming that the indeces have the same length for each dimension
     // which we can do according to Dominic
@@ -166,13 +164,13 @@ safe_real flux_kokkos(const hydro_computer<NDIM, INX>& hydroComputer,
 		return amax;
 }    // flux_kokkos
 
-template <int NDIM, int INX>
-safe_real flux_kokkos_hpx(const hydro_computer<NDIM, INX>& hydroComputer,
-    const Kokkos::View<safe_real**> U, const Kokkos::View<safe_real***> Q,
-    Kokkos::View<safe_real***> F, const Kokkos::View<safe_real**> X, safe_real omega) {
-    auto a =
-        hpx::async([=, &hydroComputer]() -> safe_real { return flux_kokkos(hydroComputer, U, Q, F, X, omega); });
-    return a.get();
-}
+// template <int NDIM, int INX>
+// safe_real flux_kokkos_hpx(const int angmom_count, const int angmom_index,
+//     const Kokkos::View<safe_real**> U, const Kokkos::View<safe_real***> Q,
+//     Kokkos::View<safe_real***> F, const Kokkos::View<safe_real**> X, safe_real omega) {
+//     auto a =
+//         hpx::async([=]() -> safe_real { return flux_kokkos( angmom_count, angmom_index, U, Q, F, X, omega); });
+//     return a.get();
+// }
 
 }    // namespace 
