@@ -104,7 +104,7 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
     Kokkos::parallel_reduce("compute fluxes", policy,
         KOKKOS_LAMBDA(const int indexIteration, const int dim, safe_real& maxAmax) {
 			// printf("%d", hpx::get_worker_thread_num());
-            std::array<safe_real, nf> this_flux;
+            safe_real this_flux[nf];
 
             // const auto& indices = geo::get_indexes(3, geo::face_pts()[dim][0]);
             const auto& i = kokkosIndices(dim,indexIteration);
@@ -117,7 +117,7 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
                 // auto UL0 = Kokkos::subview(U, Kokkos::ALL, i - geo::H_DN[dim]);
                     auto UR = Kokkos::subview(Q, Kokkos::ALL, i, d);
                 auto UL = Kokkos::subview(Q, Kokkos::ALL, i - geo::H_DN[dim], geo::flip_dim(d, dim));
-                    std::array<safe_real, NDIM> vg;
+                safe_real vg[NDIM];
                     if
                         CONSTEXPR(NDIM > 1) {
                             vg[0] = -omega * (X(1, i) + 0.5 * xloc[d][1] * dx);

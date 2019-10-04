@@ -105,8 +105,8 @@ struct physics {
 	}
 
 	template <typename ViewSlice>
-	static inline void physical_flux(const ViewSlice U, std::array < safe_real, field_count() > &F, int dim, safe_real &am, safe_real &ap,
-			const std::array < safe_real, NDIM > &vg, safe_real dx) {
+	static inline void physical_flux(const ViewSlice U, safe_real* /*safe_real[field_count()]*/ F, int dim, safe_real &am, safe_real &ap,
+			const safe_real* /*safe_real[NDIM]*/ vg, safe_real dx) {
 		safe_real p, v, v0, c;
 		to_prim(U, p, v0, dim, dx);
 		v = v0 - vg[dim];
@@ -123,13 +123,14 @@ struct physics {
 	
 	template <typename ViewSlice> 
 	static inline void flux(const ViewSlice UL, const ViewSlice UR, // const ViewSlice UL0, const ViewSlice UR0, 
-			std::array < safe_real, field_count() > & F, int dim, safe_real &am, 
-			safe_real &ap, std::array < safe_real, NDIM > &vg, safe_real dx) {
+			safe_real* /*safe_real[field_count()]*/ F, int dim, safe_real &am, 
+			safe_real &ap, const safe_real* /*safe_real[NDIM]*/ vg, safe_real dx) {
 
 		safe_real pr, vr, pl, vl, vr0, vl0, amr, apr, aml, apl;
 
 		// fill fr and fl
-		static thread_local typename std::remove_reference<decltype(F)>::type FR, FL;
+		static thread_local safe_real FR [field_count()];
+		static thread_local safe_real FL [field_count()];
 
 		physical_flux(UR, FR, dim, amr, apr, vg, dx);
 		physical_flux(UL, FL, dim, aml, apl, vg, dx);
