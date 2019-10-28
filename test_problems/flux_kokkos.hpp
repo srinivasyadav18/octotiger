@@ -37,12 +37,13 @@ namespace octotiger {
 template <int NDIM>
 static constexpr auto q_lowest_dimension_length = NDIM == 1 ? 3 : (NDIM == 2 ? 9 : 27);
 
-template <int NDIM, int INX>
+template <int NDIM, int INX, typename twoDimensionalView, typename threeDimensionalView>
 // F should be 0-initialized, things will be added to it and returned
 // all other arguments are read-only
 safe_real flux_kokkos(const int angmom_count, const int angmom_index,
-    const Kokkos::View<safe_real**> U, const Kokkos::View<safe_real***> Q,
-    Kokkos::View<safe_real***> F, const Kokkos::View<safe_real**> X, safe_real omega) {
+    const twoDimensionalView U, const threeDimensionalView Q,
+    threeDimensionalView F, const twoDimensionalView X,
+    safe_real omega) {
 
     auto sTimer = scoped_timer("flux_kokkos");
 
@@ -191,8 +192,12 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 
 template <int NDIM, int INX>
 safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
-    const Kokkos::View<safe_real**> kokkosUhost, const Kokkos::View<safe_real***> kokkosQhost,
-    Kokkos::View<safe_real***> kokkosFhost, const Kokkos::View<safe_real**> kokkosXhost, safe_real omega) {
+    Kokkos::View<safe_real**, Kokkos::HostSpace>& kokkosUhost,
+    Kokkos::View<safe_real***, Kokkos::HostSpace> kokkosQhost,
+    Kokkos::View<safe_real***, Kokkos::HostSpace> kokkosFhost,
+    Kokkos::View<safe_real**, Kokkos::HostSpace> kokkosXhost,
+    safe_real omega
+    ) {
 
     auto kokkosF = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosFhost);
     auto kokkosU = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosUhost);
