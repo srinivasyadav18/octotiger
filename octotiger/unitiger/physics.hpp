@@ -136,8 +136,8 @@ struct physics {
 		safe_real pr, vr, pl, vl, vr0, vl0, amr, apr, aml, apl;
 
 		// fill fr and fl
-		static thread_local safe_real FR [field_count()];
-		static thread_local safe_real FL [field_count()];
+		static thread_local safe_real FR [nf_];
+		static thread_local safe_real FL [nf_];
 
 		physical_flux(UR, FR, dim, amr, apr, vg, dx);
 		physical_flux(UL, FL, dim, aml, apl, vg, dx);
