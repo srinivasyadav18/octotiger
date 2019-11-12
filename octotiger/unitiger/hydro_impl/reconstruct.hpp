@@ -5,7 +5,7 @@
 
 #pragma once
 
-#define TVD_TEST
+//#define TVD_TEST
 
 #include "octotiger/unitiger/physics.hpp"
 #include "octotiger/unitiger/physics_impl.hpp"
@@ -142,29 +142,28 @@ void reconstruct_ppm(std::vector<std::vector<safe_real>> &q, const std::vector<s
 #pragma ivdep
 					for (int l = 0; l < geo.H_NX_ZM4; l++) {
 						const int i = geo.to_index(j + 2, k + 2, l + 2);
+						const auto &up2 = u[i + 2 * di];
 						const auto &up = u[i + di];
 						const auto &u0 = u[i];
 						const auto &um = u[i - di];
+						const auto &um2 = u[i - 2 * di];
 						const auto dif = up - um;
-						if (std::abs(dif) > disc[d][i] * std::min(std::abs(up), std::abs(um))) {
-							if( std::min(std::abs(up),std::abs(um))/std::max(std::abs(up),std::abs(um)) > eps2 ) {
-								const auto d2p = (1.0 / 6.0) * (u[i + 2 * di] + u0 - 2.0 * u[i + di]);
-								const auto d2m = (1.0 / 6.0) * (u0 + u[i - 2 * di] - 2.0 * u[i - di]);
-								if (d2p * d2m < 0.0) {
-									double eta = 0.0;
-									if (std::abs(dif) > eps * std::min(std::abs(up), std::abs(um))) {
-										eta = -(d2p - d2m) / dif;
-									}
-									eta = std::max(0.0, std::min(eta1 * (eta - eta2), 1.0));
-									if (eta > 0.0) {
-										auto ul = um + 0.5 * minmod_theta(u[i] - um, um - u[i - 2 * di], 2.0);
-										auto ur = up - 0.5 * minmod_theta(u[i + 2 * di] - up, up - u[i], 2.0);
-										auto &qp = q[d][i];
-										auto &qm = q[geo.flip(d)][i];
-										qp += eta * (ur - qp);
-										qm += eta * (ul - qm);
-									}
-								}
+						const auto aup = std::abs(up);
+						const auto aum = std::abs(um);
+						const auto minupum = std::min(aup, aum);
+						const auto adif = std::abs(dif);
+						auto &qp = q[d][i];
+						auto &qm = q[geo.flip(d)][i];
+						if (adif > std::max(disc[d][i], eps) * minupum && minupum / std::max(aup, aum) > eps2) {
+							const auto d2p = (1.0 / 6.0) * (up2 + u0 - 2.0 * up);
+							const auto d2m = (1.0 / 6.0) * (u0 + um2 - 2.0 * um);
+							if (d2p * d2m < 0.0) {
+								auto eta = -(d2p - d2m) / dif;
+								eta = std::max(0.0, std::min(eta1 * (eta - eta2), 1.0));
+								auto ul = um + 0.5 * minmod_theta(u0 - um, um - um2, 2.0);
+								auto ur = up - 0.5 * minmod_theta(up2 - up, up - u0, 2.0);
+								qp += eta * (ur - qp);
+								qm += eta * (ul - qm);
 							}
 						}
 					}

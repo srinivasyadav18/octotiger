@@ -14,10 +14,8 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 		safe_real omega) {
 
 	PROFILE();
-	static thread_local auto fluxes = std::vector < std::vector
-			< std::vector<std::array<safe_real, geo::NFACEDIR>>
-					>> (NDIM, std::vector < std::vector<std::array<safe_real, geo::NFACEDIR>>
-							> (nf_, std::vector<std::array<safe_real, geo::NFACEDIR>>(geo::H_N3)));
+	static thread_local auto fluxes = std::vector < std::vector<std::array<safe_real, geo::NFACEDIR>>
+			> (nf_, std::vector<std::array<safe_real, geo::NFACEDIR>>(geo::H_N3));
 	static thread_local std::vector<safe_real> UR(nf_), UL(nf_), this_flux(nf_);
 
 	static const cell_geometry<NDIM, INX> geo;
@@ -73,7 +71,7 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				ap = std::max(ap, this_ap);
 #pragma ivdep
 				for (int f = 0; f < nf_; f++) {
-					fluxes[dim][f][i][fi] = this_flux[f];
+					fluxes[f][i][fi] = this_flux[f];
 				}
 			}
 			const auto this_amax = std::max(ap, safe_real(-am));
@@ -90,7 +88,7 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				const auto &w = weights[fi];
 #pragma ivdep
 				for (const auto &i : indices) {
-					F[dim][f][i] += w * fluxes[dim][f][i][fi];
+					F[dim][f][i] += w * fluxes[f][i][fi];
 				}
 			}
 		}

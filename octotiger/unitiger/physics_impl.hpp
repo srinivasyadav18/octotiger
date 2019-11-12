@@ -32,15 +32,15 @@ void physics<NDIM>::to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v
 	const auto rho = u[rho_i];
 	const auto rhoinv = safe_real(1.) / rho;
 	safe_real ek = 0.0;
+	const auto s = u[sx_i + dim];
 	for (int dim = 0; dim < NDIM; dim++) {
-		ek += pow(u[sx_i + dim], 2) * rhoinv * safe_real(0.5);
+		ek += s * s * rhoinv * safe_real(0.5);
 	}
 	auto ein = u[egas_i] - ek;
 	if (ein < de_switch_1 * u[egas_i]) {
 		ein = pow(u[tau_i], fgamma_);
 	}
-
-	v = u[sx_i + dim] * rhoinv;
+	v = s * rhoinv;
 	p = (fgamma_ - 1.0) * ein;
 }
 
@@ -61,9 +61,8 @@ void physics<NDIM>::physical_flux(const std::vector<safe_real> &U, std::vector<s
 	}
 	F[sx_i + dim] += p;
 	F[egas_i] += v0 * p;
-	for (int n = 0; n < geo.NANGMOM; n++) {
-#pragma ivdep
-		for (int m = 0; m < NDIM; m++) {
+	for (int m = 0; m < NDIM; m++) {
+		for (int n = 0; n < geo.NANGMOM; n++) {
 			F[lx_i + n] += kdelta[n][m][dim] * x[m] * p;
 		}
 	}
@@ -439,7 +438,7 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 			U[spc_i][i] += rho;
 			break;
 		case SOD:
-			if (xsum < -xhalf/2.0) {
+			if (xsum < -xhalf / 2.0) {
 				rho = 1.0;
 				p = 1.0;
 			} else {
