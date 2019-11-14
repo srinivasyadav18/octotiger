@@ -181,7 +181,7 @@ void physics<NDIM>::enforce_outflow(hydro::state_type &U, const hydro::x_type &X
 	static const cell_geometry<NDIM, INX> geo;
 	const auto xloc = geo.xloc()[dir];
 
-	std::array<int, 3> lb, ub;
+	std::array<int, 3> lb, ub, s0;
 	for (int dim = 0; dim < NDIM; dim++) {
 		if (xloc[dim][dir] == 0) {
 			lb[dim] = geo.H_BW;
@@ -198,6 +198,7 @@ void physics<NDIM>::enforce_outflow(hydro::state_type &U, const hydro::x_type &X
 		lb[dim] = 0;
 		ub[dim] = 1;
 	}
+	s0[2] = 0.0;
 	std::array < safe_real, NDIM > norm;
 	safe_real sum = 0.0;
 	for (int dim = 0; dim < NDIM; dim++) {
@@ -212,9 +213,15 @@ void physics<NDIM>::enforce_outflow(hydro::state_type &U, const hydro::x_type &X
 		for (int k = lb[1]; k < ub[1]; k++) {
 			for (int l = lb[2]; l < ub[2]; l++) {
 				const int i = geo.to_index(j, k, l);
+				if constexpr (NDIM == 1) {
+					s0[0] = s0[1] = 0.0;
+				} else {
+					s0[0] = -X[1][i] * omega * U[rho_i][i];
+					s0[1] = +X[0][i] * omega * U[rho_i][i];
+				}
 				safe_real sdotn = 0.0;
 				for (int dim = 0; dim < NDIM; dim++) {
-					sdotn += U[sx_i + dim][i] * norm[dim];
+					sdotn += (U[sx_i + dim][i] - s0[dim]) * norm[dim];
 				}
 				sdotn = std::min(sdotn, 0.0);
 				for (int dim = 0; dim < NDIM; dim++) {
