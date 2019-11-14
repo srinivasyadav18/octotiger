@@ -90,6 +90,7 @@ struct hydro_computer: public cell_geometry<NDIM, INX> {
 		bc_ = std::move(bc);
 	}
 
+
 private:
 
 	int nf_;

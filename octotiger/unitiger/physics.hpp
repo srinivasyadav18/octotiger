@@ -91,6 +91,9 @@ struct physics {
 		return sx_i;
 	}
 
+	template<int INX>
+	static void enforce_outflow(hydro::state_type& U, const hydro::x_type& X, safe_real omega, int dir);
+
 private:
 	static int nf_;
 	static int n_species_;

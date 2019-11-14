@@ -5,6 +5,7 @@
 
 #pragma once
 
+
 template<int NDIM, int INX, class PHYS>
 void hydro_computer<NDIM, INX, PHYS>::boundaries(hydro::state_type &U, const hydro::x_type &X) {
 

@@ -177,6 +177,56 @@ const hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, co
 
 template<int NDIM>
 template<int INX>
+void physics<NDIM>::enforce_outflow(hydro::state_type &U, const hydro::x_type &X, safe_real omega, int dir) {
+	static const cell_geometry<NDIM, INX> geo;
+	const auto xloc = geo.xloc()[dir];
+
+	std::array<int, 3> lb, ub;
+	for (int dim = 0; dim < NDIM; dim++) {
+		if (xloc[dim][dir] == 0) {
+			lb[dim] = geo.H_BW;
+			ub[dim] = geo.H_NX - geo.H_BW;
+		} else if (xloc[dim][dir] == -1) {
+			lb[dim] = 0;
+			ub[dim] = geo.H_BW;
+		} else {
+			lb[dim] = geo.H_NX - geo.H_BW;
+			ub[dim] = geo.H_NX;
+		}
+	}
+	for (int dim = NDIM; dim < 3; dim++) {
+		lb[dim] = 0;
+		ub[dim] = 1;
+	}
+	std::array < safe_real, NDIM > norm;
+	safe_real sum = 0.0;
+	for (int dim = 0; dim < NDIM; dim++) {
+		norm[dim] = xloc[dim][dir];
+		sum += 1;
+	}
+	sum = std::sqrt(sum);
+	for (int dim = 0; dim < NDIM; dim++) {
+		norm[dim] /= sum;
+	}
+	for (int j = lb[0]; j < ub[0]; j++) {
+		for (int k = lb[1]; k < ub[1]; k++) {
+			for (int l = lb[2]; l < ub[2]; l++) {
+				const int i = geo.to_index(j, k, l);
+				safe_real sdotn = 0.0;
+				for (int dim = 0; dim < NDIM; dim++) {
+					sdotn += U[sx_i + dim][i] * norm[dim];
+				}
+				sdotn = std::min(sdotn, 0.0);
+				for (int dim = 0; dim < NDIM; dim++) {
+					U[sx_i + dim][i] -= sdotn * norm[dim];
+				}
+			}
+		}
+	}
+}
+
+template<int NDIM>
+template<int INX>
 const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(const hydro::state_type &U) {
 	PROFILE();
 	static const cell_geometry<NDIM, INX> geo;
@@ -438,7 +488,7 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 			U[spc_i][i] += rho;
 			break;
 		case SOD:
-			if (xsum < -xhalf/2.0) {
+			if (xsum < -xhalf / 2.0) {
 				rho = 1.0;
 				p = 1.0;
 			} else {
