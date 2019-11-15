@@ -66,8 +66,7 @@ struct physics {
 	static const hydro::state_type& pre_recon(const hydro::state_type &U, const hydro::x_type X, safe_real omega, bool angmom);
 	/*** Reconstruct uses this - GPUize****/
 	template<int INX>
-	static void post_recon( std::vector<std::vector<std::vector<safe_real>>> &Q, const hydro::x_type X,
-			safe_real omega, bool angmom);
+	static void post_recon(std::vector<std::vector<std::vector<safe_real>>> &Q, const hydro::x_type X, safe_real omega, bool angmom);
 	template<int INX>
 	using comp_type = hydro_computer<NDIM, INX, physics<NDIM>>;
 
@@ -78,7 +77,7 @@ struct physics {
 	static void analytic_solution(test_type test, hydro::state_type &U, const hydro::x_type &X, safe_real time);
 
 	template<int INX>
-	static const std::vector<std::vector<double>>& find_contact_discs( const hydro::state_type &U);
+	static const std::vector<std::vector<double>>& find_contact_discs(const hydro::state_type &U);
 
 	static void set_n_species(int n);
 
@@ -91,12 +90,90 @@ struct physics {
 		return sx_i;
 	}
 
+	inline safe_real x_deg(safe_real rho) {
+		return std::pow(rho / B_, 1.0 / 3.0);
+	}
+
+	inline safe_real H_deg(safe_real x) {
+		return 8.0 * A_ / B_ * std::sqrt(x * x + 1.0);
+	}
+
+	inline safe_real P_deg(safe_real h, safe_real x) {
+		if (x < 0.01) {
+			return 1.6 * A_ * std::pow(x, 5);
+		} else {
+			return B_ * h / 8.0 * x * (2 * x * x - 3) + 3 * A_ * asinh(x);
+		}
+	}
+
+	inline safe_real E_deg(safe_real h, safe_real p, safe_real x) {
+		if (x < 0.01) {
+			return 2.4 * A_ * std::pow(x, 5);
+		} else {
+			return B_ * std::pow(x, 3) * h - p;
+		}
+
+	}
+
+	inline safe_real dP_deg_drho(safe_real h, safe_real x) {
+		return (64.0 / 3.0) * std::pow(A_ / B_, 2) * x * x / h;
+	}
+
+	inline safe_real thermal_energy(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+		const auto x = x_deg(rho);
+		const auto h_deg = H_deg(x);
+		const auto p_deg = P_deg(h_deg, x);
+		const auto e_deg = E_deg(h_deg, p_deg, x);
+		auto etherm = egas - e_deg - ek;
+		if (etherm < de_switch_1 * egas) {
+			return std::pow(tau, fgamma_);
+		} else {
+			return etherm;
+		}
+	}
+
+	inline safe_real pressure(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+		const auto x = x_deg(rho);
+		const auto h_deg = H_deg(x);
+		const auto p_deg = P_deg(h_deg, x);
+		const auto e_deg = E_deg(h_deg, p_deg, x);
+		auto etherm = egas - e_deg - ek;
+		if (etherm < de_switch_1 * egas) {
+			etherm = std::pow(tau, fgamma_);
+		}
+		return p_deg + (fgamma_ - 1.0) * etherm;
+	}
+
+	inline std::pair<safe_real, safe_real> pressure_and_sound_speed(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+		const auto x = x_deg(rho);
+		const auto h_deg = H_deg(x);
+		const auto p_deg = P_deg(h_deg, x);
+		const auto e_deg = E_deg(h_deg, p_deg, x);
+		auto etherm = egas - e_deg - ek;
+		if (etherm < de_switch_1 * egas) {
+			etherm = std::pow(tau, fgamma_);
+		}
+		const auto p = p_deg + (fgamma_ - 1.0) * etherm;
+		const auto dp_deps = (fgamma_ - 1.0) * rho;
+		const auto dp_drho = dPdeg_drho(h_deg, x) + (fgamma_ - 1.0) * etherm / rho;
+		auto c = dp_deps * p / (rho * rho) + dp_drho;
+		return std::make_pair(p, std::sqrt(std::max(0.0, c)));
+	}
+
 private:
+	static safe_real A_;
+	static safe_real B_;
 	static int nf_;
 	static int n_species_;
 	static safe_real fgamma_;
 
 };
+
+template<int NDIM>
+safe_real physics<NDIM>::A_ = 0.0;
+
+template<int NDIM>
+safe_real physics<NDIM>::B_ = 1.0;
 
 template<int NDIM>
 safe_real physics<NDIM>::de_switch_1 = 1e-3;
