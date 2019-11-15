@@ -93,9 +93,9 @@ struct physics {
 
 	static safe_real ideal_pre_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek);
 
-	static void set_eos(const hydro::eos_type& pre, const hydro::eos_type& etherm_eos) {
+	static void set_eos(const hydro::eos_type& pre, const hydro::eos_type& etherm) {
 		pressure_eos = pre;
-		etherm_eos = etherm_eos;
+		etherm_eos = etherm;
 	}
 
 private:
