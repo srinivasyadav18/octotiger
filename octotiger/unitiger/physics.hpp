@@ -115,8 +115,8 @@ struct physics {
 
 	}
 
-	inline static safe_real dP_deg_drho(safe_real h, safe_real x) {
-		return (64.0 / 3.0) * std::pow(A_ / B_, 2) * x * x / h;
+	inline static safe_real dP_deg_drho(safe_real x) {
+		return 8.0 * A_ * std::pow(x, 2) / (3.0 * B_ * std::sqrt(x * x + 1));
 	}
 
 	inline static safe_real thermal_energy(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
@@ -155,7 +155,7 @@ struct physics {
 		}
 		const auto p = p_deg + (fgamma_ - 1.0) * etherm;
 		const auto dp_deps = (fgamma_ - 1.0) * rho;
-		const auto dp_drho = dP_deg_drho(h_deg, x) + (fgamma_ - 1.0) * etherm / rho;
+		const auto dp_drho = dP_deg_drho(x) + (fgamma_ - 1.0) * etherm / rho;
 		auto c = dp_deps * p / (rho * rho) + dp_drho;
 		return std::make_pair(p, std::sqrt(std::max(0.0, c)));
 	}
