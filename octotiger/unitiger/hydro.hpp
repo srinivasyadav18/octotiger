@@ -19,6 +19,7 @@ using std::async;
 using std::launch;
 #endif
 
+#include <functional>
 #include "octotiger/unitiger/cell_geometry.hpp"
 #include "octotiger/unitiger/util.hpp"
 
@@ -32,6 +33,8 @@ template<int NDIM>
 using recon_type =std::vector<std::vector<std::vector<safe_real>>>;
 
 using state_type = std::vector<std::vector<safe_real>>;
+
+using eos_type = std::function<safe_real(safe_real, safe_real, safe_real, safe_real)>;
 }
 
 template<int NDIM, int INX, class PHYSICS>

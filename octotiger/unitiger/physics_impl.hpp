@@ -18,6 +18,20 @@
 #include "octotiger/profiler.hpp"
 
 template<int NDIM>
+safe_real physics<NDIM>::ideal_ein_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+	safe_real ein = egas - ek;
+	if (ein < de_switch_1 * egas) {
+		ein = std::pow(tau, fgamma_);
+	}
+	return ein;
+}
+
+template<int NDIM>
+safe_real physics<NDIM>::ideal_pre_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+	return (fgamma_ - 1.0) * ideal_ein_eos(rho, egas, tau, ek);
+}
+
+template<int NDIM>
 int physics<NDIM>::field_count() {
 	return nf_;
 }
@@ -35,13 +49,8 @@ void physics<NDIM>::to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v
 	for (int dim = 0; dim < NDIM; dim++) {
 		ek += pow(u[sx_i + dim], 2) * rhoinv * safe_real(0.5);
 	}
-	auto ein = u[egas_i] - ek;
-	if (ein < de_switch_1 * u[egas_i]) {
-		ein = pow(u[tau_i], fgamma_);
-	}
-
 	v = u[sx_i + dim] * rhoinv;
-	p = (fgamma_ - 1.0) * ein;
+	p = pressure_eos(rho, u[egas_i], u[tau_i], ek);
 }
 
 template<int NDIM>
@@ -86,7 +95,7 @@ void physics<NDIM>::post_process(hydro::state_type &U, safe_real dx) {
 		for (int d = 0; d < geo.NDIR; d++) {
 			egas_max = std::max(egas_max, U[egas_i][i + dir[d]]);
 		}
-		safe_real ein = U[egas_i][i] - ek;
+		safe_real ein = energy_eos(U[rho_i][i], U[egas_i][i], U[tau_i][i], ek);
 		if (ein > de_switch_2 * egas_max) {
 			U[tau_i][i] = POWER(ein, 1.0 / fgamma_);
 		}
@@ -182,6 +191,21 @@ const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(con
 	static const cell_geometry<NDIM, INX> geo;
 	auto dir = geo.direction();
 	static thread_local std::vector<std::vector<double>> disc(geo.NDIR / 2, std::vector<double>(geo.H_N3));
+	static thread_local std::vector<double> pre(geo.H_N3);
+	for (int j = 0; j < geo.H_NX_XM2; j++) {
+		for (int k = 0; k < geo.H_NX_YM2; k++) {
+#pragma ivdep
+			for (int l = 0; l < geo.H_NX_ZM2; l++) {
+				const int i = geo.to_index(j + 1, k + 1, l + 1);
+				auto ek = 0.0;
+				const auto rhoinv = 1.0 / U[rho_i][i];
+				for (int dim = 0; dim < NDIM; dim++) {
+					ek += std::pow(U[sx_i + dim][i], 2) * rhoinv * 0.5;
+				}
+				pre[i] = pressure_eos(U[rho_i][i], U[egas_i][i], U[tau_i][i], ek);
+			}
+		}
+	}
 	for (int d = 0; d < geo.NDIR / 2; d++) {
 		const auto di = dir[d];
 		for (int j = 0; j < geo.H_NX_XM4; j++) {
@@ -190,8 +214,8 @@ const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(con
 				for (int l = 0; l < geo.H_NX_ZM4; l++) {
 					constexpr auto K0 = 0.1;
 					const int i = geo.to_index(j + 2, k + 2, l + 2);
-					const auto P_r = (fgamma_ - 1.0) * U[egas_i][i + di];
-					const auto P_l = (fgamma_ - 1.0) * U[egas_i][i - di];
+					const auto P_r = pre[i + di];
+					const auto P_l = pre[i - di];
 					const auto tmp1 = fgamma_ * K0;
 					const auto tmp2 = std::abs(P_r - P_l) / std::min(std::abs(P_r), std::abs(P_l));
 					disc[d][i] = tmp2 / tmp1;
@@ -438,7 +462,7 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 			U[spc_i][i] += rho;
 			break;
 		case SOD:
-			if (xsum < -xhalf/2.0) {
+			if (xsum < -xhalf / 2.0) {
 				rho = 1.0;
 				p = 1.0;
 			} else {

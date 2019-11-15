@@ -5,7 +5,6 @@
 
 #ifndef OCTOTIGER_UNITIGER_PHYSICS_HPP_
 #define OCTOTIGER_UNITIGER_PHYSICS_HPP_
-
 #include "octotiger/unitiger/safe_real.hpp"
 #include "octotiger/test_problems/blast.hpp"
 #include "octotiger/test_problems/exact_sod.hpp"
@@ -66,8 +65,7 @@ struct physics {
 	static const hydro::state_type& pre_recon(const hydro::state_type &U, const hydro::x_type X, safe_real omega, bool angmom);
 	/*** Reconstruct uses this - GPUize****/
 	template<int INX>
-	static void post_recon( std::vector<std::vector<std::vector<safe_real>>> &Q, const hydro::x_type X,
-			safe_real omega, bool angmom);
+	static void post_recon(std::vector<std::vector<std::vector<safe_real>>> &Q, const hydro::x_type X, safe_real omega, bool angmom);
 	template<int INX>
 	using comp_type = hydro_computer<NDIM, INX, physics<NDIM>>;
 
@@ -78,7 +76,7 @@ struct physics {
 	static void analytic_solution(test_type test, hydro::state_type &U, const hydro::x_type &X, safe_real time);
 
 	template<int INX>
-	static const std::vector<std::vector<double>>& find_contact_discs( const hydro::state_type &U);
+	static const std::vector<std::vector<double>>& find_contact_discs(const hydro::state_type &U);
 
 	static void set_n_species(int n);
 
@@ -91,12 +89,24 @@ struct physics {
 		return sx_i;
 	}
 
+	static safe_real ideal_ein_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek);
+
+	static safe_real ideal_pre_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek);
 private:
 	static int nf_;
 	static int n_species_;
 	static safe_real fgamma_;
-
+	static std::function<safe_real(safe_real, safe_real, safe_real, safe_real)> pressure_eos;
+	static std::function<safe_real(safe_real, safe_real, safe_real, safe_real)> energy_eos;
 };
+
+
+
+template<int NDIM>
+hydro::eos_type  physics<NDIM>::pressure_eos = physics<NDIM>::ideal_pre_eos;
+
+template<int NDIM>
+hydro::eos_type  physics<NDIM>::energy_eos = physics<NDIM>::ideal_ein_eos;
 
 template<int NDIM>
 safe_real physics<NDIM>::de_switch_1 = 1e-3;
