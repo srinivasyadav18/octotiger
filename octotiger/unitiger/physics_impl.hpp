@@ -31,7 +31,7 @@ void physics<NDIM>::set_fgamma(safe_real fg) {
 }
 
 template<int NDIM>
-void physics<NDIM>::to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v, int dim) {
+void physics<NDIM>::to_prim(std::vector<safe_real> u, safe_real &p,  safe_real &c, safe_real &v, int dim) {
 	const auto rho = u[rho_i];
 	const auto rhoinv = safe_real(1.) / rho;
 	safe_real ek = 0.0;
@@ -44,7 +44,9 @@ void physics<NDIM>::to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v
 	}
 
 	v = u[sx_i + dim] * rhoinv;
-	p = (fgamma_ - 1.0) * ein;
+	const auto tmp = pressure_and_sound_speed(u[rho_i], u[egas_i], u[tau_i], ek);
+	p = tmp.first;
+	c = tmp.second;
 }
 
 template<int NDIM>
@@ -53,9 +55,8 @@ void physics<NDIM>::physical_flux(const std::vector<safe_real> &U, std::vector<s
 	static const cell_geometry<NDIM, INX> geo;
 	static constexpr auto levi_civita = geo.levi_civita();
 	safe_real p, v, v0, c;
-	to_prim(U, p, v0, dim);
+	to_prim(U, p, v0, c, dim);
 	v = v0 - vg[dim];
-	c = std::sqrt(fgamma_ * p / U[rho_i]);
 	am = v - c;
 	ap = v + c;
 #pragma ivdep
@@ -89,7 +90,7 @@ void physics<NDIM>::post_process(hydro::state_type &U, safe_real dx) {
 		for (int d = 0; d < geo.NDIR; d++) {
 			egas_max = std::max(egas_max, U[egas_i][i + dir[d]]);
 		}
-		safe_real ein = U[egas_i][i] - ek;
+		safe_real ein = thermal_energy( U[rho_i][i], U[egas_i][i], U[tau_i][i], ek);
 		if (ein > de_switch_2 * egas_max) {
 			U[tau_i][i] = POWER(ein, 1.0 / fgamma_);
 		}
@@ -184,17 +185,32 @@ const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(con
 	PROFILE();
 	static const cell_geometry<NDIM, INX> geo;
 	auto dir = geo.direction();
-	static thread_local std::vector<std::vector<double>> disc(geo.NDIR / 2, std::vector<double>(geo.H_N3));
+	static thread_local std::vector<std::vector<safe_real>> disc(geo.NDIR / 2, std::vector<double>(geo.H_N3));
+	static thread_local std::vector<safe_real> P(geo.H_N3);
 	for (int d = 0; d < geo.NDIR / 2; d++) {
 		const auto di = dir[d];
+		for (int j = 0; j < geo.H_NX_XM2; j++) {
+			for (int k = 0; k < geo.H_NX_YM2; k++) {
+#pragma ivdep
+				for (int l = 0; l < geo.H_NX_ZM2; l++) {
+					constexpr auto K0 = 0.1;
+					const int i = geo.to_index(j + 1, k + 1, l + 1);
+					safe_real ek = 0.0;
+					for( int dim = 0; dim < NDIM; dim++) {
+						ek += std::pow(U[sx_i+dim][i],2) / 2.0 / U[rho_i][i];
+					}
+					P[i] = pressure(U[rho_i][i], U[egas_i][i], U[tau_i][i], ek);
+				}
+			}
+		}
 		for (int j = 0; j < geo.H_NX_XM4; j++) {
 			for (int k = 0; k < geo.H_NX_YM4; k++) {
 #pragma ivdep
 				for (int l = 0; l < geo.H_NX_ZM4; l++) {
 					constexpr auto K0 = 0.1;
 					const int i = geo.to_index(j + 2, k + 2, l + 2);
-					const auto P_r = (fgamma_ - 1.0) * U[egas_i][i + di];
-					const auto P_l = (fgamma_ - 1.0) * U[egas_i][i - di];
+					const auto P_r = P[i + di];
+					const auto P_l = P[i - di];
 					const auto tmp1 = fgamma_ * K0;
 					const auto tmp2 = std::abs(P_r - P_l) / std::min(std::abs(P_r), std::abs(P_l));
 					disc[d][i] = tmp2 / tmp1;

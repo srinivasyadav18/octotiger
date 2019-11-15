@@ -50,7 +50,7 @@ struct physics {
 
 	static void set_fgamma(safe_real fg);
 
-	static void to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v, int dim);
+	static void to_prim(std::vector<safe_real> u, safe_real &p, safe_real& c, safe_real &v, int dim);
 
 	static void physical_flux(const std::vector<safe_real> &U, std::vector<safe_real> &F, int dim, safe_real &am, safe_real &ap, std::array<safe_real, NDIM> &x,
 			std::array<safe_real, NDIM> &vg);
@@ -90,15 +90,15 @@ struct physics {
 		return sx_i;
 	}
 
-	inline safe_real x_deg(safe_real rho) {
+	inline static safe_real x_deg(safe_real rho) {
 		return std::pow(rho / B_, 1.0 / 3.0);
 	}
 
-	inline safe_real H_deg(safe_real x) {
+	inline static safe_real H_deg(safe_real x) {
 		return 8.0 * A_ / B_ * std::sqrt(x * x + 1.0);
 	}
 
-	inline safe_real P_deg(safe_real h, safe_real x) {
+	inline static safe_real P_deg(safe_real h, safe_real x) {
 		if (x < 0.01) {
 			return 1.6 * A_ * std::pow(x, 5);
 		} else {
@@ -106,7 +106,7 @@ struct physics {
 		}
 	}
 
-	inline safe_real E_deg(safe_real h, safe_real p, safe_real x) {
+	inline static safe_real E_deg(safe_real h, safe_real p, safe_real x) {
 		if (x < 0.01) {
 			return 2.4 * A_ * std::pow(x, 5);
 		} else {
@@ -115,11 +115,11 @@ struct physics {
 
 	}
 
-	inline safe_real dP_deg_drho(safe_real h, safe_real x) {
+	inline static safe_real dP_deg_drho(safe_real h, safe_real x) {
 		return (64.0 / 3.0) * std::pow(A_ / B_, 2) * x * x / h;
 	}
 
-	inline safe_real thermal_energy(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+	inline static safe_real thermal_energy(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
 		const auto x = x_deg(rho);
 		const auto h_deg = H_deg(x);
 		const auto p_deg = P_deg(h_deg, x);
@@ -132,7 +132,7 @@ struct physics {
 		}
 	}
 
-	inline safe_real pressure(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+	inline static safe_real pressure(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
 		const auto x = x_deg(rho);
 		const auto h_deg = H_deg(x);
 		const auto p_deg = P_deg(h_deg, x);
@@ -144,7 +144,7 @@ struct physics {
 		return p_deg + (fgamma_ - 1.0) * etherm;
 	}
 
-	inline std::pair<safe_real, safe_real> pressure_and_sound_speed(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+	inline static std::pair<safe_real, safe_real> pressure_and_sound_speed(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
 		const auto x = x_deg(rho);
 		const auto h_deg = H_deg(x);
 		const auto p_deg = P_deg(h_deg, x);
@@ -155,7 +155,7 @@ struct physics {
 		}
 		const auto p = p_deg + (fgamma_ - 1.0) * etherm;
 		const auto dp_deps = (fgamma_ - 1.0) * rho;
-		const auto dp_drho = dPdeg_drho(h_deg, x) + (fgamma_ - 1.0) * etherm / rho;
+		const auto dp_drho = dP_deg_drho(h_deg, x) + (fgamma_ - 1.0) * etherm / rho;
 		auto c = dp_deps * p / (rho * rho) + dp_drho;
 		return std::make_pair(p, std::sqrt(std::max(0.0, c)));
 	}
