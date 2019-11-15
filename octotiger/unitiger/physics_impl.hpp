@@ -18,7 +18,7 @@
 #include "octotiger/profiler.hpp"
 
 template<int NDIM>
-safe_real physics<NDIM>::ideal_ein_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+safe_real physics<NDIM>::ideal_etherm_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
 	safe_real ein = egas - ek;
 	if (ein < de_switch_1 * egas) {
 		ein = std::pow(tau, fgamma_);
@@ -28,7 +28,7 @@ safe_real physics<NDIM>::ideal_ein_eos(safe_real rho, safe_real egas, safe_real 
 
 template<int NDIM>
 safe_real physics<NDIM>::ideal_pre_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
-	return (fgamma_ - 1.0) * ideal_ein_eos(rho, egas, tau, ek);
+	return (fgamma_ - 1.0) * ideal_etherm_eos(rho, egas, tau, ek);
 }
 
 template<int NDIM>
@@ -95,7 +95,7 @@ void physics<NDIM>::post_process(hydro::state_type &U, safe_real dx) {
 		for (int d = 0; d < geo.NDIR; d++) {
 			egas_max = std::max(egas_max, U[egas_i][i + dir[d]]);
 		}
-		safe_real ein = energy_eos(U[rho_i][i], U[egas_i][i], U[tau_i][i], ek);
+		safe_real ein = etherm_eos(U[rho_i][i], U[egas_i][i], U[tau_i][i], ek);
 		if (ein > de_switch_2 * egas_max) {
 			U[tau_i][i] = POWER(ein, 1.0 / fgamma_);
 		}

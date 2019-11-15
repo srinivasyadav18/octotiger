@@ -89,15 +89,21 @@ struct physics {
 		return sx_i;
 	}
 
-	static safe_real ideal_ein_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek);
+	static safe_real ideal_etherm_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek);
 
 	static safe_real ideal_pre_eos(safe_real rho, safe_real egas, safe_real tau, safe_real ek);
+
+	static void set_eos(const hydro::eos_type& pre, const hydro::eos_type& etherm_eos) {
+		pressure_eos = pre;
+		etherm_eos = etherm_eos;
+	}
+
 private:
 	static int nf_;
 	static int n_species_;
 	static safe_real fgamma_;
 	static std::function<safe_real(safe_real, safe_real, safe_real, safe_real)> pressure_eos;
-	static std::function<safe_real(safe_real, safe_real, safe_real, safe_real)> energy_eos;
+	static std::function<safe_real(safe_real, safe_real, safe_real, safe_real)> etherm_eos;
 };
 
 
@@ -106,7 +112,7 @@ template<int NDIM>
 hydro::eos_type  physics<NDIM>::pressure_eos = physics<NDIM>::ideal_pre_eos;
 
 template<int NDIM>
-hydro::eos_type  physics<NDIM>::energy_eos = physics<NDIM>::ideal_ein_eos;
+hydro::eos_type  physics<NDIM>::etherm_eos = physics<NDIM>::ideal_etherm_eos;
 
 template<int NDIM>
 safe_real physics<NDIM>::de_switch_1 = 1e-3;

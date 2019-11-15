@@ -1696,6 +1696,34 @@ real grid::compute_fluxes() {
 		}
 	}
 	hydro.use_smooth_recon(pot_i);
+
+	if (opts().eos == WD) {
+		const auto A = physcon().A;
+		const auto B = physcon().B;
+		const auto des = opts().dual_energy_sw1;
+		const auto gamma = fgamma;
+		const auto wd_therm_eos = [A, B, des, gamma](safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+			safe_real edeg = ztwd_energy(rho, A, B);
+			safe_real ein = egas - ek - edeg;
+			if (ein < des * egas) {
+				ein = std::pow(tau, gamma);
+			}
+			return ein;
+		};
+		const auto wd_pre_eos = [A, B, des, gamma](safe_real rho, safe_real egas, safe_real tau, safe_real ek) {
+			safe_real edeg = ztwd_energy(rho, A, B);
+			safe_real ein = egas - ek - edeg;
+			if (ein < des * egas) {
+				ein = std::pow(tau, gamma);
+			}
+			const auto ptherm = (gamma - 1.0) * ein;
+			const auto pdeg = ztwd_pressure(rho, A, B);
+			return ptherm + pdeg;
+		};
+		physics<NDIM>::set_eos(wd_pre_eos, wd_therm_eos);
+
+	}
+
 	static thread_local auto f = std::vector<std::vector<std::vector<safe_real>>>(NDIM,
 			std::vector<std::vector<safe_real>>(opts().n_fields, std::vector<safe_real>(H_N3)));
 	const auto &q = hydro.reconstruct(U, X, omega);
@@ -2140,39 +2168,19 @@ void grid::dual_energy_update() {
 	PROFILE();
 
 //	bool in_bnd;
+
+	hydro.post_process(U, dx);
+
 	for (integer i = H_BW; i != H_NX - H_BW; ++i) {
 		for (integer j = H_BW; j != H_NX - H_BW; ++j) {
 #pragma GCC ivdep
 			for (integer k = H_BW; k != H_NX - H_BW; ++k) {
 				const integer iii = hindex(i, j, k);
-				real ek = ZERO;
-				ek += HALF * pow(U[sx_i][iii], 2) / U[rho_i][iii];
-				ek += HALF * pow(U[sy_i][iii], 2) / U[rho_i][iii];
-				ek += HALF * pow(U[sz_i][iii], 2) / U[rho_i][iii];
-				real ei;
-				if (opts().eos == WD) {
-					ei = U[egas_i][iii] - ek - ztwd_energy(U[rho_i][iii]);
-				} else {
-					ei = U[egas_i][iii] - ek;
-				}
-				real et = U[egas_i][iii];
-				for (integer x = -1; x <= 1; x++) {
-					for (integer y = -1; y <= 1; y++) {
-						for (integer z = -1; z <= 1; z++) {
-							et = std::max(et, (double) U[egas_i][iii + x * H_DNX + y * H_DNY + z * H_DNZ]);
-						}
-					}
-				}
-				if (ei > de_switch1 * et) {
-					U[tau_i][iii] = std::pow(ei, ONE / fgamma);
-				}
-
 				double rho_tot = 0.0;
 				for (int s = 0; s < opts().n_species; s++) {
 					rho_tot += U[spc_i + s][iii];
 				}
 				U[rho_i][iii] = rho_tot;
-
 			}
 		}
 	}
