@@ -6,7 +6,6 @@
 #include "octotiger/radiation/rad_grid.hpp"
 #include "octotiger/test_problems/exact_sod.hpp"
 
-#include <fenv.h>
 
 #include "octotiger/diagnostics.hpp"
 #include "octotiger/future.hpp"
@@ -353,9 +352,6 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 		return rc;
 	}
 
-	fedisableexcept(FE_DIVBYZERO);
-	fedisableexcept(FE_INVALID);
-	fedisableexcept(FE_OVERFLOW);
 
 	const auto is_loc = [this, diags](integer j, integer k, integer l) {
 		const integer iii = hindex(j, k, l);
@@ -612,9 +608,6 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 		rc.grid_out[f] += U_out[f];
 	}
 	rc.grid_out[egas_i] += U_out[pot_i];
-	feenableexcept(FE_DIVBYZERO);
-	feenableexcept(FE_INVALID);
-	feenableexcept(FE_OVERFLOW);
 
 	return rc;
 }

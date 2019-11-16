@@ -97,6 +97,7 @@ bool options::process_options(int argc, char *argv[]) {
 	("dual_energy_sw2", po::value<real>(&(opts().dual_energy_sw2))->default_value(0.1), "dual energy switch 2") //
 	("hard_dt", po::value<real>(&(opts().hard_dt))->default_value(-1), "timestep size") //
 	("unigrid", po::value<bool>(&(opts().unigrid))->default_value(false), "unigrid") //
+	("fpe_enable", po::value<bool>(&(opts().fpe_enable))->default_value(true), "Enable floating point exceptions") //
 	("cdisc_detect", po::value<bool>(&(opts().cdisc_detect))->default_value(true), "PPM contact discontinuity detection") //
 	("disable_output", po::value<bool>(&(opts().disable_output))->default_value(false), "disable silo output") //
 	("disable_diagnostics", po::value<bool>(&(opts().disable_diagnostics))->default_value(false), "disable diagnostics") //
@@ -215,6 +216,7 @@ bool options::process_options(int argc, char *argv[]) {
 		SHOW(eos);
 		SHOW(entropy_driving_rate);
 		SHOW(entropy_driving_time);
+		SHOW(fpe_enable);
 		SHOW(future_wait_time);
 		SHOW(hard_dt);
 		SHOW(hydro);
