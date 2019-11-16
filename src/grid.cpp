@@ -21,6 +21,8 @@
 #include "octotiger/test_problems/amr/amr.hpp"
 #include "octotiger/unitiger/hydro_impl/reconstruct.hpp"
 #include "octotiger/unitiger/hydro_impl/flux.hpp"
+#include "octotiger/util.hpp"
+
 
 #include <hpx/include/runtime.hpp>
 #include <hpx/collectives/broadcast.hpp>
@@ -298,6 +300,7 @@ std::vector<silo_var_t> grid::var_data() const {
 constexpr integer nspec = 2;
 diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 	PROFILE();
+	disable_exceptions disable();
 	diagnostics_t rc;
 	if (opts().disable_diagnostics) {
 		return rc;
@@ -352,10 +355,6 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 		rc.grid_out[egas_i] += U_out[pot_i];
 		return rc;
 	}
-
-	fedisableexcept(FE_DIVBYZERO);
-	fedisableexcept(FE_INVALID);
-	fedisableexcept(FE_OVERFLOW);
 
 	const auto is_loc = [this, diags](integer j, integer k, integer l) {
 		const integer iii = hindex(j, k, l);
@@ -612,9 +611,6 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 		rc.grid_out[f] += U_out[f];
 	}
 	rc.grid_out[egas_i] += U_out[pot_i];
-	feenableexcept(FE_DIVBYZERO);
-	feenableexcept(FE_INVALID);
-	feenableexcept(FE_OVERFLOW);
 
 	return rc;
 }

@@ -12,7 +12,27 @@
 
 #include <cstdio>
 #include <functional>
+#include <fenv.h>
 
+
+struct disable_exceptions {
+	disable_exceptions() {
+		disable();
+	}
+	~disable_exceptions() {
+		enable();
+	}
+	void disable() {
+		fedisableexcept(FE_DIVBYZERO);
+		fedisableexcept(FE_INVALID);
+		fedisableexcept(FE_OVERFLOW);
+	}
+	void enable() {
+		fedisableexcept(FE_DIVBYZERO);
+		fedisableexcept(FE_INVALID);
+		fedisableexcept(FE_OVERFLOW);
+	}
+};
 
 
 /*OCTOTIGER_FORCEINLINE real minmod(real a, real b) {

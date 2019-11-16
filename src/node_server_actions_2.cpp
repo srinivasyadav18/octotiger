@@ -14,6 +14,7 @@
 #include "octotiger/options.hpp"
 #include "octotiger/profiler.hpp"
 #include "octotiger/taylor.hpp"
+#include "octotiger/util.hpp"
 
 #include <hpx/include/lcos.hpp>
 #include <hpx/include/run_as.hpp>
@@ -175,10 +176,7 @@ analytic_t node_server::compare_analytic() {
 }
 
 const diagnostics_t& diagnostics_t::compute() {
-	fedisableexcept(FE_DIVBYZERO);
-	fedisableexcept(FE_INVALID);
-	fedisableexcept(FE_OVERFLOW);
-
+	disable_exceptions disable();
 	if (virial_norm != 0.0) {
 		virial /= virial_norm;
 	}
@@ -216,10 +214,6 @@ const diagnostics_t& diagnostics_t::compute() {
 		tidal[s] *= m[1 - s];
 	}
 	z_mom_orb = mu * sep2;
-
-	feenableexcept(FE_DIVBYZERO);
-	feenableexcept(FE_INVALID);
-	feenableexcept(FE_OVERFLOW);
 
 	return *this;
 }
@@ -300,6 +294,7 @@ diagnostics_t node_server::diagnostics(const diagnostics_t& diags) {
 }
 
 diagnostics_t node_server::child_diagnostics(const diagnostics_t& diags) {
+	disable_exceptions disable();
 	diagnostics_t sums;
 	std::array<future<diagnostics_t>, NCHILD> futs;
 	integer index = 0;
