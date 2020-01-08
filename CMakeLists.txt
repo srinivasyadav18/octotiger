@@ -11,6 +11,36 @@ cmake_policy(VERSION 3.10)
 # Libraries linked via full path no longer produce linker search paths.
 cmake_policy(SET CMP0003 NEW)
 
+## https://stackoverflow.com/questions/32183975/how-to-print-all-the-properties-of-a-target-in-cmake/56738858#56738858
+## https://stackoverflow.com/a/56738858/3743145
+
+## Get all properties that cmake supports
+execute_process(COMMAND cmake --help-property-list OUTPUT_VARIABLE CMAKE_PROPERTY_LIST)
+## Convert command output into a CMake list
+STRING(REGEX REPLACE ";" "\\\\;" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
+STRING(REGEX REPLACE "\n" ";" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
+
+list(REMOVE_DUPLICATES CMAKE_PROPERTY_LIST)
+
+function(print_target_properties tgt)
+    if(NOT TARGET ${tgt})
+      message("There is no target named '${tgt}'")
+      return()
+    endif()
+
+    foreach (prop ${CMAKE_PROPERTY_LIST})
+        if (NOT "${prop}" MATCHES "^LOCATION$|^LOCATION_|_LOCATION$")
+	string(REPLACE "<CONFIG>" "${CMAKE_BUILD_TYPE}" prop ${prop})
+        get_target_property(propval ${tgt} ${prop})
+        if (propval)
+            get_target_property(propval ${tgt} ${prop})
+            message ("${tgt} ${prop} = ${propval}")
+        endif()
+	endif()
+    endforeach(prop)
+endfunction(print_target_properties)
+
+
 project(octotiger CXX)
 
 # Search path for CMake modules to be loaded by include() and find_package()
@@ -53,11 +83,19 @@ if(OCTOTIGER_WITH_CUDA)
   string(APPEND CUDA_NVCC_FLAGS ";-Xptxas=-v,-fmad=true,--opt-level=4")
 endif()
 
-if(OCTOTIGER_WITH_KOKKOS)
+#if(OCTOTIGER_WITH_KOKKOS)
   # you may be required to create an empty directory in 
   # ${HPX_DIR}/include/hpx/external for now
   find_package(Kokkos REQUIRED)
-endif()
+#  include_directories(${Kokkos_INCLUDE_DIR})
+#  link_libraries(${Kokkos_LIBRARIES})
+#endif()
+#get_directory_properties(output INCLUDE_DIRECTORIES)
+#message(STATUS ${output})
+#get_directory_properties(output LINK_DIRECTORIES)
+message(STATUS "Library path ${CMAKE_LIBRARY_PATH}")
+message(STATUS "Kokkos path ${Kokkos_INCLUDE_DIR}")
+
 
 ################################################################################
 # Set up Octotiger target
@@ -303,10 +341,10 @@ else()
   if(${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
     target_compile_options(octolib PRIVATE
       -Wno-ignored-attributes -Wno-attributes -Wno-deprecated-declarations
-      -Wno-unused-result -ffast-math -Wno-write-strings)
+      -Wno-unused-result -ffast-math -Wno-write-strings -march=native)
     target_compile_options(unitiger PRIVATE
       -Wno-ignored-attributes -Wno-attributes -Wno-deprecated-declarations
-      -Wno-unused-result -ffast-math -Wno-write-strings)
+      -Wno-unused-result -ffast-math -Wno-write-strings -march=native)
   elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL Intel)
       #set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -ipo -Wunused-result ")
       #set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-Ofast -ipo")
@@ -401,7 +439,7 @@ if(OCTOTIGER_WITH_BLAST_TEST)
       message(FATAL_ERROR "GCC Quad-Precision Math Library is not available with MSVC")
     endif()
     target_compile_definitions(octolib PUBLIC OCTOTIGER_HAVE_QUADMATH)
-    target_link_libraries(octolib quadmath)
+    target_link_libraries(octolib PUBLIC quadmath)
 
   else()
       message(FATAL_ERROR "Octotiger with OCTOTIGER_WITH_BLAST_TEST=ON cannot "
@@ -433,14 +471,35 @@ if (OCTOTIGER_WITH_KOKKOS)
 #        -Wno-unused-result -ffast-math -O3)
 #    target_link_libraries(flux_kokkos Kokkos::kokkos)
 
-  add_hpx_executable(
-    flux_kokkos
-    DEPENDENCIES
-      Kokkos::kokkos hydrolib
-    SOURCES
-      test_problems/flux_kokkos.cpp
-    HEADERS
-      test_problems/flux_kokkos.hpp
-  )
-endif()
+#  add_hpx_executable(
+#    flux_kokkos
+#    DEPENDENCIES
+#      hydrolib kokkos
+#    SOURCES
+#      test_problems/flux_kokkos.cpp
+#    HEADERS
+#      test_problems/flux_kokkos.hpp
+#  )
 
+
+add_executable(flux_kokkos test_problems/flux_kokkos.cpp)
+target_include_directories(flux_kokkos PUBLIC ".") 
+target_include_directories(flux_kokkos PUBLIC "/scratch/snx3000/tpolling/minimal_kokkos/external_dependencies/kokkos-master-build/install/include")
+
+target_compile_options(flux_kokkos PRIVATE --expt-extended-lambda -fopenmp)
+
+#+string(REPLACE "/lib/cmake/HPX" "" HPX_ROOTPATH ${HPX_DIR})
+#target_include_directories(flux_kokkos PUBLIC "${HPX_ROOTPATH}/include") 
+#+string(REPLACE "/lib/cmake/Vc" "" Vc_ROOTPATH ${Vc_DIR})
+#target_include_directories(flux_kokkos PUBLIC "${Vc_ROOTPATH}/include") 
+#target_include_directories(flux_kokkos PUBLIC "${Silo_DIR}/include") 
+
+target_link_libraries(flux_kokkos hpx boost_system boost_program_options boost_thread boost_regex boost_chrono boost_date_time boost_filesystem boost_atomic hydrolib kokkos "-L/${CMAKE_CURRENT_BINARY_DIR}")
+
+target_link_directories(flux_kokkos PUBLIC "/scratch/snx3000/tpolling/minimal_kokkos/external_dependencies/kokkos-master-build/install/lib")
+
+
+print_target_properties(octolib)
+print_target_properties(flux_kokkos)
+
+endif()
