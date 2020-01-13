@@ -192,7 +192,7 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
                 auto UR = Kokkos::subview(Q, Kokkos::ALL, i, d);
                 auto UL = Kokkos::subview(Q, Kokkos::ALL, i - H_DN_device[dim], flip_dim_device<NDIM>(d, dim));
 
-                safe_real vg[NDIM];
+                Kokkos::Array<safe_real, NDIM> vg;
                 if CONSTEXPR(NDIM > 1) {
                     vg[0] = -omega * (X(1, i) + 0.5 * xloc[d][1] * dx);
                     vg[1] = +omega * (X(0, i) + 0.5 * xloc[d][0] * dx);
