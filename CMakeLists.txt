@@ -95,6 +95,12 @@ if(OCTOTIGER_WITH_CUDA)
   string(APPEND CUDA_NVCC_FLAGS ";-Xptxas=-v,-fmad=true,--opt-level=4")
 endif()
 
+if(OCTOTIGER_WITH_KOKKOS)
+  # you may be required to create an empty directory in 
+  # ${HPX_DIR}/include/hpx/external for now
+  find_package(Kokkos REQUIRED)
+endif()
+
 ################################################################################
 # Set up Octo-Tiger target
 ################################################################################
@@ -465,4 +471,8 @@ if(OCTOTIGER_WITH_TESTS)
   enable_testing()
 
   add_subdirectory(test_problems)
+endif()
+
+if (OCTOTIGER_WITH_KOKKOS)
+  #TODO set up kokkos based target
 endif()

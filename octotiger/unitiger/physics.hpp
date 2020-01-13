@@ -3,9 +3,11 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+
 #ifndef OCTOTIGER_UNITIGER_PHYSICS_HPP_
 #define OCTOTIGER_UNITIGER_PHYSICS_HPP_
 
+#include "octotiger/unitiger/util.hpp"
 #include "octotiger/unitiger/safe_real.hpp"
 #include "octotiger/test_problems/blast.hpp"
 #include "octotiger/test_problems/exact_sod.hpp"
@@ -25,7 +27,8 @@ struct physics {
 	static constexpr int lx_i = 4 + NDIM;
 	static constexpr int ly_i = 5 + NDIM;
 	static constexpr int lz_i = 6 + NDIM;
-	static constexpr int spc_i = 4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2));
+	// static constexpr int spc_i = 4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2));
+	static constexpr int spc_i = 4 + NDIM + (NDIM == 1 ? 0 : (NDIM == 2 ? 1 : (NDIM == 3 ? 3 : -1)));
 	static safe_real de_switch_1;
 	static safe_real de_switch_2;
 
@@ -116,7 +119,6 @@ private:
 	static safe_real B_;
 	static safe_real GM_;
 	static safe_real deg_pres(safe_real x);
-
 };
 
 template<int NDIM>
@@ -141,10 +143,12 @@ template<int NDIM>
 safe_real physics<NDIM>::de_switch_2 = 1e-1;
 
 template<int NDIM>
-int physics<NDIM>::nf_ = (4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2))) + physics<NDIM>::n_species_;
+int physics<NDIM>::n_species_ = 5;
 
 template<int NDIM>
-int physics<NDIM>::n_species_ = 5;
+// int physics<NDIM>::nf_ = (4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2))) + physics<NDIM>::n_species_;
+int physics<NDIM>::nf_ = (4 + NDIM + (NDIM == 1 ? 0 : (NDIM == 2 ? 1 : (NDIM == 3 ? 3 : -1)))) + n_species_;
+
 
 template<int NDIM>
 safe_real physics<NDIM>::fgamma_ = 7. / 5.;

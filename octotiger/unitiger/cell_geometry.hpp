@@ -44,11 +44,16 @@ struct cell_geometry {
 	static constexpr int H_DNX = NDIM == 3 ? cell_geometry::H_NX * cell_geometry::H_NX : (NDIM == 2 ? cell_geometry::H_NX : 1);
 	static constexpr int H_DNY = NDIM == 3 ? cell_geometry::H_NX : 1;
 	static constexpr int H_DNZ = 1;
-	static constexpr int H_N3 = std::pow(cell_geometry::H_NX, NDIM);
+	
+	// static constexpr int H_N3 = std::pow(cell_geometry::H_NX, NDIM);
+	static constexpr int H_N3 = PowerNDIM(cell_geometry::H_NX);
 	static constexpr int H_DN0 = 0;
-	static constexpr int NDIR = std::pow(3, NDIM);
-	static constexpr int NANGMOM = NDIM == 1 ? 0 : std::pow(3, NDIM - 2);
-	static constexpr int NFACEDIR = std::pow(3, NDIM - 1);
+	// static constexpr int NDIR = std::pow(3, NDIM);
+	static constexpr int NDIR = PowerNDIM(3);
+	// static constexpr int NANGMOM = NDIM == 1 ? 0 : std::pow(3, NDIM - 2);
+	static constexpr int NANGMOM = NDIM == 1 ? 0 : (NDIM == 2 ? 1 : (NDIM == 3 ? 3 : -1));
+	// static constexpr int NFACEDIR = std::pow(3, NDIM - 1);
+	static constexpr int NFACEDIR = (NDIM == 1 ? 1 : (NDIM == 2 ? 3 : (NDIM == 3 ? 9 : -1)));
 	static constexpr int H_DN[3] = { H_DNX, H_DNY, H_DNZ };
 
 	static constexpr int group_count() {
@@ -215,7 +220,7 @@ private:
 			const auto pair = group_pair(gi, n);
 			const int x = pair.second % 3;
 			const int y = (pair.second / 3) % 3;
-			const int z = pair.second / 9;
+			// const int z = pair.second / 9;
 			const int index = -((x / 2) * H_DNX + (y / 2) * H_DNY);
 			if (index != pair.first) {
 				fail = true;
@@ -225,7 +230,7 @@ private:
 		for (int n = 0; n < group_size_[2][2]; n++) {
 			const auto pair = group_pair(gi, n);
 			const int x = pair.second % 3;
-			const int y = (pair.second / 3) % 3;
+			// const int y = (pair.second / 3) % 3;
 			const int z = pair.second / 9;
 			const int index = -((x / 2) * H_DNX + (z / 2) * H_DNZ);
 			if (index != pair.first) {
@@ -235,7 +240,7 @@ private:
 		gi = 3;
 		for (int n = 0; n < group_size_[2][2]; n++) {
 			const auto pair = group_pair(gi, n);
-			const int x = pair.second % 3;
+			// const int x = pair.second % 3;
 			const int y = (pair.second / 3) % 3;
 			const int z = pair.second / 9;
 			const int index = -((y / 2) * H_DNY + (z / 2) * H_DNZ);
