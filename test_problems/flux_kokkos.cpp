@@ -279,13 +279,9 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 	fclose(fp);
 }
 
-
-
 int main(int argc, char** argv) {
     Kokkos::initialize(argc, argv);
     Kokkos::print_configuration(std::cout);
-
-#if !defined(__CUDA_ARCH__)
 
 	feenableexcept(FE_DIVBYZERO);
 	feenableexcept(FE_INVALID);
@@ -294,8 +290,6 @@ int main(int argc, char** argv) {
 	test_random_numbers<3, 50>();
 	run_test_kokkos<3, 50>(physics<3>::BLAST, true);
 	// run_test<2, 200>(physics<2>::BLAST, true);
-
-#endif    // not defined __CUDA_ARCH__
 
     Kokkos::finalize();
 	return 0;

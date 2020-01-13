@@ -37,6 +37,31 @@ namespace octotiger {
 template <int NDIM>
 static constexpr auto q_lowest_dimension_length = NDIM == 1 ? 3 : (NDIM == 2 ? 9 : 27);
 
+//TODO avoid these duplicates
+template <int NDIM>
+static KOKKOS_INLINE_FUNCTION int flip_dim_device(const int d, int flip_dim) {
+    int dims[NDIM];
+    int k = d;
+    for (int dim = 0; dim < NDIM; dim++) {
+        dims[dim] = k % 3;
+        k /= 3;
+    }
+    k = 0;
+    dims[flip_dim] = 2 - dims[flip_dim];
+    for (int dim = 0; dim < NDIM; dim++) {
+        k *= 3;
+        k += dims[NDIM - 1 - dim];
+    }
+    return k;
+}
+
+// max function
+template<class T> 
+KOKKOS_INLINE_FUNCTION const T& max(const T& a, const T& b)
+{
+    return (a < b) ? b : a;
+}
+
 template <int NDIM, int INX, typename twoDimensionalView, typename threeDimensionalView>
 // F should be 0-initialized, things will be added to it and returned
 // all other arguments are read-only
@@ -78,19 +103,12 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
     Kokkos::View<safe_real[NDIM][geo::H_N3][nf][geo::NFACEDIR]> fluxes(
         Kokkos::ViewAllocateWithoutInitializing("fluxes"));
 
-    static constexpr auto faces = geo::face_pts();
-    static constexpr auto weights = geo::face_weight();
-    static constexpr auto xloc = geo::xloc();
-    static constexpr auto kdelta = geo::kronecker_delta();
-
-    const auto dx = X(0, geo::H_DNX) - X(0, 0);
-
-    Kokkos::View<int**, Kokkos::HostSpace> kokkosIndices(
+    Kokkos::View<int**> kokkosIndices(
         Kokkos::ViewAllocateWithoutInitializing("indices"), NDIM, indices_size);
-	auto kokkosIhost = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosIndices);
+	auto kokkosIhost = Kokkos::create_mirror_view(typename Kokkos::DefaultHostExecutionSpace::memory_space(), kokkosIndices);
 
     Kokkos::parallel_for("init_I", Kokkos::MDRangePolicy<Kokkos::DefaultHostExecutionSpace, Kokkos::Rank<2>>({0, 0}, {indices_size, NDIM}),
-        KOKKOS_LAMBDA(const int i, const int dim) { kokkosIhost(dim, i) = geo().get_indexes(3, geo::face_pts()[dim][0])[i]; }); //--expt-relaxed-constexpr
+        KOKKOS_LAMBDA(const int i, const int dim) { kokkosIhost(dim, i) = geo().get_indexes(3, geo::face_pts()[dim][0])[i]; });
     Kokkos::fence();
 	Kokkos::deep_copy(kokkosIndices, kokkosIhost);
 
@@ -105,45 +123,102 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 
     Kokkos::parallel_reduce("compute fluxes", policy,
         KOKKOS_LAMBDA(const int indexIteration, const int dim, safe_real& maxAmax) {
-			// printf("%d", hpx::get_worker_thread_num());
-            safe_real this_flux[nf];
+            // ----------------------------------------------------------------------------------------//
+            // these arrays/references to static constexpr host variables are not allowed in device code
+            // static constexpr auto faces = geo::face_pts(); 
+            // static constexpr auto weights = geo::face_weight();
+            // static constexpr auto xloc = geo::xloc();
+            // static constexpr auto kdelta = geo::kronecker_delta();
+            // hacky workaround here: copy them into the kernel, index the relevant dimensionality
+            // TODO make this nicer
+            static constexpr int lower_face_members_device[3][3][9] = { { { 0 } }, 
+                        { { 3, 0, 6 }, { 1, 0, 2 } }, 
+                        { { 12, 0, 3, 6, 9, 15, 18, 21, 24 }, { 10, 0, 1, 2, 9, 11,
+			                        18, 19, 20 }, { 4, 0, 1, 2, 3, 5, 6, 7, 8 } } };
+			static constexpr auto faces = lower_face_members_device[NDIM-1];
+
+            static constexpr safe_real quad_weights_device[3][9] = { { 1.0 }, { 2.0 / 3.0, 1.0 / 6.0, 1.0 / 6.0 }, { 16. / 36., 1. / 36., 4. / 36., 1. / 36., 4. / 36., 4.
+                    / 36., 1. / 36., 4. / 36., 1. / 36. } };
+            static constexpr auto weights = quad_weights_device[NDIM-1];
+
+            static constexpr int face_locs_device[3][27][3] = {
+            /**/{ { -1 }, { 0 }, { 1 } },
+
+            /**/{
+            /**/{ -1, -1 }, { +0, -1 }, { +1, -1 },
+            /**/{ -1, +0 }, { +0, +0 }, { +1, +0 },
+            /**/{ -1, +1 }, { +0, +1 }, { +1, +1 } },
+
+            /**/{
+            /**/{ -1, -1, -1 }, { +0, -1, -1 }, { +1, -1, -1 },
+            /**/{ -1, +0, -1 }, { +0, +0, -1 }, { 1, +0, -1 },
+            /**/{ -1, +1, -1 }, { +0, +1, -1 }, { +1, +1, -1 },
+            /**/{ -1, -1, +0 }, { +0, -1, +0 }, { +1, -1, +0 },
+            /**/{ -1, +0, +0 }, { +0, +0, +0 }, { +1, +0, +0 },
+            /**/{ -1, +1, +0 }, { +0, +1, +0 }, { +1, +1, +0 },
+            /**/{ -1, -1, +1 }, { +0, -1, +1 }, { +1, -1, +1 },
+            /**/{ -1, +0, +1 }, { +0, +0, +1 }, { +1, +0, +1 },
+            /**/{ -1, +1, +1 }, { +0, +1, +1 }, { +1, +1, +1 } } };
+            static constexpr auto xloc = face_locs_device[NDIM-1];
+
+            static constexpr int kdeltas_device[3][3][3][3] = { { { { } } }, { { { 0, 1 }, { -1, 0 } } }, { { { 0, 0, 0 }, { 0, 0, 1 }, { 0, -1, 0 } }, { { 0, 0, -1 }, { 0, 0,
+                    0 }, { 1, 0, 0 } }, { { 0, 1, 0 }, { -1, 0, 0 }, { 0, 0, 0 } } } };
+            static constexpr auto kdelta = kdeltas_device[NDIM - 1];
+
+            // a copy of geo::H_DN, for device code
+            static constexpr int H_DNX_device = NDIM == 3 ? H_NX * H_NX : (NDIM == 2 ? H_NX : 1);
+            static constexpr int H_DNY_device = NDIM == 3 ? H_NX : 1;
+            static constexpr int H_DNZ_device = 1;
+           	static constexpr int H_DN_device[3] = { H_DNX_device, H_DNY_device, H_DNZ_device };
+
+            static const auto nf_device = physics<NDIM>::field_count();  //--expt-relaxed-constexpr
+            printf("nf %d ", nf_device);
+            //--------------------------------------------------------------//
+
+            const auto dx = X(0, H_DNX_device) - X(0, 0);
+
+            safe_real this_flux[nf_device];
 
             // const auto& indices = geo::get_indexes(3, geo::face_pts()[dim][0]);
             const auto& i = kokkosIndices(dim,indexIteration);
-				safe_real ap = 0.0, am = 0.0;
-				safe_real this_ap, this_am;
+            safe_real ap = 0.0, am = 0.0;
+            safe_real this_ap, this_am;
+
             for (int fi = 0; fi < geo::NFACEDIR; fi++) {
-					const auto d = faces[dim][fi];
+				const auto d = faces[dim][fi];
                 // UR0, UL0 are not needed for now
                 // auto UR0 = Kokkos::subview(U, Kokkos::ALL, i);
                 // auto UL0 = Kokkos::subview(U, Kokkos::ALL, i - geo::H_DN[dim]);
-                    auto UR = Kokkos::subview(Q, Kokkos::ALL, i, d);
-                auto UL = Kokkos::subview(Q, Kokkos::ALL, i - geo::H_DN[dim], geo::flip_dim(d, dim));
+                auto UR = Kokkos::subview(Q, Kokkos::ALL, i, d);
+                auto UL = Kokkos::subview(Q, Kokkos::ALL, i - H_DN_device[dim], flip_dim_device<NDIM>(d, dim));
+
                 safe_real vg[NDIM];
-                    if
-                        CONSTEXPR(NDIM > 1) {
-                            vg[0] = -omega * (X(1, i) + 0.5 * xloc[d][1] * dx);
-                            vg[1] = +omega * (X(0, i) + 0.5 * xloc[d][0] * dx);
-                            if CONSTEXPR(NDIM == 3) {
-                                vg[2] = 0.0;
-                            }
-                        }
-                    else {
-						vg[0] = 0.0;
-					}
+                if CONSTEXPR(NDIM > 1) {
+                    vg[0] = -omega * (X(1, i) + 0.5 * xloc[d][1] * dx);
+                    vg[1] = +omega * (X(0, i) + 0.5 * xloc[d][0] * dx);
+                    if CONSTEXPR(NDIM == 3) {
+                        vg[2] = 0.0;
+                    }
+                }
+                else {
+                    vg[0] = 0.0;
+                }
+                // printf("%d ", fi);
+
                 // physics<NDIM>::flux(UL, UR, UL0, UR0, this_flux, dim, this_am, this_ap, vg, dx);
-                physics<NDIM>::flux(UL, UR, this_flux, dim, this_am, this_ap, vg, dx);
-					am = std::min(am, this_am); //--expt-relaxed-constexpr
-					ap = std::max(ap, this_ap);  //--expt-relaxed-constexpr
-					for (int f = 0; f < nf; f++) {
+                physics<NDIM>::flux(UL, UR, this_flux, dim, this_am, this_ap, vg, dx);  //--expt-relaxed-constexpr
+
+                am = std::min(am, this_am); //--expt-relaxed-constexpr
+                ap = std::max(ap, this_ap);  //--expt-relaxed-constexpr
+                for (int f = 0; f < nf_device; f++) {
                     fluxes(dim, i, f, fi) = this_flux[f];
-					}
-				}
+                }
+            }
             
             maxAmax = std::max(ap, safe_real(-am));  //--expt-relaxed-constexpr
 
                 // field update from fluxes
-			for (int f = 0; f < nf; f++) {
+			for (int f = 0; f < nf_device; f++) {
                     F(dim, f, i) = 0.0;
                 for (int fi = 0; fi < geo::NFACEDIR; fi++) {
                         const auto& w = weights[fi];
