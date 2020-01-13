@@ -35,15 +35,15 @@ struct cell_geometry {
 	}
 
 	static int group_size(int gi) {
-		return group_size_[NDIM - 1][gi];
+		return group_size_[NDIMMinusOne_][gi];
 	}
 
 	static std::pair<int, int> group_pair(int gi, int ni) {
-		return groups3d_[NDIM - 1][gi][ni];
+		return groups3d_[NDIMMinusOne_][gi][ni];
 	}
 
 private:
-
+	static constexpr int NDIMMinusOne_ = NDIM - 1;
 	static constexpr int ngroups_[3] = { 0, 1, 4 };
 	static constexpr int group_size_[3][4] = { { }, { 4 }, { 8, 4, 4, 4 } };
 	static constexpr std::pair<int, int> groups3d_[3][4][8] = { { { } }, { {
