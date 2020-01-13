@@ -3,8 +3,6 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#if !defined(__CUDA_ARCH__)
-
 #include <fenv.h>
 #include <time.h>
 #include <type_traits>
@@ -12,14 +10,16 @@
 
 #define OCTOTIGER_GRIDDIM 8    // usually set in build scripts
 
-#include "flux_kokkos.hpp"
 #include <Kokkos_Core.hpp>
 
 #include <hpx/hpx_main.hpp>
 
-#include "octotiger/unitiger/safe_real.hpp"
-#include "octotiger/unitiger/unitiger.hpp"
+#include "octotiger/geometry.hpp"
 #include "octotiger/unitiger/hydro.hpp"
+#include "octotiger/unitiger/physics.hpp"
+
+#include "flux_kokkos.hpp"
+#include "octotiger/unitiger/safe_real.hpp"
 
 static constexpr double tmax = 2.49e-5;
 static constexpr safe_real dt_out = tmax / 249;
@@ -34,13 +34,11 @@ static constexpr safe_real dt_out = tmax / 249;
 // ask Dominic again - how are they different?
 
 
-#if !defined(__CUDA_ARCH__)
-
 template<int NDIM, int INX>
 void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 	static constexpr auto H_BW = 3;
-	static constexpr auto H_NX = INX + 2 * H_BW;
-	static constexpr auto H_N3 = std::pow(INX+2*H_BW,NDIM);
+	// static constexpr auto H_NX = INX + 2 * H_BW;
+	static constexpr auto H_N3 = PowerNDIM(INX+2*H_BW);
 
 	static constexpr safe_real CFL = (0.4 / NDIM);
 	hydro_computer<NDIM, INX> computer;
@@ -135,15 +133,11 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 	fprintf( fp, "%i %li\n", INX, tstop -tstart);
 	fclose(fp);
 }
-#endif    // not defined __CUDA_ARCH__
-
-
-#if !defined(__CUDA_ARCH__)
 
 // for timing purposes, test with random numbers
 template <int NDIM, int INX>
 void test_random_numbers() {
-    static constexpr auto H_N3 = static_cast<int>(std::pow(INX + 2 * H_BW, NDIM));
+    static constexpr auto H_N3 = static_cast<int>(PowerNDIM(INX + 2 * H_BW));
     const auto nf = physics<NDIM>::field_count();
     hydro_computer<NDIM, INX> computer;
     computer.use_angmom_correction(physics<NDIM>::sx_i, 1);
@@ -168,7 +162,7 @@ void test_random_numbers() {
             arr.fill(1.0);
         }
     }
-
+	printf("compute flux with random numbers for %d, %d \n", NDIM, INX);
     for (int i = 0; i < 10; ++i) {
         octotiger::compute_flux_kokkos<NDIM, INX>(computer, U0, U, Q, F, X, omega, nf, H_N3);
     }
@@ -177,8 +171,9 @@ void test_random_numbers() {
 template <int NDIM, int INX>
 void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correction) {
 	static constexpr auto H_BW = 3;
-	static constexpr auto H_NX = INX + 2 * H_BW;
-    static constexpr auto H_N3 = static_cast<int>(std::pow(INX + 2 * H_BW, NDIM));
+	// static constexpr auto H_NX = INX + 2 * H_BW;
+    // static constexpr auto H_N3 = static_cast<int>(std::pow(INX + 2 * H_BW, NDIM));
+    static constexpr auto H_N3 = static_cast<int>(PowerNDIM(INX + 2 * H_BW));
 
 	static constexpr safe_real CFL = (0.4 / NDIM);
 	hydro_computer<NDIM, INX> computer;
@@ -283,7 +278,8 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 	fprintf( fp, "%i %li\n", INX, tstop -tstart);
 	fclose(fp);
 }
-#endif    // not defined __CUDA_ARCH__
+
+
 
 int main(int argc, char** argv) {
     Kokkos::initialize(argc, argv);
@@ -305,4 +301,3 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
-#endif    // not defined __CUDA_ARCH__

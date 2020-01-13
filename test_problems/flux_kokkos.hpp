@@ -85,19 +85,16 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 
     const auto dx = X(0, geo::H_DNX) - X(0, 0);
 
-    Kokkos::View<int**> kokkosIndices(
+    Kokkos::View<int**, Kokkos::HostSpace> kokkosIndices(
         Kokkos::ViewAllocateWithoutInitializing("indices"), NDIM, indices_size);
-	auto kokkosIhost = Kokkos::create_mirror_view(kokkosIndices);
+	auto kokkosIhost = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosIndices);
 
-#if !defined(__CUDA_ARCH__)
     Kokkos::parallel_for("init_I", Kokkos::MDRangePolicy<Kokkos::DefaultHostExecutionSpace, Kokkos::Rank<2>>({0, 0}, {indices_size, NDIM}),
-        KOKKOS_LAMBDA(const int i, const int dim) { kokkosIhost(dim, i) = geo().get_indexes(3, geo::face_pts()[dim][0])[i]; });
-#endif
+        KOKKOS_LAMBDA(const int i, const int dim) { kokkosIhost(dim, i) = geo().get_indexes(3, geo::face_pts()[dim][0])[i]; }); //--expt-relaxed-constexpr
     Kokkos::fence();
-	Kokkos::deep_copy(kokkosIhost, kokkosIndices);
+	Kokkos::deep_copy(kokkosIndices, kokkosIhost);
 
-		safe_real amax = 0.0;
-
+	safe_real amax = 0.0;
 	
     // auto policy = Kokkos::MDRangePolicy<Kokkos::Experimental::HPX, Kokkos::Rank<2>>
     auto policy =
@@ -127,24 +124,23 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
                         CONSTEXPR(NDIM > 1) {
                             vg[0] = -omega * (X(1, i) + 0.5 * xloc[d][1] * dx);
                             vg[1] = +omega * (X(0, i) + 0.5 * xloc[d][0] * dx);
-                            if
-                                CONSTEXPR(NDIM == 3) {
-							vg[2] = 0.0;
-						}
+                            if CONSTEXPR(NDIM == 3) {
+                                vg[2] = 0.0;
+                            }
                         }
                     else {
 						vg[0] = 0.0;
 					}
                 // physics<NDIM>::flux(UL, UR, UL0, UR0, this_flux, dim, this_am, this_ap, vg, dx);
                 physics<NDIM>::flux(UL, UR, this_flux, dim, this_am, this_ap, vg, dx);
-					am = std::min(am, this_am);
-					ap = std::max(ap, this_ap);
+					am = std::min(am, this_am); //--expt-relaxed-constexpr
+					ap = std::max(ap, this_ap);  //--expt-relaxed-constexpr
 					for (int f = 0; f < nf; f++) {
                     fluxes(dim, i, f, fi) = this_flux[f];
 					}
 				}
             
-            maxAmax = std::max(ap, safe_real(-am));
+            maxAmax = std::max(ap, safe_real(-am));  //--expt-relaxed-constexpr
 
                 // field update from fluxes
 			for (int f = 0; f < nf; f++) {
@@ -206,9 +202,9 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
 
     Kokkos::fence();
 
-    Kokkos::deep_copy(kokkosUhost, kokkosU);
-    Kokkos::deep_copy(kokkosXhost, kokkosX);
-    Kokkos::deep_copy(kokkosQhost, kokkosQ);
+    Kokkos::deep_copy(kokkosU, kokkosUhost);
+    Kokkos::deep_copy(kokkosX, kokkosXhost);
+    Kokkos::deep_copy(kokkosQ, kokkosQhost);
 
     Kokkos::fence();
     
@@ -217,15 +213,12 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
 
     Kokkos::fence();
 
-    Kokkos::deep_copy(kokkosF, kokkosFhost);
+    Kokkos::deep_copy(kokkosFhost, kokkosF);
 
     Kokkos::fence();
 
     return amax;
 }
-
-
-#if !defined(__CUDA_ARCH__)
 
 template <int NDIM, int INX>
 safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
@@ -262,7 +255,7 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
     Kokkos::parallel_for("init_Q",
         Kokkos::MDRangePolicy<Kokkos::Serial, Kokkos::Rank<3>>(
             {0, 0, 0}, {nf, H_N3, q_lowest_dimension_length<NDIM>}),
-        KOKKOS_LAMBDA(int i, int j, int k) { kokkosQhost(i, j, k) = q[i][j][k]; });
+        KOKKOS_LAMBDA(int i, int j, int k) { kokkosQhost(i, j, k) = q[i][j][k]; }); //--expt-relaxed-constexpr
 
     // std::cout << kokkosQ.extent(0) << " " << kokkosQ.extent(1) << " " << kokkosQ.extent(2) << "Q"
     // << std::endl;
@@ -283,7 +276,5 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
 
     return amax;
 }
-
-#endif    // not defined __CUDA_ARCH__
 
 }    // namespace octotiger

@@ -4,7 +4,6 @@
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 
-#if !defined(__CUDA_ARCH__)
 
 #include "./safe_real.hpp"
 #include "./util.hpp"
@@ -28,7 +27,8 @@ struct physics {
 	static constexpr int zx_i = 4 + NDIM;
 	static constexpr int zy_i = 5 + NDIM;
 	static constexpr int zz_i = 6 + NDIM;
-	static constexpr int spc_i = 4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2));
+	// static constexpr int spc_i = 4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2));
+	static constexpr int spc_i = 4 + NDIM + (NDIM == 1 ? 0 : (NDIM == 2 ? 1 : (NDIM == 3 ? 3 : -1)));
 	static bool angmom_;
 
 	enum test_type {
@@ -43,7 +43,6 @@ struct physics {
 		fgamma_ = fg;
 	}
 
-#if !defined(__CUDA_ARCH__)
 
 	static void to_prim(const std::vector<safe_real>& u, safe_real &p, safe_real &v, int dim, safe_real dx) {
 		const auto rho = u[rho_i];
@@ -79,7 +78,8 @@ struct physics {
 	static void flux(const std::vector<safe_real> &UL, const std::vector<safe_real> &UR, const std::vector<safe_real> &UL0, const std::vector<safe_real> &UR0,
 			std::vector<safe_real> &F, int dim, safe_real &am, safe_real &ap, std::array<safe_real, NDIM> &vg, safe_real dx) {
 
-		safe_real pr, vr, pl, vl, vr0, vl0, amr, apr, aml, apl;
+		// safe_real pr, vr, pl, vl, vr0, vl0, amr, apr, aml, apl;
+		safe_real amr, apr, aml, apl;
 
 		static thread_local std::vector<safe_real> FR(nf_), FL(nf_);
 		
@@ -91,7 +91,6 @@ struct physics {
 			F[f] = (ap * FL[f] - am * FR[f] + ap * am * (UR[f] - UL[f])) / (ap - am);
 		}
 	}
-#endif    // not defined __CUDA_ARCH__
 
 	// copy of the above three functions for kokkos view data type 
 	template <typename ViewSlice>
@@ -133,7 +132,8 @@ struct physics {
 			safe_real* /*safe_real[field_count()]*/ F, int dim, safe_real &am, 
 			safe_real &ap, const safe_real* /*safe_real[NDIM]*/ vg, safe_real dx) {
 
-		safe_real pr, vr, pl, vl, vr0, vl0, amr, apr, aml, apl;
+		// safe_real pr, vr, pl, vl, vr0, vl0, amr, apr, aml, apl;
+		safe_real amr, apr, aml, apl;
 
 		// fill fr and fl
 		static thread_local safe_real FR [nf_];
@@ -148,7 +148,6 @@ struct physics {
 		}
 	}
 
-#if !defined(__CUDA_ARCH__)
 	template<int INX>
 	static void post_process(hydro::state_type &U, safe_real dx) {
 		static const cell_geometry<NDIM, INX> geo;
@@ -371,17 +370,16 @@ static void analytic_solution(test_type test, hydro::state_type &U, const hydro:
 static void set_angmom() {
 	angmom_ = true;
 }
-#endif    // not defined __CUDA_ARCH__
 
 private:
 static const int n_species_ = 5;
-static const int nf_ = (4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2))) + n_species_;
+// static const int nf_ = (4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2))) + n_species_;
+static const int nf_ = (4 + NDIM + (NDIM == 1 ? 0 : (NDIM == 2 ? 1 : (NDIM == 3 ? 3 : -1)))) + n_species_;
 static safe_real fgamma_;
 
 };
 
 
-#if !defined(__CUDA_ARCH__)
 
 template<int NDIM>
 template<int INX>
@@ -397,7 +395,6 @@ std::vector<typename hydro_computer<NDIM, INX>::bc_type> physics<NDIM>::initiali
 	switch (t) {
 	case SOD:
 	case BLAST:
-		break;
 		break;
 	case KH:
 	case CONTACT:
@@ -430,8 +427,8 @@ std::vector<typename hydro_computer<NDIM, INX>::bc_type> physics<NDIM>::initiali
 		for (int f = 0; f < nf_; f++) {
 			U[f][i] = 0.0;
 		}
-		const auto xlocs = geo.xloc();
-		const auto weights = geo.volume_weight();
+		// const auto xlocs = geo.xloc();
+		// const auto weights = geo.volume_weight();
 		std::array<safe_real, NDIM> x;
 		double rho = 0, vx = 0, vy = 0, vz = 0, p = 0, r;
 		safe_real x2, xsum;
@@ -524,7 +521,4 @@ bool physics<NDIM>::angmom_ = false;
 template<int NDIM>
 safe_real physics<NDIM>::fgamma_ = 7. / 5.;
 
-#endif    // not defined __CUDA_ARCH__
 #endif /* OCTOTIGER_UNITIGER_PHYSICS_HPP_ */
-
-#endif    // not defined __CUDA_ARCH__

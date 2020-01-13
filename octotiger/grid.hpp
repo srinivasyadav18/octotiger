@@ -25,7 +25,7 @@
 //#include "octotiger/taylor.hpp"
 #include "octotiger/unitiger/safe_real.hpp"
 
-#include <hpx/runtime/serialization/serialize.hpp>
+#include <hpx/serialization/serialize.hpp>
 #include <hpx/serialization/traits/is_bitwise_serializable.hpp>
 
 #include <functional>

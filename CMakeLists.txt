@@ -58,6 +58,9 @@ if(OCTOTIGER_WITH_KOKKOS)
   # ${HPX_DIR}/include/hpx/external for now
   find_package(Kokkos REQUIRED)
 endif()
+message(STATUS "Kokkos config ${Kokkos_CONFIG}")
+message(STATUS "Kokkos path ${Kokkos_INCLUDE_DIRS}")
+
 
 ################################################################################
 # Set up Octotiger target
@@ -401,7 +404,7 @@ if(OCTOTIGER_WITH_BLAST_TEST)
       message(FATAL_ERROR "GCC Quad-Precision Math Library is not available with MSVC")
     endif()
     target_compile_definitions(octolib PUBLIC OCTOTIGER_HAVE_QUADMATH)
-    target_link_libraries(octolib quadmath)
+    target_link_libraries(octolib PUBLIC quadmath)
 
   else()
       message(FATAL_ERROR "Octotiger with OCTOTIGER_WITH_BLAST_TEST=ON cannot "
@@ -436,11 +439,14 @@ if (OCTOTIGER_WITH_KOKKOS)
   add_hpx_executable(
     flux_kokkos
     DEPENDENCIES
-      Kokkos::kokkos hydrolib
+      hydrolib kokkos
     SOURCES
       test_problems/flux_kokkos.cpp
     HEADERS
       test_problems/flux_kokkos.hpp
   )
+  # manual hack to help find Kokkos package #TODO remove
+  target_include_directories(flux_kokkos PUBLIC "/scratch/snx3000/tpolling/minimal_kokkos/external_dependencies/kokkos-master-build/install/include")
+  target_link_directories(flux_kokkos PUBLIC "/scratch/snx3000/tpolling/minimal_kokkos/external_dependencies/kokkos-master-build/install/lib")
 endif()
 
