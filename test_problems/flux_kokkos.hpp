@@ -179,6 +179,8 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 
             safe_real this_flux[nf_device];
 
+            physics_variables<NDIM> physics_device;
+
             // const auto& indices = geo::get_indexes(3, geo::face_pts()[dim][0]);
             const auto& i = kokkosIndices(dim,indexIteration);
             safe_real ap = 0.0, am = 0.0;
@@ -206,7 +208,7 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
                 // printf("%d ", fi);
 
                 // physics<NDIM>::flux(UL, UR, UL0, UR0, this_flux, dim, this_am, this_ap, vg, dx);
-                physics<NDIM>::flux(UL, UR, this_flux, dim, this_am, this_ap, vg, dx);  //--expt-relaxed-constexpr
+                flux(physics_device, UL, UR, this_flux, dim, this_am, this_ap, vg, dx);  //--expt-relaxed-constexpr
 
                 am = std::min(am, this_am); //--expt-relaxed-constexpr
                 ap = std::max(ap, this_ap);  //--expt-relaxed-constexpr

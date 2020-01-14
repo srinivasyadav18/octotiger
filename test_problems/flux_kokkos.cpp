@@ -43,7 +43,7 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 	static constexpr safe_real CFL = (0.4 / NDIM);
 	hydro_computer<NDIM, INX> computer;
 	if (with_correction) {
-		computer.use_angmom_correction(physics<NDIM>::sx_i, 1);
+		computer.use_angmom_correction(physics<NDIM>::variables_.sx_i, 1);
 	}
 	const auto nf = physics<NDIM>::field_count();
 	std::vector<std::vector<std::vector<safe_real>>> F(NDIM, std::vector<std::vector<safe_real>>(nf, std::vector<safe_real>(H_N3)));
@@ -140,7 +140,7 @@ void test_random_numbers() {
     static constexpr auto H_N3 = static_cast<int>(PowerNDIM(INX + 2 * H_BW));
     const auto nf = physics<NDIM>::field_count();
     hydro_computer<NDIM, INX> computer;
-    computer.use_angmom_correction(physics<NDIM>::sx_i, 1);
+    computer.use_angmom_correction(physics<NDIM>::variables_.sx_i, 1);
     const safe_real omega = 0.0;
 
     // use random data for the view fields
@@ -178,7 +178,7 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 	static constexpr safe_real CFL = (0.4 / NDIM);
 	hydro_computer<NDIM, INX> computer;
 	if (with_correction) {
-		computer.use_angmom_correction(physics<NDIM>::sx_i, 1);
+		computer.use_angmom_correction(physics<NDIM>::variables_.sx_i, 1);
 	}
 	const auto nf = physics<NDIM>::field_count();
 	// assert all our indices are integral
