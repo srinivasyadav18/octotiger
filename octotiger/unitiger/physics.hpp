@@ -112,7 +112,7 @@ struct physics {
 
 	template <typename ViewSlice>
 	static inline void physical_flux(const ViewSlice U, safe_real* /*safe_real[field_count()]*/ F, int dim, safe_real &am, safe_real &ap,
-			const Kokkos::Array<safe_real, NDIM> &vg, safe_real dx) {
+			const safe_real* /*safe_real[NDIM]*/ vg, safe_real dx) {
 		safe_real p, v, v0, c;
 		to_prim(U, p, v0, dim, dx);
 		v = v0 - vg[dim];
@@ -130,7 +130,7 @@ struct physics {
 	template <typename ViewSlice> 
 	static inline void flux(const ViewSlice UL, const ViewSlice UR, // const ViewSlice UL0, const ViewSlice UR0, 
 			safe_real* /*safe_real[field_count()]*/ F, int dim, safe_real &am, 
-			safe_real &ap, const Kokkos::Array<safe_real, NDIM> &vg, safe_real dx) {
+			safe_real &ap, const safe_real* /*safe_real[NDIM]*/ vg, safe_real dx) {
 
 		// safe_real pr, vr, pl, vl, vr0, vl0, amr, apr, aml, apl;
 		safe_real amr, apr, aml, apl;
