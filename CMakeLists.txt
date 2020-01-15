@@ -446,6 +446,9 @@ if (OCTOTIGER_WITH_KOKKOS)
       test_problems/flux_kokkos.hpp
   )
   # manual hack to help find Kokkos package #TODO remove
+  target_include_directories(hydrolib PUBLIC "/scratch/snx3000/tpolling/minimal_kokkos/external_dependencies/kokkos-master-build/install/include")
+  target_link_directories(hydrolib PUBLIC "/scratch/snx3000/tpolling/minimal_kokkos/external_dependencies/kokkos-master-build/install/lib")
+
   target_include_directories(flux_kokkos PUBLIC "/scratch/snx3000/tpolling/minimal_kokkos/external_dependencies/kokkos-master-build/install/include")
   target_link_directories(flux_kokkos PUBLIC "/scratch/snx3000/tpolling/minimal_kokkos/external_dependencies/kokkos-master-build/install/lib")
 endif()
