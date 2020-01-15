@@ -530,4 +530,7 @@ KOKKOS_INLINE_FUNCTION void flux(const physics_variables<NDIM> var, const ViewSl
     }
 }
 
+template<int NDIM>
+physics_variables<NDIM> physics<NDIM>::variables_ = physics_variables<NDIM>();
+
 #endif /* OCTOTIGER_UNITIGER_PHYSICS_HPP_ */

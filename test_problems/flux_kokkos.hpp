@@ -164,15 +164,14 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
             static constexpr int H_DNZ_device = 1;
            	static constexpr int H_DN_device[3] = { H_DNX_device, H_DNY_device, H_DNZ_device };
 
-            static const auto nf_device = physics<NDIM>::field_count();  //--expt-relaxed-constexpr
-            printf("nf %d ", nf_device);
             //--------------------------------------------------------------//
 
             const auto dx = X(0, H_DNX_device) - X(0, 0);
 
-            safe_real this_flux[nf_device];
-
             physics_variables<NDIM> physics_device;
+            static const auto nf_device = physics_device.nf_;
+
+            safe_real this_flux[nf_device];
 
             // const auto& indices = geo::get_indexes(3, geo::face_pts()[dim][0]);
             const auto& i = kokkosIndices(dim,indexIteration);

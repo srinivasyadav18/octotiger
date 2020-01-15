@@ -39,7 +39,7 @@ static constexpr int int_pow() {
 template<class T> 
 KOKKOS_INLINE_FUNCTION const T& max_device(const T& a, const T& b)
 {
-    return (a < b) ? b : a; //TODO use CUDA intrinsic max if __CUDA_ARCH__
+    return (a < b) ? b : a; //TODO use CUDA intrinsic max if __CUDA_ARCH__, std::max otherwise
 }
 
 template<class T> 
@@ -47,7 +47,8 @@ KOKKOS_INLINE_FUNCTION const T& min_device(const T& a, const T& b)
 {
     return (a < b) ? a : b;
 }
-
+// #else 
+// #define KOKKOS_INLINE_FUNCTION 
 // #endif
 
 template<class T>
