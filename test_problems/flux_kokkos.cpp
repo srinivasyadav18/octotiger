@@ -33,12 +33,14 @@ static constexpr safe_real dt_out = tmax / 249;
 // one the template parameter used here 
 // ask Dominic again - how are they different?
 
-
 template<int NDIM, int INX>
 void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
-	static constexpr auto H_BW = 3;
+	static constexpr int H_BW = 3;
 	// static constexpr auto H_NX = INX + 2 * H_BW;
-	static constexpr auto H_N3 = PowerNDIM(INX+2*H_BW);
+	static constexpr int H_N3 = std::pow(INX+2*H_BW,NDIM);
+	printf("H_N3 %d \n", H_N3);
+	static_assert(std::pow(206, NDIM) == PowerNDIM(206));
+	static_assert(H_N3 == PowerNDIM(INX+2*H_BW));
 
 	static constexpr safe_real CFL = (0.4 / NDIM);
 	hydro_computer<NDIM, INX> computer;
@@ -137,7 +139,9 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 // for timing purposes, test with random numbers
 template <int NDIM, int INX>
 void test_random_numbers() {
-    static constexpr auto H_N3 = static_cast<int>(PowerNDIM(INX + 2 * H_BW));
+	static constexpr int H_BW = 3;
+    static constexpr auto H_N3 = static_cast<int>(PowerNDIM(INX+2*H_BW));
+	printf("H_N3 %d \n", H_N3);
     const auto nf = physics<NDIM>::field_count();
     hydro_computer<NDIM, INX> computer;
     computer.use_angmom_correction(physics<NDIM>::variables_.sx_i, 1);
@@ -173,7 +177,8 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 	static constexpr auto H_BW = 3;
 	// static constexpr auto H_NX = INX + 2 * H_BW;
     // static constexpr auto H_N3 = static_cast<int>(std::pow(INX + 2 * H_BW, NDIM));
-    static constexpr auto H_N3 = static_cast<int>(PowerNDIM(INX + 2 * H_BW));
+    static constexpr auto H_N3 = static_cast<int>(PowerNDIM(INX+2*H_BW));
+	printf("H_N3 %d \n", H_N3);
 
 	static constexpr safe_real CFL = (0.4 / NDIM);
 	hydro_computer<NDIM, INX> computer;
@@ -280,13 +285,18 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 }
 
 int main(int argc, char** argv) {
-    Kokkos::initialize(argc, argv);
-    Kokkos::print_configuration(std::cout);
+	
+	Kokkos::initialize(argc, argv);
+    // Kokkos::print_configuration(std::cout);
 
 	feenableexcept(FE_DIVBYZERO);
 	feenableexcept(FE_INVALID);
 	feenableexcept(FE_OVERFLOW);
 
+#if !defined(__CUDA_ARCH__)
+	run_test<2, 200>(physics<2>::KH, false);
+#endif
+	run_test_kokkos<2, 200>(physics<2>::KH, false);
 	test_random_numbers<3, 50>();
 	run_test_kokkos<3, 50>(physics<3>::BLAST, true);
 	// run_test<2, 200>(physics<2>::BLAST, true);

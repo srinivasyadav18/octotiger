@@ -10,7 +10,7 @@
 #include "octotiger/unitiger/safe_real.hpp"
 
 // to compile with nvcc, cannot use std::pow in constexpr; this is a workaround
-#define PowerNDIM(num) (NDIM == 1 ? num : (NDIM == 2 ? num*num : (NDIM == 3 ? num*num*num : -1)))
+#define PowerNDIM(num) ((NDIM == 1) ? (num) : ((NDIM == 2) ? ((num)*(num)) : ((NDIM == 3) ? ((num)*(num)*(num)) : -1)))
 
 template<int NDIM, int NX>
 std::array<int, NDIM> index_to_dims(int i) {
