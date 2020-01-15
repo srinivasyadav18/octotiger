@@ -37,7 +37,7 @@ namespace octotiger {
 template <int NDIM>
 static constexpr auto q_lowest_dimension_length = NDIM == 1 ? 3 : (NDIM == 2 ? 9 : 27);
 
-//TODO avoid these duplicates
+//TODO avoid duplicates
 template <int NDIM>
 static KOKKOS_INLINE_FUNCTION int flip_dim_device(const int d, int flip_dim) {
     int dims[NDIM];
@@ -53,13 +53,6 @@ static KOKKOS_INLINE_FUNCTION int flip_dim_device(const int d, int flip_dim) {
         k += dims[NDIM - 1 - dim];
     }
     return k;
-}
-
-// max function
-template<class T> 
-KOKKOS_INLINE_FUNCTION const T& max(const T& a, const T& b)
-{
-    return (a < b) ? b : a;
 }
 
 template <int NDIM, int INX, typename twoDimensionalView, typename threeDimensionalView>
@@ -208,16 +201,16 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
                 // printf("%d ", fi);
 
                 // physics<NDIM>::flux(UL, UR, UL0, UR0, this_flux, dim, this_am, this_ap, vg, dx);
-                flux(physics_device, UL, UR, this_flux, dim, this_am, this_ap, vg, dx);  //--expt-relaxed-constexpr
+                flux(physics_device, UL, UR, this_flux, dim, this_am, this_ap, vg, dx);
 
-                am = std::min(am, this_am); //--expt-relaxed-constexpr
-                ap = std::max(ap, this_ap);  //--expt-relaxed-constexpr
+                am = min_device(am, this_am);
+                ap = max_device(ap, this_ap);
                 for (int f = 0; f < nf_device; f++) {
                     fluxes(dim, i, f, fi) = this_flux[f];
                 }
             }
             
-            maxAmax = std::max(ap, safe_real(-am));  //--expt-relaxed-constexpr
+            maxAmax = max_device(ap, safe_real(-am));
 
                 // field update from fluxes
 			for (int f = 0; f < nf_device; f++) {
@@ -332,7 +325,7 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
     Kokkos::parallel_for("init_Q",
         Kokkos::MDRangePolicy<Kokkos::Serial, Kokkos::Rank<3>>(
             {0, 0, 0}, {nf, H_N3, q_lowest_dimension_length<NDIM>}),
-        KOKKOS_LAMBDA(int i, int j, int k) { kokkosQhost(i, j, k) = q[i][j][k]; }); //--expt-relaxed-constexpr
+        KOKKOS_LAMBDA(int i, int j, int k) { kokkosQhost(i, j, k) = q[i][j][k]; }); // ignore warning, because Serial is always on host
 
     // std::cout << kokkosQ.extent(0) << " " << kokkosQ.extent(1) << " " << kokkosQ.extent(2) << "Q"
     // << std::endl;

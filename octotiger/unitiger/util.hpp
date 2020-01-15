@@ -31,6 +31,25 @@ static constexpr int int_pow() {
 	return a;
 }
 
+// #ifdef OCTOTIGER_WITH_KOKKOS
+
+#include <Kokkos_Core.hpp>
+
+// max function to use from CUDA and host
+template<class T> 
+KOKKOS_INLINE_FUNCTION const T& max_device(const T& a, const T& b)
+{
+    return (a < b) ? b : a; //TODO use CUDA intrinsic max if __CUDA_ARCH__
+}
+
+template<class T> 
+KOKKOS_INLINE_FUNCTION const T& min_device(const T& a, const T& b)
+{
+    return (a < b) ? a : b;
+}
+
+// #endif
+
 template<class T>
 static inline void limit_slope(T &ql, T q0, T &qr) {
 	const T tmp1 = qr - ql;

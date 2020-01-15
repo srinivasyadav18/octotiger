@@ -38,6 +38,8 @@ struct physics_variables
 template <int NDIM>
 struct physics
 {
+    static physics_variables<NDIM> variables_;
+
     enum test_type
     {
         SOD,
@@ -437,7 +439,7 @@ struct physics
             case KH:
                 const auto eps = []() { return (rand() + 0.5) / RAND_MAX * 1.0e-3; };
 
-                U[physics<NDIM>::variables_.tau_i][i] = 1.0;
+                U[variables_.tau_i][i] = 1.0;
                 p = 1.0;
                 if (x[1] < 0.0) {
                     rho = 1.0 + eps();
@@ -468,13 +470,11 @@ struct physics
 
         return bc;
     }
-
-    static physics_variables<NDIM> variables_;
 };
 
 // copy of the three member functions for kokkos view data type and a data struct to be handed over
 template <int NDIM, typename ViewSlice>
-static KOKKOS_INLINE_FUNCTION void to_prim(const physics_variables<NDIM> var, const ViewSlice u,
+KOKKOS_INLINE_FUNCTION void to_prim(const physics_variables<NDIM> var, const ViewSlice u,
     safe_real& p, safe_real& v, int dim, safe_real dx) {
     const auto rho = u[var.rho_i];
     const auto rhoinv = safe_real(1.) / rho;
@@ -492,7 +492,7 @@ static KOKKOS_INLINE_FUNCTION void to_prim(const physics_variables<NDIM> var, co
 }
 
 template <int NDIM, typename ViewSlice>
-static KOKKOS_INLINE_FUNCTION void physical_flux(const physics_variables<NDIM> var,
+KOKKOS_INLINE_FUNCTION void physical_flux(const physics_variables<NDIM> var,
     const ViewSlice U, safe_real* /*safe_real[field_count()]*/ F, int dim, safe_real& am,
     safe_real& ap, const safe_real* /*safe_real[NDIM]*/ vg, safe_real dx) {
     safe_real p, v, v0, c;
@@ -509,7 +509,7 @@ static KOKKOS_INLINE_FUNCTION void physical_flux(const physics_variables<NDIM> v
 }
 
 template <int NDIM, typename ViewSlice>
-static KOKKOS_INLINE_FUNCTION void flux(const physics_variables<NDIM> var, const ViewSlice UL,
+KOKKOS_INLINE_FUNCTION void flux(const physics_variables<NDIM> var, const ViewSlice UL,
     const ViewSlice UR,    // const ViewSlice UL0, const ViewSlice UR0,
     safe_real* /*safe_real[field_count()]*/ F, int dim, safe_real& am, safe_real& ap,
     const safe_real* /*safe_real[NDIM]*/ vg, safe_real dx) {
@@ -523,8 +523,8 @@ static KOKKOS_INLINE_FUNCTION void flux(const physics_variables<NDIM> var, const
 
     physical_flux(var, UR, FR, dim, amr, apr, vg, dx);
     physical_flux(var, UL, FL, dim, aml, apl, vg, dx);
-    ap = std::max(std::max(apr, apl), safe_real(0.0));
-    am = std::min(std::min(amr, aml), safe_real(0.0));
+    ap = max_device(max_device(apr, apl), safe_real(0.0));
+    am = min_device(min_device(amr, aml), safe_real(0.0));
     for (int f = 0; f < var.nf_; f++) {
         F[f] = (ap * FL[f] - am * FR[f] + ap * am * (UR[f] - UL[f])) / (ap - am);
     }

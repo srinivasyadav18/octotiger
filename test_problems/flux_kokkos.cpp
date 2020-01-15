@@ -71,7 +71,7 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 		auto q = computer.reconstruct(U, X, omega);
 		auto a = computer.flux(U, q, F, X, omega);
 		safe_real dt = CFL * dx / a;
-		dt = std::min(double(dt), tmax - t + 1.0e-20);
+		dt = min_device(double(dt), tmax - t + 1.0e-20);
 		computer.advance(U0, U, F, X, dx, dt, 1.0, omega);
 		computer.boundaries(U);
 		q = computer.reconstruct(U, X, omega);
@@ -105,7 +105,7 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 		for (int i = 0; i < H_N3; i++) {
 			L1[f] += std::abs(U0[f][i] - U[f][i]);
 			L2[f] += std::pow(U0[f][i] - U[f][i], 2);
-			Linf[f] = std::max((double) Linf[f], std::abs(U0[f][i] - U[f][i]));
+			Linf[f] = max_device((double) Linf[f], std::abs(U0[f][i] - U[f][i]));
 		}
 		L2[f] = sqrt(L2[f]);
 		L1[f] /= INX * INX;
@@ -250,7 +250,7 @@ void run_test_kokkos(typename physics<NDIM>::test_type problem, bool with_correc
 		for (int i = 0; i < H_N3; i++) {
 			L1[f] += std::abs(U0[f][i] - U[f][i]);
 			L2[f] += std::pow(U0[f][i] - U[f][i], 2);
-			Linf[f] = std::max((double) Linf[f], std::abs(U0[f][i] - U[f][i]));
+			Linf[f] = max_device((double) Linf[f], std::abs(U0[f][i] - U[f][i]));
 		}
 		L2[f] = sqrt(L2[f]);
 		L1[f] /= INX * INX;
