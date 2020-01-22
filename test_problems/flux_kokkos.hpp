@@ -55,6 +55,9 @@ static KOKKOS_INLINE_FUNCTION int flip_dim_device(const int d, int flip_dim) {
     return k;
 }
 
+// using FluxExecutionSpace = Kokkos::DefaultExecutionSpace;
+using FluxExecutionSpace = Kokkos::DefaultHostExecutionSpace;
+
 template <int NDIM, int INX, typename twoDimensionalView, typename threeDimensionalView>
 // F should be 0-initialized, things will be added to it and returned
 // all other arguments are read-only
@@ -93,10 +96,10 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 	auto flux_size_dim_3 = static_cast<int>(std::pow(INX + 1, NDIM));
     //--------------------------------------------------------------------------------------------
 
-    Kokkos::View<safe_real[NDIM][geo::H_N3][nf][geo::NFACEDIR]> fluxes(
+    Kokkos::View<safe_real[NDIM][geo::H_N3][nf][geo::NFACEDIR], FluxExecutionSpace> fluxes(
         Kokkos::ViewAllocateWithoutInitializing("fluxes"));
 
-    Kokkos::View<int**> kokkosIndices(
+    Kokkos::View<int**, FluxExecutionSpace> kokkosIndices(
         Kokkos::ViewAllocateWithoutInitializing("indices"), NDIM, indices_size);
 	auto kokkosIhost = Kokkos::create_mirror_view(typename Kokkos::DefaultHostExecutionSpace::memory_space(), kokkosIndices);
 
@@ -109,7 +112,7 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 	
     // auto policy = Kokkos::MDRangePolicy<Kokkos::Experimental::HPX, Kokkos::Rank<2>>
     auto policy =
-        Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0, 0}, {static_cast<int>(indices_size), NDIM});
+        Kokkos::MDRangePolicy<FluxExecutionSpace, Kokkos::Rank<2>>({0, 0}, {static_cast<int>(indices_size), NDIM});
         // Kokkos::MDRangePolicy<Kokkos::Serial, Kokkos::Rank<2>>({0, 0}, {static_cast<int>(indices_size), NDIM});
 
     Kokkos::fence();
@@ -264,10 +267,10 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
     safe_real omega
     ) {
 
-    auto kokkosF = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosFhost);
-    auto kokkosU = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosUhost);
-    auto kokkosX = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosXhost);
-    auto kokkosQ = Kokkos::create_mirror_view(typename Kokkos::DefaultExecutionSpace::memory_space(), kokkosQhost);
+    auto kokkosF = Kokkos::create_mirror_view(typename FluxExecutionSpace::memory_space(), kokkosFhost);
+    auto kokkosU = Kokkos::create_mirror_view(typename FluxExecutionSpace::memory_space(), kokkosUhost);
+    auto kokkosX = Kokkos::create_mirror_view(typename FluxExecutionSpace::memory_space(), kokkosXhost);
+    auto kokkosQ = Kokkos::create_mirror_view(typename FluxExecutionSpace::memory_space(), kokkosQhost);
 
     Kokkos::fence();
 
