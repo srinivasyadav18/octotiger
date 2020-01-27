@@ -201,6 +201,8 @@ inline safe_real superbee(safe_real a, safe_real b) {
 template<int NDIM, int INX, class PHYS>
 const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(const hydro::state_type &U_, const hydro::x_type &X, safe_real omega) {
 	PROFILE();
+	apex::scoped_timer(__func__);
+
 	static thread_local auto AM = std::vector < std::vector < safe_real >> (geo::NANGMOM, std::vector < safe_real > (geo::H_N3));
 	static thread_local auto Q = std::vector < std::vector<std::vector<safe_real>>
 			> (nf_, std::vector < std::vector < safe_real >> (geo::NDIR, std::vector < safe_real > (geo::H_N3)));

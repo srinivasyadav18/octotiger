@@ -260,9 +260,9 @@ void line_of_centers_analyze(const line_of_centers_t& loc, real omega, std::pair
 }
 
 void node_server::execute_solver(bool scf, node_count_type ngrids) {
-	timings_.times_[timings::time_regrid] = 0.0;
-	timings_.times_[timings::time_fmm] = 0.0;
-	timings::scope ts(timings_, timings::time_total);
+//	timings_.times_[timings::time_regrid] = 0.0;
+//	timings_.times_[timings::time_fmm] = 0.0;
+//	timings::scope ts(timings_, timings::time_total);
 	integer output_cnt{};
 //	output_all("X", 0, false);
 
@@ -441,7 +441,7 @@ void node_server::execute_solver(bool scf, node_count_type ngrids) {
 
 	bench_stop = hpx::util::high_resolution_clock::now() / 1e9;
 	{
-		timings::scope ts(timings_, timings::time_compare_analytic);
+	//	timings::scope ts(timings_, timings::time_compare_analytic);
 
 		if (!opts().disable_output) {
 			printf("doing silo out...\n");
@@ -485,7 +485,7 @@ void node_server::refined_step() {
 //	hpx::util::itt::task t(hpx::get_thread_itt_domain(), sh);
 //#endif
 
-	timings::scope ts(timings_, timings::time_computation);
+//	timings::scope ts(timings_, timings::time_computation);
 	const real dx = TWO * grid::get_scaling_factor() / real(INX << my_location.level());
 	real cfl0 = opts().cfl;
 
@@ -517,7 +517,7 @@ future<void> node_server::nonrefined_step() {
 //	hpx::util::itt::task t(hpx::get_thread_itt_domain(), sh);
 //#endif
 
-	timings::scope ts(timings_, timings::time_computation);
+//	timings::scope ts(timings_, timings::time_computation);
 
 	real cfl0 = opts().cfl;
 	dt_ = ZERO;

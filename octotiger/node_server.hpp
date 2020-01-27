@@ -112,7 +112,7 @@ private:
 	octotiger::fmm::monopole_interactions::p2p_interaction_interface p2p_interactor;
 #endif
 public:
-	timings timings_;
+//	timings timings_;
 
 	real get_time() const {
 		return current_time;

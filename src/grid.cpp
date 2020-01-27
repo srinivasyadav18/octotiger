@@ -1679,6 +1679,7 @@ void grid::rad_init() {
 }
 
 real grid::compute_fluxes() {
+
 	PROFILE();
 	static hpx::lcos::local::once_flag flag;
 	hpx::lcos::local::call_once(flag, [this]() {
