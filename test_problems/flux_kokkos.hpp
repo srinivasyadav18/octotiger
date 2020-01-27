@@ -66,8 +66,6 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
     threeDimensionalView F, const twoDimensionalView X,
     safe_real omega) {
 
-    auto sTimer = scoped_timer("flux_kokkos");
-
     using geo = const cell_geometry<NDIM, INX>;
 
     static const auto nf = physics<NDIM>::field_count();
@@ -104,7 +102,10 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 	auto kokkosIhost = Kokkos::create_mirror_view(typename Kokkos::DefaultHostExecutionSpace::memory_space(), kokkosIndices);
 
     Kokkos::parallel_for("init_I", Kokkos::MDRangePolicy<Kokkos::DefaultHostExecutionSpace, Kokkos::Rank<2>>({0, 0}, {indices_size, NDIM}),
-        KOKKOS_LAMBDA(const int i, const int dim) { kokkosIhost(dim, i) = geo().get_indexes(3, geo::face_pts()[dim][0])[i]; });
+        KOKKOS_LAMBDA(const int i, const int dim) { 
+            kokkosIhost(dim, i) = geo().get_indexes(3, geo::face_pts()[dim][0])[i]; 
+        }
+    );
     Kokkos::fence();
 	Kokkos::deep_copy(kokkosIndices, kokkosIhost);
 
@@ -116,6 +117,8 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
         // Kokkos::MDRangePolicy<Kokkos::Serial, Kokkos::Rank<2>>({0, 0}, {static_cast<int>(indices_size), NDIM});
 
     Kokkos::fence();
+
+    auto sTimer = scoped_timer("flux_kokkos");
 
     Kokkos::parallel_reduce("compute fluxes", policy,
         KOKKOS_LAMBDA(const int indexIteration, const int dim, safe_real& maxAmax) {
@@ -162,8 +165,8 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
             static constexpr auto kdelta = kdeltas_device[NDIM - 1];
 
             // a copy of geo::H_DN, for device code
-            static constexpr int H_DNX_device = NDIM == 3 ? H_NX * H_NX : (NDIM == 2 ? H_NX : 1);
-            static constexpr int H_DNY_device = NDIM == 3 ? H_NX : 1;
+            static constexpr int H_DNX_device = NDIM == 3 ? geo::H_NX * geo::H_NX : (NDIM == 2 ? geo::H_NX : 1);
+            static constexpr int H_DNY_device = NDIM == 3 ? geo::H_NX : 1;
             static constexpr int H_DNZ_device = 1;
            	static constexpr int H_DN_device[3] = { H_DNX_device, H_DNY_device, H_DNZ_device };
 
@@ -187,7 +190,13 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
                 // auto UR0 = Kokkos::subview(U, Kokkos::ALL, i);
                 // auto UL0 = Kokkos::subview(U, Kokkos::ALL, i - geo::H_DN[dim]);
                 auto UR = Kokkos::subview(Q, Kokkos::ALL, i, d);
+                if (UR[0] == 0.){
+                    printf("UR NAN!\n");
+                }
                 auto UL = Kokkos::subview(Q, Kokkos::ALL, i - H_DN_device[dim], flip_dim_device<NDIM>(d, dim));
+                if (UL[0] == 0.){
+                    printf("UL NAN!\n");
+                }
 
                 safe_real vg[NDIM];
                 if CONSTEXPR(NDIM > 1) {
@@ -200,7 +209,6 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
                 else {
                     vg[0] = 0.0;
                 }
-                // printf("%d ", fi);
 
                 // physics<NDIM>::flux(UL, UR, UL0, UR0, this_flux, dim, this_am, this_ap, vg, dx);
                 flux(physics_device, UL, UR, this_flux, dim, this_am, this_ap, vg, dx);
@@ -211,18 +219,18 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
                     fluxes(dim, i, f, fi) = this_flux[f];
                 }
             }
-            
-            maxAmax = max_device(ap, safe_real(-am));
 
-                // field update from fluxes
+            maxAmax = max_device(maxAmax, max_device(ap, safe_real(-am)));
+
+            // field update from fluxes
 			for (int f = 0; f < nf_device; f++) {
                     F(dim, f, i) = 0.0;
                 for (int fi = 0; fi < geo::NFACEDIR; fi++) {
-                        const auto& w = weights[fi];
+                    const auto& w = weights[fi];
                     F(dim, f, i) += w * fluxes(dim, i, f, fi);
-					}
-				}
-                // angular momentum update from linear momentum
+                }
+            }
+            // angular momentum update from linear momentum
 			for (int angmom_pair = 0; angmom_pair < angmom_count; angmom_pair++) {
                 const int sx_i = angmom_index + angmom_pair * (NDIM + geo::NANGMOM);
 				const int zx_i = sx_i + NDIM;
@@ -246,7 +254,7 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
         Kokkos::Max<safe_real>(amax));
 
     Kokkos::fence();
-		return amax;
+	return amax;
 }    // flux_kokkos
 
 // template <int NDIM, int INX>

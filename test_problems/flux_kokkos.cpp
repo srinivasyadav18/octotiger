@@ -149,7 +149,7 @@ void run_test(typename physics<NDIM>::test_type problem, bool with_correction) {
 		else{
 			a = computer.flux(U, q, F, X, omega);
 		}
-		printState<NDIM>(U, U0, F, X, omega, q, a);
+		// printState<NDIM>(U, U0, F, X, omega, q, a);
 		safe_real dt = CFL * dx / a;
 		dt = std::min(double(dt), tmax - t + 1.0e-20);
 		computer.advance(U0, U, F, X, dx, dt, 1.0, omega);
@@ -266,6 +266,7 @@ void compare(typename physics<NDIM>::test_type problem, bool with_correction) {
 	first_q = q;
 	safe_real a_ref, a;
 	a = octotiger::compute_flux_kokkos<NDIM, INX>(computer, U0, U, q, F, X, omega, nf, H_N3);
+	printf("reference \n");
 	a_ref = computer.flux(U, q, F_ref, X, omega);
 	printf("a: %e %e \n", a, a_ref);
 
@@ -274,7 +275,7 @@ void compare(typename physics<NDIM>::test_type problem, bool with_correction) {
 		for (int j=0; j < F[i].size(); ++j){
 			for (int k=0; k < F[i][j].size(); ++k){
 				auto diff = abs(F[i][j][k] - F_ref[i][j][k]);
-				bool is_same = ((diff/F[i][j][k] < 1e-5) && (diff/F_ref[i][j][k] < 1e-5)) || diff < 1e-15;
+				bool is_same = ((diff/F[i][j][k] < 1e-10) && (diff/F_ref[i][j][k] < 1e-10)) || diff < 1e-20;
 				if (!is_same){
 					printf("%d %d %d: %e %e; ", i, j, k, F[i][j][k], diff);
 				}
@@ -408,16 +409,9 @@ int main(int argc, char** argv) {
 	// test_random_numbers<3, 50>();
 	// test_random_numbers<2, 200>();
 	// run_tests<3, 50, true>(physics<3>::BLAST, true);
-	// run_test<2, 8, false>(physics<2>::BLAST, true);
-	// run_test<2, 8, true>(physics<2>::BLAST, true); // identical
-	// compare<2, 8>(physics<2>::BLAST, true);
-	compare<2, 10>(physics<2>::BLAST, true);
-	// compare<2, 20>(physics<2>::BLAST, true);
-	// compare<2, 100>(physics<2>::BLAST, true);
-	// compare<2, 200>(physics<2>::BLAST, true);
-	// compare<2, 200>(physics<2>::BLAST, true);
-	// run_test<2, 10, false>(physics<2>::BLAST, true);
-	// run_test<2, 10, true>(physics<2>::BLAST, true);
+	compare<2, 200>(physics<2>::BLAST, true);
+	run_test<2, 200, false>(physics<2>::BLAST, true);
+	run_test<2, 200, true>(physics<2>::BLAST, true);
 	// flux_kokkos: 0.00442272 seconds
 	
     Kokkos::finalize();
