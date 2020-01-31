@@ -5,7 +5,7 @@
 
 // Original Fortran source: http://cococubed.asu.edu/research_pages/sedov.shtml
 
-#if !defined(__CUDA_ARCH__)
+#ifndef __CUDA_ARCH__
 
 
 /* sedov3.f -- translated by f2c (version 20160102).
@@ -23,6 +23,7 @@
 #include <cmath>
 #include <vector>
 #include <unordered_map>
+#include <memory>
 //#include "f2c.h"
 
 #if !defined(OCTOTIGER_HAVE_BOOST_MULTIPRECISION)
