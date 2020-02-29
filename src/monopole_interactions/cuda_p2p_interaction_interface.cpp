@@ -6,7 +6,7 @@
 #ifdef OCTOTIGER_HAVE_CUDA
 #include "octotiger/monopole_interactions/cuda_p2p_interaction_interface.hpp"
 #include "octotiger/monopole_interactions/p2p_cuda_kernel.hpp"
-
+#include <hpx/cuda_support/cuda_future_helper.hpp>
 #include "octotiger/options.hpp"
 
 #include <array>
@@ -44,11 +44,11 @@ namespace octotiger { namespace fmm { namespace monopole_interactions {
                 monopoles, neighbors, type, staging_area.local_monopoles);
 
             // Queue moving of input data to device
-            util::cuda_helper& gpu_interface =
+            hpx::cuda::cuda_future_helper& gpu_interface =
                 kernel_scheduler::scheduler().get_launch_interface(slot);
             kernel_device_enviroment& env =
                 kernel_scheduler::scheduler().get_device_enviroment(slot);
-            gpu_interface.copy_async(env.device_local_monopoles,
+            gpu_interface.memcpy_async(env.device_local_monopoles,
                 staging_area.local_monopoles.data(), local_monopoles_size,
                 cudaMemcpyHostToDevice);
 
@@ -60,14 +60,14 @@ namespace octotiger { namespace fmm { namespace monopole_interactions {
             //                 &theta, &dx};
             void* args[] = {&(env.device_local_monopoles),
                 &(env.device_blocked_monopoles), &theta, &dx};
-            gpu_interface.execute(reinterpret_cast<void const*>(&cuda_p2p_interactions_kernel),
+            gpu_interface.device_launch_apply(&cuda_p2p_interactions_kernel,
                 grid_spec, threads_per_block, args, 0);
             // void* sum_args[] = {&(env.device_blocked_monopoles)};
             // dim3 const sum_spec(1);
             // dim3 const threads(512);
             // gpu_interface.execute(
             //     &cuda_add_pot_blocks, sum_spec, threads, sum_args, 0);
-            gpu_interface.copy_async(potential_expansions_SoA.get_pod(),
+            gpu_interface.memcpy_async(potential_expansions_SoA.get_pod(),
                 env.device_blocked_monopoles, potential_expansions_small_size,
                 cudaMemcpyDeviceToHost);
 

@@ -165,7 +165,6 @@ set(header_files
     octotiger/common_kernel/struct_of_array_data.hpp
     octotiger/compute_factor.hpp
     octotiger/cuda_util/cuda_global_def.hpp
-    octotiger/cuda_util/cuda_helper.hpp
     octotiger/cuda_util/cuda_scheduler.hpp
     octotiger/monopole_interactions/calculate_stencil.hpp
     octotiger/monopole_interactions/cuda_p2p_interaction_interface.hpp

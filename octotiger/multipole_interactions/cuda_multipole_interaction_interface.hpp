@@ -7,7 +7,7 @@
 #include "octotiger/multipole_interactions/multipole_interaction_interface.hpp"    // will be used as fallback in non-cuda compilations
 
 #ifdef OCTOTIGER_HAVE_CUDA
-#include "octotiger/cuda_util/cuda_helper.hpp"
+#include <hpx/cuda_support/cuda_future_helper.hpp>
 #include "octotiger/cuda_util/cuda_scheduler.hpp"
 
 #include "octotiger/real.hpp"

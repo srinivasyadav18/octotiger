@@ -21,7 +21,7 @@
 #include "octotiger/test_problems/amr/amr.hpp"
 
 #ifdef OCTOTIGER_HAVE_CUDA
-#include "octotiger/cuda_util/cuda_helper.hpp"
+#include <hpx/cuda_support/cuda_future_helper.hpp>
 #include "octotiger/cuda_util/cuda_scheduler.hpp"
 #include "octotiger/monopole_interactions/cuda_p2p_interaction_interface.hpp"
 #include "octotiger/multipole_interactions/cuda_multipole_interaction_interface.hpp"
@@ -99,7 +99,7 @@ std::size_t init_thread_local_worker(std::size_t desired)
                   <<  mono_inter::calculate_stencil().first.size() << std::endl << std::endl;
         }
         static_assert(octotiger::fmm::STENCIL_WIDTH <= INX, R"(
-            ERROR: Stencil is too wide for the subgrid size. 
+            ERROR: Stencil is too wide for the subgrid size.
             Please increase either OCTOTIGER_THETA_MINIMUM or OCTOTIGER_WITH_GRIDDIM (see cmake file))");
 
         std::cout << "OS-thread " << current << " on locality "
@@ -232,8 +232,8 @@ void initialize(options _opts, std::vector<hpx::id_type> const& localities) {
 
 #ifdef OCTOTIGER_HAVE_CUDA
 	std::cout << "CUDA is enabled! Available CUDA targets on this locality: " << std::endl;
-	octotiger::util::cuda_helper::print_local_targets();
-    octotiger::fmm::kernel_scheduler::init_constants();
+        hpx::cuda::cuda_future_helper::print_local_targets();
+        octotiger::fmm::kernel_scheduler::init_constants();
 #endif
 	grid::static_init();
 	normalize_constants();
@@ -425,12 +425,12 @@ int hpx_main(int argc, char* argv[]) {
 
 
 
-          ___       _      _____ _                 
-         / _ \  ___| |_ __|_   _(_) __ _  ___ _ __ 
+          ___       _      _____ _
+         / _ \  ___| |_ __|_   _(_) __ _  ___ _ __
         | | | |/ __| __/ _ \| | | |/ _` |/ _ \ '__|
-        | |_| | (__| || (_) | | | | (_| |  __/ |   
-         \___/ \___|\__\___/|_| |_|\__, |\___|_|   
-      _                            |___/           
+        | |_| | (__| || (_) | | | | (_| |  __/ |
+         \___/ \___|\__\___/|_| |_|\__, |\___|_|
+      _                            |___/
      (_)
               _ __..-;''`-
       O   (`/' ` |  \ \ \ \-.

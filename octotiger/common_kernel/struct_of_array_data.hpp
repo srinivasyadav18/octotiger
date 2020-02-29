@@ -7,7 +7,7 @@
 
 #include "kernel_simd_types.hpp"
 #ifdef OCTOTIGER_HAVE_CUDA
-#include "../cuda_util/cuda_helper.hpp"
+#include <hpx/cuda_support/cuda_future_helper.hpp>
 #endif
 
 // #include "interaction_constants.hpp"

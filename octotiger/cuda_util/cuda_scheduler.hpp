@@ -10,7 +10,7 @@
 #include "octotiger/common_kernel/multiindex.hpp"
 #include "octotiger/common_kernel/struct_of_array_data.hpp"
 #include "octotiger/config/export_definitions.hpp"
-#include "octotiger/cuda_util/cuda_helper.hpp"
+#include <hpx/cuda_support/cuda_future_helper.hpp>
 #include "octotiger/real.hpp"
 #include "octotiger/taylor.hpp"
 
@@ -56,13 +56,13 @@ namespace octotiger { namespace fmm {
         T* allocate(std::size_t n)
         {
             T* data;
-            util::cuda_helper::cuda_error(
+            hpx::cuda::cuda_error(
                 cudaMallocHost(reinterpret_cast<void**>(&data), n * sizeof(T)));
             return data;
         }
         void deallocate(T* p, std::size_t n)
         {
-            util::cuda_helper::cuda_error(cudaFreeHost(p));
+            hpx::cuda::cuda_error(cudaFreeHost(p));
         }
     };
 
@@ -89,7 +89,7 @@ namespace octotiger { namespace fmm {
     using hydro_input_t = octotiger::fmm::struct_of_array_data<std::array<T, NF>, T, NF, H_N3, 19>;
 
     // Contains references to all data needed for one Hydro kernel run
-    class hydro_staging_area 
+    class hydro_staging_area
     {
         public:
         hydro_staging_area(hydro_tmp_t<double> &D1,
@@ -170,7 +170,7 @@ namespace octotiger { namespace fmm {
         kernel_device_enviroment& get_device_enviroment(std::size_t slot);
         // Get the CUDA interface for a slot
         // Throws if a CPU slot (-1) is given
-        util::cuda_helper& get_launch_interface(std::size_t slot);
+        hpx::cuda::cuda_future_helper& get_launch_interface(std::size_t slot);
         // Global scheduler instance for this HPX thread
         static OCTOTIGER_EXPORT kernel_scheduler& scheduler();
 
@@ -197,7 +197,7 @@ namespace octotiger { namespace fmm {
         bool is_initialized;
 
         // Contains number_cuda_streams_managed CUDA interfaces
-        std::vector<util::cuda_helper> stream_interfaces;
+        std::vector<hpx::cuda::cuda_future_helper> stream_interfaces;
         // Pinned memory for each stream, containing room for the expansions
         std::vector<struct_of_array_data<expansion,
             real,

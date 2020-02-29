@@ -10,7 +10,7 @@
 #include "octotiger/unitiger/physics.hpp"
 #include "octotiger/unitiger/physics_impl.hpp"
 
-#include <octotiger/cuda_util/cuda_helper.hpp>
+#include <hpx/cuda_support/cuda_future_helper.hpp>
 #include <octotiger/cuda_util/cuda_scheduler.hpp>
 #include <octotiger/common_kernel/struct_of_array_data.hpp>
 #include <octotiger/profiler.hpp>

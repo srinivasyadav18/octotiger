@@ -111,15 +111,15 @@ namespace octotiger { namespace fmm {
             // Move data to constant memory, once per gpu
             for (std::size_t gpu_id = 0; gpu_id < gpu_count; ++gpu_id)
             {
-                util::cuda_helper::cuda_error(cudaSetDevice(gpu_id));
-                util::cuda_helper::cuda_error(cudaMemcpyToSymbol(
+                hpx::cuda::cuda_error(cudaSetDevice(gpu_id));
+                hpx::cuda::cuda_error(cudaMemcpyToSymbol(
                     multipole_interactions::device_constant_stencil_masks,
                     multipole_stencil_masks.get(), full_stencil_size / sizeof(double) * sizeof(bool)));
-                util::cuda_helper::cuda_error(cudaMemcpyToSymbol(
+                hpx::cuda::cuda_error(cudaMemcpyToSymbol(
                     multipole_interactions::device_stencil_indicator_const,
                     multipole_inner_stencil_masks.get(),
                     full_stencil_size / sizeof(double) * sizeof(bool)));
-                util::cuda_helper::cuda_error(cudaMemcpyToSymbol(
+                hpx::cuda::cuda_error(cudaMemcpyToSymbol(
                     monopole_interactions::device_stencil_masks,
                     multipole_stencil_masks.get(), full_stencil_size / sizeof(double) * sizeof(bool)));
                 // util::cuda_helper::cuda_error(cudaMemcpyToSymbol(
@@ -220,32 +220,35 @@ namespace octotiger { namespace fmm {
 
                 // Allocate buffers on the gpus - once per stream
                 std::size_t local_stream_id = 0;
-                stream_interfaces.reserve(number_cuda_streams_managed);
+                //stream_interfaces.reserve(number_cuda_streams_managed);
                 for (kernel_device_enviroment& env : kernel_device_enviroments)
                 {
                     std::size_t const worker_gpu_id =
                         (worker_stream_id + local_stream_id) / streams_per_gpu;
-                    util::cuda_helper::cuda_error(cudaSetDevice(worker_gpu_id));
-                    stream_interfaces.emplace_back(worker_gpu_id);
+
+                    hpx::cuda::cuda_error(cudaSetDevice(worker_gpu_id));
+                    stream_interfaces.emplace_back(
+                        std::move(hpx::cuda::cuda_future_helper(
+                        worker_gpu_id)));
 
                     // Allocate memory on device
-                    util::cuda_helper::cuda_error(
+                    hpx::cuda::cuda_error(
                         cudaMalloc(reinterpret_cast<void**>(&(env.device_local_monopoles)),
                             local_monopoles_size));
-                    util::cuda_helper::cuda_error(
+                    hpx::cuda::cuda_error(
                         cudaMalloc(reinterpret_cast<void**>(&(env.device_local_expansions)),
                             local_expansions_size));
-                    util::cuda_helper::cuda_error(
+                    hpx::cuda::cuda_error(
                         cudaMalloc(reinterpret_cast<void**>(&(env.device_center_of_masses)),
                             center_of_masses_size));
-                    util::cuda_helper::cuda_error(
+                    hpx::cuda::cuda_error(
                         cudaMalloc(reinterpret_cast<void**>(&(env.device_potential_expansions)),
                             potential_expansions_size));
-                    util::cuda_helper::cuda_error(
+                    hpx::cuda::cuda_error(
                         cudaMalloc(reinterpret_cast<void**>(&(env.device_angular_corrections)),
                             angular_corrections_size));
 
-                    util::cuda_helper::cuda_error(
+                    hpx::cuda::cuda_error(
                         cudaMalloc(reinterpret_cast<void**>(&(env.device_blocked_monopoles)),
                             3 * potential_expansions_small_size));
 
@@ -254,13 +257,13 @@ namespace octotiger { namespace fmm {
                     ++cur_slot;
                     if (cur_slot >= slots_per_cuda_stream)
                     {
-                        //util::cuda_helper::cuda_error(cudaThreadSynchronize());
+                        //hpx::cuda::cuda_error(cudaThreadSynchronize());
                         cur_slot = 0;
                         ++cur_interface;
                     }
                 }
                 // continue when all cuda things are handled
-                util::cuda_helper::cuda_error(cudaThreadSynchronize());
+                hpx::cuda::cuda_error(cudaThreadSynchronize());
             }
         }
         is_initialized = true;
@@ -271,15 +274,15 @@ namespace octotiger { namespace fmm {
         // Deallocate device buffers
         for (kernel_device_enviroment& env : kernel_device_enviroments)
         {
-            util::cuda_helper::cuda_error(
+            hpx::cuda::cuda_error(
                 cudaFree(static_cast<void*>(env.device_local_monopoles)));
-            util::cuda_helper::cuda_error(
+            hpx::cuda::cuda_error(
                 cudaFree(static_cast<void*>(env.device_local_expansions)));
-            util::cuda_helper::cuda_error(
+            hpx::cuda::cuda_error(
                 cudaFree(static_cast<void*>(env.device_center_of_masses)));
-            util::cuda_helper::cuda_error(
+            hpx::cuda::cuda_error(
                 cudaFree(static_cast<void*>(env.device_potential_expansions)));
-            util::cuda_helper::cuda_error(
+            hpx::cuda::cuda_error(
                 cudaFree(static_cast<void*>(env.device_angular_corrections)));
        }
     }
@@ -290,7 +293,7 @@ namespace octotiger { namespace fmm {
              ++slot_id)
         {
             cudaError_t const response =
-                stream_interfaces[slot_id].pass_through(
+                stream_interfaces[slot_id].apply_pass_through(
                     [](cudaStream_t& stream) -> cudaError_t {
                         return cudaStreamQuery(stream);
                     });
@@ -322,7 +325,7 @@ namespace octotiger { namespace fmm {
         return kernel_device_enviroments[slot];
     }
 
-    util::cuda_helper& kernel_scheduler::get_launch_interface(std::size_t slot)
+    hpx::cuda::cuda_future_helper& kernel_scheduler::get_launch_interface(std::size_t slot)
     {
         std::size_t interface = slot / slots_per_cuda_stream;
         return stream_interfaces[slot];
