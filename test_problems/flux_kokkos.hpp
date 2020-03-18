@@ -217,19 +217,13 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
                 ap = max_device(ap, this_ap);
                 for (int f = 0; f < nf_device; f++) {
                     fluxes(dim, i, f, fi) = this_flux[f];
+                    // field update from fluxes
+                    F(dim, f, i) += weights[fi] * this_flux[f];
                 }
             }
 
             maxAmax = max_device(maxAmax, max_device(ap, safe_real(-am)));
 
-            // field update from fluxes
-			for (int f = 0; f < nf_device; f++) {
-                    F(dim, f, i) = 0.0;
-                for (int fi = 0; fi < geo::NFACEDIR; fi++) {
-                    const auto& w = weights[fi];
-                    F(dim, f, i) += w * fluxes(dim, i, f, fi);
-                }
-            }
             // angular momentum update from linear momentum
 			for (int angmom_pair = 0; angmom_pair < angmom_count; angmom_pair++) {
                 const int sx_i = angmom_index + angmom_pair * (NDIM + geo::NANGMOM);
@@ -285,6 +279,7 @@ safe_real compute_flux_kokkos(hydro_computer<NDIM, INX>& computer,
     Kokkos::deep_copy(kokkosU, kokkosUhost);
     Kokkos::deep_copy(kokkosX, kokkosXhost);
     Kokkos::deep_copy(kokkosQ, kokkosQhost);
+    Kokkos::deep_copy(kokkosF, kokkosFhost);
 
     Kokkos::fence();
     
