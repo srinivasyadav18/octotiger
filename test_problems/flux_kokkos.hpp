@@ -223,7 +223,7 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
             }
 
             maxAmax = max_device(maxAmax, max_device(ap, safe_real(-am)));
-
+            /* this here disappeared from octotiger master with e3e698cbe8a2e79b1188afe9ee4cf28abdd78385
             // angular momentum update from linear momentum
 			for (int angmom_pair = 0; angmom_pair < angmom_count; angmom_pair++) {
                 const int sx_i = angmom_index + angmom_pair * (NDIM + geo::NANGMOM);
@@ -243,7 +243,7 @@ safe_real flux_kokkos(const int angmom_count, const int angmom_index,
 						}
 					}
 				}
-			}
+			}*/
         },
         Kokkos::Max<safe_real>(amax));
 
