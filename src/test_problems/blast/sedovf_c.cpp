@@ -24,6 +24,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <cassert>
 //#include "f2c.h"
 
 #if !defined(OCTOTIGER_HAVE_BOOST_MULTIPRECISION)
@@ -1134,9 +1135,6 @@ sed_real zeroin_(sed_real *ax, sed_real *bx, D_fp f, sed_real *tol) {
 #include <hpx/lcos/local/spinlock.hpp>
 using mutex_type = hpx::lcos::local::spinlock;
 #else
-#include <unordered_map>
-#include <memory>
-#include <cassert>
 using mutex_type = std::mutex;
 #endif
 
