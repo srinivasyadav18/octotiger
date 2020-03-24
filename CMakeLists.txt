@@ -67,6 +67,8 @@ option(OCTOTIGER_WITH_TESTS "Enable tests" ON)
 
 set(OCTOTIGER_WITH_GRIDDIM "8" CACHE STRING "Grid size")
 
+set(CMAKE_CXX_STANDARD 14)
+
 ################################################################################
 # Find required packages
 ################################################################################
@@ -244,7 +246,7 @@ add_hpx_library(
 add_hpx_library(
   hydrolib
   DEPENDENCIES
-    Silo::silo Vc::Vc Boost::boost quadmath
+    Silo::silo Vc::Vc Boost::boost quadmath Kokkos::kokkos
   SOURCES
    src/unitiger/hydro.cpp
    src/test_problems/blast/sedovf_c.cpp
@@ -462,26 +464,15 @@ if (OCTOTIGER_WITH_KOKKOS)
     ################################################################################
     # Set up flux_kokkos target
     ################################################################################
-#    add_executable(flux_kokkos test_problems/flux_kokkos.cpp)
-#    target_compile_options(flux_kokkos PRIVATE
-#        -Wno-ignored-attributes -Wno-attributes -Wno-deprecated-declarations
-#        -Wno-unused-result -ffast-math -O3)
-#    target_link_libraries(flux_kokkos Kokkos::kokkos)
 
   add_hpx_executable(
     flux_kokkos
     DEPENDENCIES
-      hydrolib kokkos
+      hydrolib Kokkos::kokkos
     SOURCES
       test_problems/flux_kokkos.cpp
     HEADERS
       test_problems/flux_kokkos.hpp
   )
-  # manual hack to help find Kokkos headers #TODO remove
-  target_include_directories(hydrolib PUBLIC "${Kokkos_DIR}/install/include")
-  target_link_directories(hydrolib PUBLIC "${Kokkos_DIR}/install/lib")
-
-  target_include_directories(flux_kokkos PUBLIC "${Kokkos_DIR}/install/include")
-  target_link_directories(flux_kokkos PUBLIC "${Kokkos_DIR}/install/lib")
 endif()
 
