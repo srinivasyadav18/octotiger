@@ -14,7 +14,12 @@
 #include <limits>
 #include <silo.h>
 
-#define CONSTEXPR
+// remove if constexpr (...) syntax while not compiling with c++17
+#if __cplusplus >= 201703L
+    #define CONSTEXPR constexpr
+#else
+    #define CONSTEXPR
+#endif
 
 #define NO_POS_ENFORCE
 //#define FACES_ONLY

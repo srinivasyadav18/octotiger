@@ -1044,7 +1044,7 @@ void rad_grid::complete_rad_amr_boundary() {
 					const int iiir = hindex(i, j, k);
 					if (is_coarse[iii0]) {
 						int ir, jr, kr;
-						if constexpr (H_BW % 2 == 0) {
+						if CONSTEXPR (H_BW % 2 == 0) {
 							ir = i % 2;
 							jr = j % 2;
 							kr = k % 2;
