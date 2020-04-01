@@ -1,3 +1,4 @@
+#if !defined(__CUDA_ARCH__) 
 //  Copyright (c) 2019 AUTHORS
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -18,6 +19,8 @@
 #include "octotiger/taylor.hpp"
 
 #include <hpx/include/parallel_for_loop.hpp>
+
+#include <Vc/Vc>
 
 #include <cmath>
 #include <cstddef>
@@ -1582,13 +1585,13 @@ multipole_pass_type grid::compute_multipoles(gsolve_type type, const multipole_p
 									X[d][ci] = (*(com_ptr[0]))[iiic][d];
 								}
 							}
-#if !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
+#if !defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
 							real mtot = mc.sum();
 #else
                             real mtot = Vc::reduce(mc);
 #endif
 							for (integer d = 0; d < NDIM; ++d) {
-#if !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
+#if !defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
 								(*(com_ptr[1]))[iiip][d] = (X[d] * mc).sum() / mtot;
 #else
                                 (*(com_ptr[1]))[iiip][d] = Vc::reduce(X[d] * mc) / mtot;
@@ -1628,7 +1631,7 @@ multipole_pass_type grid::compute_multipoles(gsolve_type type, const multipole_p
 
 						mp = mc >> dx;
 						for (integer j = 0; j != 20; ++j) {
-#if !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
+#if !defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
 							MM[j] = mp[j].sum();
 #else
                             MM[j] = Vc::reduce(mp[j]);
@@ -1762,3 +1765,5 @@ neighbor_gravity_type grid::fill_received_array(neighbor_gravity_type raw_input)
 const std::vector<boundary_interaction_type>& grid::get_ilist_n_bnd(const geo::direction &dir) {
 	return ilist_n_bnd[dir];
 }
+
+#endif /*!defined __CUDA_ARCH__*/

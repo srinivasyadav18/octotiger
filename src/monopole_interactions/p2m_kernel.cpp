@@ -1,3 +1,4 @@
+#if !defined(__CUDA_ARCH__) 
 //  Copyright (c) 2019 AUTHORS
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -13,6 +14,8 @@
 #include "octotiger/interaction_types.hpp"
 #include "octotiger/options.hpp"
 #include "octotiger/real.hpp"
+
+#include <Vc/Vc>
 
 #include <array>
 #include <cstddef>
@@ -585,3 +588,5 @@ namespace fmm {
     }    // namespace monopole_interactions
 }    // namespace fmm
 }    // namespace octotiger
+
+#endif /*!defined __CUDA_ARCH__*/
