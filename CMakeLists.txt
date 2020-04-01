@@ -356,9 +356,9 @@ else()
   endif()
 endif()
 
-if(OCTOTIGER_WITH_Vc)
-  find_package(Vc REQUIRED)
+find_package(Vc REQUIRED)
 
+if(OCTOTIGER_WITH_Vc)
   target_compile_definitions(octolib PUBLIC
     OCTOTIGER_HAVE_VC
     # Need serialization support from HPX
