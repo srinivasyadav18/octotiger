@@ -404,7 +404,7 @@ void grid::load(Archive& arc, const unsigned) {
 		rad_grid_ptr->set_dx(dx);
 	}
 	for (integer i = 0; i != INX * INX * INX; ++i) {
-#if defined(HPX_HAVE_DATAPAR)
+#if defined(HPX_HAVE_DATAPAR) || !defined(OCTOTIGER_HAVE_VC)
 		arc >> G[i];
 #else
 		arc >> G[i][0];
@@ -428,7 +428,7 @@ void grid::save(Archive& arc, const unsigned) const {
 		arc << *rad_grid_ptr;
 	}
 	for (integer i = 0; i != INX * INX * INX; ++i) {
-#if defined(HPX_HAVE_DATAPAR)
+#if defined(HPX_HAVE_DATAPAR) || !defined(OCTOTIGER_HAVE_VC)
 		arc << G[i];
 #else
 		arc << G[i][0];

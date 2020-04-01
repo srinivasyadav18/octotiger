@@ -13,7 +13,7 @@
 #include <hpx/runtime/serialization/datapar.hpp>
 #include <hpx/serialization/traits/is_bitwise_serializable.hpp>
 
-#include <Vc/Vc>
+#include "octotiger/simd.hpp"
 
 // #if !defined(HPX_HAVE_DATAPAR)
 
@@ -22,10 +22,9 @@
 
 // #if defined(Vc_HAVE_AVX512F) || defined(Vc_HAVE_AVX)
 
-#ifdef __AVX2__
+#if defined(__AVX2__) && defined(OCTOTIGER_HAVE_VC)
 using space_vector = Vc::Vector<real, Vc::VectorAbi::Avx>;
 #else
-using floatv = Vc::float_v;
  template<class T = real>
  class space_vector_gen : public std::array<T, NDIM> {
  public:

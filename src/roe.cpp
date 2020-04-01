@@ -125,7 +125,7 @@ real roe_fluxes(hydro_state_t<std::vector<real>>& F, hydro_state_t<std::vector<r
 				F[field][iii + j] = f[field][j];
 			}
 		}
-#if !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
+#if !defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
         max_lambda = std::max(max_lambda, a.max());
 #else
         using Vc::max;

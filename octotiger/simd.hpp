@@ -8,9 +8,11 @@
 
 //#include "octotiger/defs.hpp"
 
+
 #include <hpx/parallel/traits/vector_pack_type.hpp>
 #include <hpx/runtime/serialization/datapar.hpp>
 
+#if defined(OCTOTIGER_HAVE_VC)
 #include <cstddef>
 #include <cstdint>
 //#include <cstdio>
@@ -431,5 +433,15 @@ constexpr std::size_t simd_len = simd_vector::size();
 //#endif
 
 // #endif
+
+#else /* defined(OCTOTIGER_HAVE_VC) */
+
+//no simd
+using simd_vector = double;
+using int_simd_vector = std::uint32_t;
+using v4sd = double;
+constexpr std::size_t simd_len = 1;
+
+#endif /* defined(OCTOTIGER_HAVE_VC) */
 
 #endif /* SIMD_VECTOR_HPP_ */

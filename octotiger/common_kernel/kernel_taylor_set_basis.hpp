@@ -21,6 +21,8 @@ namespace fmm {
             // taylor<N, T>& A = *this;
 
             const m2m_vector r2 = X[0] * X[0] + X[1] * X[1] + X[2] * X[2];
+
+#if defined(OCTOTIGER_HAVE_VC)
             // m2m_vector::mask_type mask = r2 > 0.0;
             // m2m_vector r2inv = 0.0;
             // // initialized to 1 to fix div by zero after masking
@@ -29,6 +31,9 @@ namespace fmm {
             // m2m_vector tmp_one = 1.0;
             // Vc::where(mask, r2inv) = ONE / tmp_max;
             m2m_vector tmp_max = Vc::max(r2, m2m_vector(1.0e-20));
+#else /* defined(OCTOTIGER_HAVE_VC) */
+            m2m_vector tmp_max = std::max(r2, m2m_vector(1.0e-20));
+#endif /* defined(OCTOTIGER_HAVE_VC) */
             m2m_vector r2inv = ONE / tmp_max;
 
             // parts of formula (6)

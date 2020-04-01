@@ -135,19 +135,27 @@ public:
 
 
     OCTOTIGER_FORCEINLINE taylor<N, T>& operator+=(v4sd const& other)  {
+#if defined(OCTOTIGER_HAVE_VC)
 #pragma GCC ivdep
         for (integer i = 0; i != 4; ++i) {
             data[i] += other[i];
         }
+#else /* defined(OCTOTIGER_HAVE_VC) */
+        data += other;
+#endif /* defined(OCTOTIGER_HAVE_VC) */
         return *this;
     }
 
     OCTOTIGER_FORCEINLINE taylor<N, T> operator-() const {
         taylor<N, T> r = *this;
+#if defined(OCTOTIGER_HAVE_VC)
 #pragma GCC ivdep
         for (integer i = 0; i != my_size; ++i) {
             r.data[i] = -r.data[i];
         }
+#else /* defined(OCTOTIGER_HAVE_VC) */
+        r.data = -r.data;
+#endif /* defined(OCTOTIGER_HAVE_VC) */
         return r;
     }
 
@@ -433,9 +441,16 @@ inline void taylor<5, simd_vector>::set_basis(const std::array<simd_vector, NDIM
     const T r2 = sqr(X[0]) + sqr(X[1]) + sqr(X[2]);
     T r2inv = 0.0;
     for (volatile integer i = 0; i != simd_len; ++i) {
+
+#if defined(OCTOTIGER_HAVE_VC)
         if (r2[i] > 0.0) {
             r2inv[i] = ONE / std::max(r2[i], 1.0e-20);
         }
+#else /* defined(OCTOTIGER_HAVE_VC) */
+        if (r2 > 0.0) {
+            r2inv = ONE / std::max(r2, 1.0e-20);
+        }
+#endif /* defined(OCTOTIGER_HAVE_VC) */
     }
 
     // parts of formula (6)
