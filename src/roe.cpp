@@ -33,6 +33,7 @@ real ztwd_sound_speed(real d, real ei) {
     return sqrt(cs2);
 }
 
+#if defined(OCTOTIGER_HAVE_VC)
 real roe_fluxes(hydro_state_t<std::vector<real>>& F, hydro_state_t<std::vector<real>>& UL, hydro_state_t<std::vector<real>>& UR,
 	const std::vector<space_vector>& X, real omega, integer dimension, real dx) {
 
@@ -137,3 +138,5 @@ real roe_fluxes(hydro_state_t<std::vector<real>>& F, hydro_state_t<std::vector<r
 
 	return max_lambda;
 }
+
+#endif /* defined(OCTOTIGER_HAVE_VC) */

@@ -1,4 +1,4 @@
-#if !defined(__CUDA_ARCH__) 
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 //  Copyright (c) 2019 AUTHORS
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
