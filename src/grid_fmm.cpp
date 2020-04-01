@@ -1,4 +1,4 @@
-#if !defined(__CUDA_ARCH__) 
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 //  Copyright (c) 2019 AUTHORS
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -214,6 +214,7 @@ void grid::solve_gravity(gsolve_type type) {
 //     4, 5, 6, 7, 8, 9
 // };
 
+#if defined(OCTOTIGER_HAVE_VC)
 void grid::compute_interactions(gsolve_type type) {
 	PROFILE();
 
@@ -1674,6 +1675,7 @@ multipole_pass_type grid::compute_multipoles(gsolve_type type, const multipole_p
 
 	return mret;
 }
+#endif /* defined(OCTOTIGER_HAVE_VC) */
 
 gravity_boundary_type grid::get_gravity_boundary(const geo::direction &dir, bool is_local) {
 	PROFILE();
@@ -1766,4 +1768,4 @@ const std::vector<boundary_interaction_type>& grid::get_ilist_n_bnd(const geo::d
 	return ilist_n_bnd[dir];
 }
 
-#endif /*!defined __CUDA_ARCH__*/
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
