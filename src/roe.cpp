@@ -33,7 +33,7 @@ real ztwd_sound_speed(real d, real ei) {
     return sqrt(cs2);
 }
 
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 real roe_fluxes(hydro_state_t<std::vector<real>>& F, hydro_state_t<std::vector<real>>& UL, hydro_state_t<std::vector<real>>& UR,
 	const std::vector<space_vector>& X, real omega, integer dimension, real dx) {
 
@@ -126,7 +126,7 @@ real roe_fluxes(hydro_state_t<std::vector<real>>& F, hydro_state_t<std::vector<r
 				F[field][iii + j] = f[field][j];
 			}
 		}
-#if !defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
         max_lambda = std::max(max_lambda, a.max());
 #else
         using Vc::max;
@@ -139,4 +139,4 @@ real roe_fluxes(hydro_state_t<std::vector<real>>& F, hydro_state_t<std::vector<r
 	return max_lambda;
 }
 
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */

@@ -310,7 +310,7 @@ static scf_parameters& initial_params() {
 	return a;
 }
 
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 real grid::scf_update(real com, real omega, real c1, real c2, real c1_x, real c2_x, real l1_x, struct_eos struct_eos_1,
 		struct_eos struct_eos_2) {
 
@@ -450,7 +450,7 @@ real grid::scf_update(real com, real omega, real c1, real c2, real c1_x, real c2
 	}
 	return 0.0;
 }
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 
 
 

@@ -1,4 +1,4 @@
-#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
+#if!defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 //  Copyright (c) 2019 AUTHORS
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -214,7 +214,7 @@ void grid::solve_gravity(gsolve_type type) {
 //     4, 5, 6, 7, 8, 9
 // };
 
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 void grid::compute_interactions(gsolve_type type) {
 	PROFILE();
 
@@ -1586,13 +1586,13 @@ multipole_pass_type grid::compute_multipoles(gsolve_type type, const multipole_p
 									X[d][ci] = (*(com_ptr[0]))[iiic][d];
 								}
 							}
-#if !defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
 							real mtot = mc.sum();
 #else
                             real mtot = Vc::reduce(mc);
 #endif
 							for (integer d = 0; d < NDIM; ++d) {
-#if !defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
 								(*(com_ptr[1]))[iiip][d] = (X[d] * mc).sum() / mtot;
 #else
                                 (*(com_ptr[1]))[iiip][d] = Vc::reduce(X[d] * mc) / mtot;
@@ -1632,7 +1632,7 @@ multipole_pass_type grid::compute_multipoles(gsolve_type type, const multipole_p
 
 						mp = mc >> dx;
 						for (integer j = 0; j != 20; ++j) {
-#if !defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) || !defined(HPX_HAVE_DATAPAR_VC) || (defined(Vc_IS_VERSION_1) && Vc_IS_VERSION_1)
 							MM[j] = mp[j].sum();
 #else
                             MM[j] = Vc::reduce(mp[j]);
@@ -1675,7 +1675,7 @@ multipole_pass_type grid::compute_multipoles(gsolve_type type, const multipole_p
 
 	return mret;
 }
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 
 gravity_boundary_type grid::get_gravity_boundary(const geo::direction &dir, bool is_local) {
 	PROFILE();

@@ -50,18 +50,18 @@ struct gravity_boundary_type
         local_semaphore = reinterpret_cast<decltype(local_semaphore)>(tmp);
     }
 };
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 Vc_DECLARE_ALLOCATOR(gravity_boundary_type)
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 
 struct neighbor_gravity_type {
     gravity_boundary_type data;
     bool is_monopole;
     geo::direction direction;
 };
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 Vc_DECLARE_ALLOCATOR(neighbor_gravity_type)
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 
 // struct neighbor_gravity_type
 // {
@@ -120,9 +120,9 @@ class interaction_type
     //     four = other.four;
     // }
 };
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 Vc_DECLARE_ALLOCATOR(interaction_type)
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 
 struct boundary_interaction_type
 {
@@ -136,9 +136,9 @@ struct boundary_interaction_type
     // index vector in cell
     space_vector x;
 };
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 Vc_DECLARE_ALLOCATOR(boundary_interaction_type)
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 
 
 #include "options_enum.hpp"

@@ -1,3 +1,4 @@
+#if !defined(__CUDA_ARCH__)
 //  Copyright (c) 2019 AUTHORS
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -272,7 +273,7 @@ std::vector<silo_var_t> grid::var_data() const {
 	}
 //	}
 
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 	if (opts().gravity) {
 		for (auto l : str_to_index_gravity) {
 			unit = convert_gravity_units(l.second);
@@ -293,10 +294,10 @@ std::vector<silo_var_t> grid::var_data() const {
 			s.push_back(std::move(this_s));
 		}
 	}
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 	// make sure this is not called at runtime
 	assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 	if (opts().radiation) {
 		auto rad = rad_grid_ptr->var_data();
 		for (auto &r : rad) {
@@ -384,13 +385,13 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 						p += ztwd_pressure(U[rho_i][iii]);
 					}
 					if (opts().gravity) {
-#if defined(OCTOTIGER_HAVE_VC)						
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)						
 						rc.virial += (2.0 * ek + 0.5 * U[rho_i][iii] * G[iiig][phi_i] + 3.0 * p) * (dx * dx * dx);
 						rc.virial_norm += (2.0 * ek - 0.5 * U[rho_i][iii] * G[iiig][phi_i] + 3.0 * p) * (dx * dx * dx);
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 						// make sure this is not called at runtime
 						assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 					} else {
 						rc.virial_norm = 1.0;
 					}
@@ -459,15 +460,15 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 		const real x = X[XDIM][iii] - diags.grid_com[0];
 		const real y = X[YDIM][iii] - diags.grid_com[1];
 		const real z = X[ZDIM][iii];
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 		real ax = G[iiig][gx_i] + x * diags.omega * diags.omega;
 		real ay = G[iiig][gy_i] + y * diags.omega * diags.omega;
 		real az = G[iiig][gz_i];
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 		// make sure this is not called at runtime
 		assert(false);
 		real ax,ay,az;
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 		real nx, ny, nz;
 		const real a = SQRT(ax * ax + ay * ay + az * az);
 		if (a > 0.0) {
@@ -548,13 +549,13 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 				}
 				if (diags.stage > 1) {
 					const real R2 = x * x + y * y;
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 					const real phi_g = G[iiig][phi_i];
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 					// make sure this is not called at runtime
 					assert(false);
 					const real phi_g = 0.;
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 					if (diags.omega < 0.0) {
 						rc.failed = true;
 						return rc;
@@ -574,13 +575,13 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 						const real dX[NDIM] = { (x - diags.com[i][XDIM]), (y - diags.com[i][YDIM]), (z - diags.com[i][ZDIM]) };
 						rc.js[i] += dX[0] * U[sy_i][iii] * dV;
 						rc.js[i] -= dX[1] * U[sx_i][iii] * dV;
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 						rc.gt[i] += dX[0] * G[iiig][gy_i] * dV * rho0;
 						rc.gt[i] -= dX[1] * G[iiig][gx_i] * dV * rho0;
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 						// make sure this is not called at runtime
 						assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 						const real r = SQRT(dX[0] * dX[0] + dX[1] * dX[1] + dX[2] * dX[2]);
 						for (integer n = 0; n != NDIM; ++n) {
 							for (integer m = 0; m <= n; ++m) {
@@ -648,13 +649,13 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 						p += ztwd_pressure(U[rho_i][iii]);
 					}
 					if (opts().problem == DWD) {
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 						rc.virial += (2.0 * ek + 0.5 * U[rho_i][iii] * G[iiig][phi_i] + 3.0 * p) * (dx * dx * dx);
 						rc.virial_norm += (2.0 * ek - 0.5 * U[rho_i][iii] * G[iiig][phi_i] + 3.0 * p) * (dx * dx * dx);
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 						// make sure this is not called at runtime
 						assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 					}
 					for (integer f = 0; f != opts().n_fields; ++f) {
 						rc.grid_sum[f] += U[f][iii] * dV;
@@ -889,12 +890,12 @@ line_of_centers_t grid::line_of_centers(const std::pair<space_vector, space_vect
 						data[ui] = U[ui][iii];
 					}
 					for (integer gi = 0; gi != NGF; ++gi) {
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 						data[opts().n_fields + gi] = G[iiig][gi];
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 						// make sure this is not called at runtime
 						assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 					}
 					loc.resize(loc.size() + 1);
 					loc[loc.size() - 1].first = p;
@@ -926,15 +927,15 @@ std::pair<std::vector<real>, std::vector<real>> grid::diagnostic_error() const {
 				if (opts().problem == SOLID_SPHERE) {
 					const auto a = solid_sphere_analytic_phi(x, y, z, 0.25);
 					std::vector<real> n(4);
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 					n[phi_i] = G[iii][phi_i];
 					n[gx_i] = G[iii][gx_i];
 					n[gy_i] = G[iii][gy_i];
 					n[gz_i] = G[iii][gz_i];
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 						// make sure this is not called at runtime
 						assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 					const real rho = U[rho_i][iiih];
 					for (integer l = 0; l != 4; ++l) {
 						e.first[l] += std::abs(a[l] - n[l]) * dV * rho;
@@ -1151,15 +1152,15 @@ void grid::change_units(real m, real l, real t, real k) {
 //		}
 	}
 	for (integer i = 0; i != INX * INX * INX; ++i) {
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 		G[i][phi_i] *= l2 * t2inv;
 		G[i][gx_i] *= l2 * tinv;
 		G[i][gy_i] *= l2 * tinv;
 		G[i][gz_i] *= l2 * tinv;
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 		// make sure this is not called at runtime
 		assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 	}
 	if (opts().radiation) {
 		rad_grid_ptr->change_units(m, l, t, k);
@@ -1208,7 +1209,7 @@ real grid::roche_volume(const std::pair<space_vector, space_vector> &axis, const
 				real y = X[YDIM][iii];
 				real z = X[ZDIM][iii];
 				const real R = std::sqrt(x0 * x0 + y * y);
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 				real phi_eff = G[iiig][phi_i] - 0.5 * sqr(omega * R);
 				//	real factor = axis.first[0] == l1.first ? 0.5 : 1.0;
 				if ((x0 <= l1.first && !donor) || (x0 >= l1.first && donor)) {
@@ -1222,10 +1223,10 @@ real grid::roche_volume(const std::pair<space_vector, space_vector> &axis, const
 						}
 					}
 				}
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 				// make sure this is not called at runtime
 				assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 			}
 		}
 	}
@@ -1339,7 +1340,7 @@ std::vector<real> grid::conserved_sums(space_vector &com, space_vector &com_dot,
 
 std::vector<real> grid::gforce_sum(bool torque) const {
 
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 	std::vector<real> sum(NDIM, ZERO);
 	const real dV = dx * dx * dx;
 	for (integer i = H_BW; i != H_NX - H_BW; ++i) {
@@ -1368,10 +1369,10 @@ std::vector<real> grid::gforce_sum(bool torque) const {
 		}
 	}
 	return sum;
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 	// make sure this is not called at runtime
 	assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 }
 
 std::vector<real> grid::l_sums() const {
@@ -1665,12 +1666,12 @@ analytic_t grid::compute_analytic(real t) {
 				if (opts().problem == SOLID_SPHERE) {
 					const auto a = solid_sphere_analytic_phi(X[0][iii], X[1][iii], X[2][iii], 0.25);
 					for (int f = 0; f < 4; f++) {
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 						G[gindex(i - H_BW, j - H_BW, k - H_BW)][f] = a[f];
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 						// make sure this is not called at runtime
 						assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 					}
 				}
 			}
@@ -1752,12 +1753,12 @@ grid::grid(const init_func_type &init_func, real _dx, std::array<real, NDIM> _xm
 	if (opts().gravity) {
 		for (integer i = 0; i != G_N3; ++i) {
 			for (integer field = 0; field != NGF; ++field) {
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 				G[i][field] = 0.0;
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 						// make sure this is not called at runtime
 						assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 			}
 		}
 	}
@@ -2005,23 +2006,23 @@ void grid::compute_sources(real t, real rotational_time) {
 				}
 				const real rho = U[rho_i][iii];
 				if (opts().gravity) {
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 					src[sx_i][iii0] += rho * G[iiig][gx_i];
 					src[sy_i][iii0] += rho * G[iiig][gy_i];
 					src[sz_i][iii0] += rho * G[iiig][gz_i];
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 						// make sure this is not called at runtime
 						assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 				}
 				if (opts().gravity) {
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 					src[egas_i][iii0] -= omega * X[YDIM][iii] * rho * G[iiig][gx_i];
 					src[egas_i][iii0] += omega * X[XDIM][iii] * rho * G[iiig][gy_i];
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 						// make sure this is not called at runtime
 						assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 				}
 				if (opts().driving_rate != 0.0) {
 					const real period_len = 2.0 * M_PI / grid::omega;
@@ -2119,12 +2120,12 @@ void grid::compute_dudt() {
 				const integer iii0 = h0index(i - H_BW, j - H_BW, k - H_BW);
 				const integer iiig = gindex(i - H_BW, j - H_BW, k - H_BW);
 				if (opts().gravity) {
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 					dUdt[egas_i][iii0] -= (dUdt[rho_i][iii0] * G[iiig][phi_i]) * HALF;
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 					// make sure this is not called at runtime
 					assert(false);
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 				}
 			}
 		}
@@ -2348,3 +2349,4 @@ std::vector<real> grid::conserved_outflows() const {
 	return Uret;
 }
 
+#endif /* !defined(__CUDA_ARCH__) */

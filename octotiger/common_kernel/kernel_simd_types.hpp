@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#if defined(OCTOTIGER_HAVE_VC)
+#if !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC)
 
 #include <Vc/Vc>
 
@@ -31,10 +31,10 @@ using m2m_int_vector = Vc::Vector<std::int32_t, Vc::VectorAbi::Scalar>;
 // using expansion_v = taylor<4, m2m_vector>;
 
 
-#else /* defined(OCTOTIGER_HAVE_VC) */
+#else /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
 
 // no simd
 using m2m_vector = double;
 using m2m_int_vector = std::int32_t;
 
-#endif /* defined(OCTOTIGER_HAVE_VC) */
+#endif /* !defined(__CUDA_ARCH__) && defined(OCTOTIGER_HAVE_VC) */
