@@ -7,6 +7,7 @@
 
 #include "octotiger/common_kernel/interaction_constants.hpp"
 #include "octotiger/cuda_util/cuda_global_def.hpp"
+#include "octotiger/kokkos_util.hpp"
 #include "octotiger/defs.hpp"
 
 #include <cmath>
@@ -25,7 +26,7 @@ namespace fmm {
         T y;
         T z;
 
-        CUDA_CALLABLE_METHOD multiindex(T x, T y, T z)
+        OCTOTIGER_FUNCTION multiindex(T x, T y, T z)
           : x(x)
           , y(y)
           , z(z) {
@@ -34,12 +35,12 @@ namespace fmm {
         }
 
         template <typename U>
-        CUDA_CALLABLE_METHOD multiindex(const multiindex<U>& other) {
+        OCTOTIGER_FUNCTION multiindex(const multiindex<U>& other) {
             x = other.x;
             y = other.y;
             z = other.z;
         }
-        CUDA_CALLABLE_METHOD multiindex() {
+        OCTOTIGER_FUNCTION multiindex() {
             /* do not initialise anything in here! If a value is touched in the default
             constructor, we cannot use the class within cuda constant memory (and we want to) */
         }
@@ -50,11 +51,11 @@ namespace fmm {
         //   , y(y)
         //   , z(z) {}
 
-        CUDA_CALLABLE_METHOD inline double length() const {
+        OCTOTIGER_FUNCTION inline double length() const {
             return sqrt(static_cast<double>(x * x + y * y + z * z));
         }
 
-        CUDA_CALLABLE_METHOD inline bool compare(multiindex& other) {
+        OCTOTIGER_FUNCTION inline bool compare(multiindex& other) {
             if (this->x == other.x && this->y == other.y && this->z == other.z) {
                 return true;
             } else {
@@ -62,7 +63,7 @@ namespace fmm {
             }
         }
 
-        CUDA_CALLABLE_METHOD inline bool operator == (const multiindex& other) const {
+        OCTOTIGER_FUNCTION inline bool operator == (const multiindex& other) const {
             if (this->x == other.x && this->y == other.y && this->z == other.z) {
                 return true;
             } else {
@@ -71,7 +72,7 @@ namespace fmm {
         }
 
         // set this multiindex to the next coarser level index
-        CUDA_CALLABLE_METHOD void transform_coarse() {
+        OCTOTIGER_FUNCTION void transform_coarse() {
             const T patch_size = static_cast<typename T::value_type>(INX);
             const T subtract = static_cast<typename T::value_type>(INX / 2);
 
@@ -81,7 +82,7 @@ namespace fmm {
         }
     };
 
-    CUDA_CALLABLE_METHOD inline multiindex<> flat_index_to_multiindex_not_padded(
+    OCTOTIGER_FUNCTION inline multiindex<> flat_index_to_multiindex_not_padded(
         size_t flat_index) {
         size_t x = flat_index / (INNER_CELLS_PER_DIRECTION * INNER_CELLS_PER_DIRECTION);
         flat_index %= (INNER_CELLS_PER_DIRECTION * INNER_CELLS_PER_DIRECTION);
@@ -92,7 +93,7 @@ namespace fmm {
         return m;
     }
 
-    CUDA_CALLABLE_METHOD inline multiindex<> flat_index_to_multiindex_padded(size_t flat_index) {
+    OCTOTIGER_FUNCTION inline multiindex<> flat_index_to_multiindex_padded(size_t flat_index) {
         size_t x = flat_index / (PADDED_STRIDE * PADDED_STRIDE);
         flat_index %= (PADDED_STRIDE * PADDED_STRIDE);
         size_t y = flat_index / PADDED_STRIDE;
@@ -103,7 +104,7 @@ namespace fmm {
     }
 
     template <typename T>
-    CUDA_CALLABLE_METHOD inline T to_flat_index_padded(const multiindex<T>& m) {
+    OCTOTIGER_FUNCTION inline T to_flat_index_padded(const multiindex<T>& m) {
       return (m.x - PADDING_OFFSET) * PADDED_STRIDE * PADDED_STRIDE + (m.y - PADDING_OFFSET) *
       PADDED_STRIDE + (m.z - PADDING_OFFSET);
     }
@@ -112,14 +113,14 @@ namespace fmm {
      * Note: for m2m_int_vector and integer
      * Note: returns uint32_t vector because of Vc limitation */
     template <typename T>
-    CUDA_CALLABLE_METHOD inline T to_inner_flat_index_not_padded(const multiindex<T>& m) {
+    OCTOTIGER_FUNCTION inline T to_inner_flat_index_not_padded(const multiindex<T>& m) {
         return m.x * INNER_CELLS_PER_DIRECTION * INNER_CELLS_PER_DIRECTION +
             m.y * INNER_CELLS_PER_DIRECTION + m.z;
     }
 
     // This specialization is only required on cuda devices since T::value_type is not supported!
     template <>
-    CUDA_CALLABLE_METHOD inline void multiindex<int32_t>::transform_coarse() {
+    OCTOTIGER_FUNCTION inline void multiindex<int32_t>::transform_coarse() {
         const int32_t patch_size = static_cast<int32_t>(INX);
         const int32_t subtract = static_cast<int32_t>(INX / 2);
         x = ((x + patch_size) >> 1) - subtract;
@@ -127,7 +128,7 @@ namespace fmm {
         z = ((z + patch_size) >> 1) - subtract;
     }
 
-    CUDA_CALLABLE_METHOD inline int32_t distance_squared_reciprocal(
+    OCTOTIGER_FUNCTION inline int32_t distance_squared_reciprocal(
         const multiindex<>& i, const multiindex<>& j) {
         return (sqr(i.x - j.x) + sqr(i.y - j.y) + sqr(i.z - j.z));
     }

@@ -7,6 +7,7 @@
 #define DEFS_HPP_
 
 #include "octotiger/real.hpp"
+#include "octotiger/kokkos_util.hpp"
 
 #include <array>
 //#include <cstddef>
@@ -217,7 +218,7 @@ constexpr inline integer gindex(integer i, integer j, integer k)
 }
 
 template <typename T>
-constexpr inline T sqr(T const& val)
+OCTOTIGER_FUNCTION constexpr inline T sqr(T const& val)
 {
     return val * val;
 }
