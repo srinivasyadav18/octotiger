@@ -67,6 +67,8 @@ option(OCTOTIGER_WITH_TESTS "Enable tests" ON)
 set(OCTOTIGER_WITH_GRIDDIM "8" CACHE STRING "Grid size")
 set(OCTOTIGER_THETA_MINIMUM "0.34" CACHE STRING "Minimal allowed theta value - important for optimizations")
 
+set(CMAKE_CXX_STANDARD 14)
+
 # silence warnings for deprecated HPX includes
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-cpp")
 
@@ -243,6 +245,9 @@ add_hpx_library(
   octolib
   DEPENDENCIES
     Silo::silo Vc::Vc Boost::boost
+if(OCTOTIGER_WITH_KOKKOS)
+    Kokkos::kokkos
+endif()
   SOURCES
     ${source_files}
   HEADERS
