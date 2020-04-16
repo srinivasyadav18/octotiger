@@ -1,8 +1,25 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "helmholtz.h"
-#include "const.h"
+#include <algorithm>
+#include <octotiger/helmholtz.hpp>
+
+const double pi = 3.1415926535897932384e0, eulercon = 0.577215664901532861e0, a2rad = pi / 180.0e0, rad2a = 180.0e0
+		/ pi;
+
+// physical constants
+const double g = 6.6742867e-8, h = 6.6260689633e-27, hbar = 0.5e0 * h / pi, qe = 4.8032042712e-10,
+		avo = 6.0221417930e23, clight = 2.99792458e10, kerg = 1.380650424e-16, ev2erg = 1.60217648740e-12, kev = kerg
+				/ ev2erg, amu = 1.66053878283e-24, mn = 1.67492721184e-24, mp = 1.67262163783e-24,
+		me = 9.1093821545e-28, rbohr = hbar * hbar / (me * qe * qe), fine = qe * qe / (hbar * clight), hion =
+				13.605698140e0;
+
+const double ssol = 5.67051e-5, asol = 4.0e0 * ssol / clight, weinlam = h * clight / (kerg * 4.965114232e0), weinfre =
+		2.821439372e0 * kerg / h, rhonuc = 2.342e14;
+
+// astronomical constants
+const double msol = 1.9892e33, rsol = 6.95997e10, lsol = 3.8268e33, mearth = 5.9764e27, rearth = 6.37e8, ly =
+		9.460528e17, pc = 3.261633e0 * ly, au = 1.495978921e13, secyer = 3.1558149984e7;
 
 #define IMAX 1081
 #define JMAX 401
@@ -74,20 +91,25 @@ double dt_sav_ion[JMAX], dt2_sav_ion[JMAX], dti_sav_ion[JMAX], dt2i_sav_ion[JMAX
            + fi[12] *w1d*w1t   +  fi[13] *w1md*w1t \
            + fi[14] *w1d*w1mt  +  fi[15] *w1md*w1mt
 
-static double max(double a, double b) {
-	return a > b ? a : b;
-}
 
-static double min(double a, double b) {
-	return a < b ? a : b;
-}
+void read_helm_table();
 
-__attribute__((constructor)) void read_helm_table() {
+struct init_helmholtz_t {
+	init_helmholtz_t() {
+		read_helm_table();
+	}
+};
+
+static init_helmholtz_t init_helmholtz;
+
+void read_helm_table() {
 	int i, j;
 	double tsav, dsav, dth, dt2, dti, dt2i, dt3i, dd, dd2, ddi, dd2i, dd3i;
 	FILE* fp;
 	fp = fopen("helmholtz.table.dat", "rt");
-
+	if( fp == NULL ) {
+		printf( "Unable to load helmholtz.table.dat");
+	}
 	tlo = 3.0;
 	thi = 13.0;
 	tstp = (thi - tlo) / double(JMAX - 1);
@@ -141,6 +163,7 @@ __attribute__((constructor)) void read_helm_table() {
 	}
 }
 
+
 void helmholtz_set_cgs_units(double cm, double g, double s, double K) {
 //	printf("Setting cgs units cm = %e g = %e s = %e K = %e\n", cm, g, s, K);
 	cm_to_code = cm;
@@ -181,12 +204,12 @@ void helmholtz_eos(eos_t* eos) {
 	eos_from_code(eos);
 
 	den = eos->rho;
-	temp = max(eos->T, HELMHOLTZ_TMIN);
+	temp = std::max(eos->T, HELMHOLTZ_TMIN);
 	abar = eos->abar;
 	zbar = eos->zbar;
 
 	ytot1 = 1.0 / abar;
-	ye = max(1.0d - 16, ytot1 * zbar);
+	ye = std::max(1.0d - 16, ytot1 * zbar);
 
 // initialize
 	deni = 1.0 / den;
@@ -219,9 +242,9 @@ void helmholtz_eos(eos_t* eos) {
 
 // hash locate this temperature and density
 	jat = int((log10(temp) - tlo) * tstpi) + 1;
-	jat = max(1, min(jat, JMAX - 1));
+	jat = std::max(1, std::min(jat, JMAX - 1));
 	iat = int((log10(din) - dlo) * dstpi) + 1;
-	iat = max(1, min(iat, IMAX - 1));
+	iat = std::max(1, std::min(iat, IMAX - 1));
 	--jat;
 	--iat;
 
@@ -264,8 +287,8 @@ void helmholtz_eos(eos_t* eos) {
 	fi[35] = fddtt[iat + 1][jat + 1];
 
 // various differences
-	xt = max((temp - t[jat]) * dti_sav[jat], 0.0);
-	xd = max((din - d[iat]) * ddi_sav[iat], 0.0);
+	xt = std::max((temp - t[jat]) * dti_sav[jat], 0.0);
+	xd = std::max((din - d[iat]) * ddi_sav[iat], 0.0);
 	mxt = 1.0 - xt;
 	mxd = 1.0 - xd;
 
@@ -463,9 +486,9 @@ void helmholtz_compute_T(eos_t* eos) {
 			//		}
 			/*			if (last_sign != sign && iters > 0) {
 			 if (dT > 0.0) {
-			 tmin = min(T0, eos->T);
+			 tmin = std::min(T0, eos->T);
 			 } else {
-			 tmax = max(T0, eos->T);
+			 tmax = std::max(T0, eos->T);
 			 }
 			 }
 			 dT *= 0.9999;*/
@@ -475,8 +498,8 @@ void helmholtz_compute_T(eos_t* eos) {
 				break;
 			}
 			/*	if (iters > 0) {*/
-			//		 eos->T = max(eos->T, (T0 + tmin) / 2.0);
-			//	eos->T = min(eos->T, (T0 + HELMHOLTZ_TMAX) / 2.0);
+			//		 eos->T = std::max(eos->T, (T0 + tmin) / 2.0);
+			//	eos->T = std::min(eos->T, (T0 + HELMHOLTZ_TMAX) / 2.0);
 			//	 }
 			//		 T0 = eos->T;
 			iters++;

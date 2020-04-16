@@ -98,6 +98,7 @@ set(source_files
     src/grid_fmm.cpp
     src/grid_output.cpp
     src/grid_scf.cpp
+    src/helmholtz.cpp
     src/lane_emden.cpp
     src/new.cpp
     src/node_client.cpp
