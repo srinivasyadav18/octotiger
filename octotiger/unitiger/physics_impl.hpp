@@ -35,9 +35,11 @@ safe_real physics<NDIM>::deg_pres(safe_real x) {
 
 template<int NDIM>
 void physics<NDIM>::to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v, safe_real &cs, int dim) {
+	// equations of state: density and inverse density at current point
 	const auto rho = u[rho_i];
 	const auto rhoinv = safe_real(1.) / rho;
 	double hdeg = 0.0, pdeg = 0.0, edeg = 0.0, dpdeg_drho = 0.0;
+	// some correction in case of degenerate systems/energies (?)
 	if (A_ != 0.0) {
 		const auto x = std::pow(rho / B_, 1.0 / 3.0);
 		hdeg = 8.0 * A_ / B_ * std::sqrt(x * x + 1.0);

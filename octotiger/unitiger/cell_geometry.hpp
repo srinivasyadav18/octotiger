@@ -13,9 +13,12 @@
 template<int NDIM, int INX>
 struct cell_geometry {
 
+	// ghost layer width
 	static constexpr int H_BW = OCTOTIGER_BW;
+	// total width of unitiger subgrid (2* ghost layer width + width of "our" actual chunk)
 	static constexpr int H_NX = (2 * H_BW + INX);
 
+	// extents/widths for each dimension (always H_NX, if dimension is present)
 	static constexpr int H_NX_X = cell_geometry::H_NX;
 	static constexpr int H_NX_Y = NDIM > 1 ? cell_geometry::H_NX : 1;
 	static constexpr int H_NX_Z = NDIM > 2 ? cell_geometry::H_NX : 1;
@@ -40,16 +43,24 @@ struct cell_geometry {
 	static constexpr int H_NX_YM8 = NDIM > 1 ? cell_geometry::H_NX - 8 : 1;
 	static constexpr int H_NX_ZM8 = NDIM > 2 ? cell_geometry::H_NX - 8 : 1;
 
+	// "codimensions" for linearization/iteration over the whole unitiger block, cf. to_index
 	static constexpr int H_DNX = NDIM == 3 ? cell_geometry::H_NX * cell_geometry::H_NX : (NDIM == 2 ? cell_geometry::H_NX : 1);
 	static constexpr int H_DNY = NDIM == 3 ? cell_geometry::H_NX : 1;
 	static constexpr int H_DNZ = 1;
+
+	// total number of cells in the whole block
 	static constexpr int H_N3 = std::pow(cell_geometry::H_NX, NDIM);
 	static constexpr int H_DN0 = 0;
+
+	// number of points in 3-stencil, enumerated as shown below (where NDIR/2 means center / no shift)
 	static constexpr int NDIR = std::pow(3, NDIM);
+	// number of angular moments
 	static constexpr int NANGMOM = NDIM == 1 ? 0 : std::pow(3, NDIM - 2);
+	// number of faces in face_pts()/lower_face_members[NDIM-1]
 	static constexpr int NFACEDIR = std::pow(3, NDIM - 1);
 	static constexpr int H_DN[3] = { H_DNX, H_DNY, H_DNZ };
 
+	// groups only used for validation afaict
 	static constexpr int group_count() {
 		return ngroups_[NDIM - 1];
 	}
@@ -107,20 +118,31 @@ private:
 	/**/{ -H_DNY, 7 },
 	/**/{ -H_DNZ, 19 },
 	/**/{ -H_DN0, 1 } } } };
+
+	// unused but helps understand lower_face_members
 	static constexpr bool is_lower_face[3][3][27] = { { 1, 0, 0 },
 	/**/{ { 1, 0, 0, 1, 0, 0, 1, 0, 0 }, { 1, 1, 1, 0, 0, 0, 0, 0, 0 } }, {
 	/**/{ 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0 },
 	/**/{ 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0 },
 	/**/{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } } };
 
+	// levi-civita operator
+	// may denote a cross product
 	static constexpr int levi_civitas[3][3][3][3] = { { { { } } }, { { { 0, 1 }, { -1, 0 } } }, { { { 0, 0, 0 }, { 0, 0, 1 }, { 0, -1, 0 } }, { { 0, 0, -1 }, {
 			0, 0, 0 }, { 1, 0, 0 } }, { { 0, 1, 0 }, { -1, 0, 0 }, { 0, 0, 0 } } } };
+
+	// lower_face_members[dimensionality][face_index][point_index] denotes 
+	// which "directions" in the 3-stencil are part of the lower half shell, 
+	// starting with the face centers for point_index=0
 	static constexpr int lower_face_members[3][3][9] = { { { 0 } }, { { 3, 0, 6 }, { 1, 0, 2 } }, { { 12, 0, 3, 6, 9, 15, 18, 21, 24 }, { 10, 0, 1, 2, 9, 11,
 			18, 19, 20 }, { 4, 0, 1, 2, 3, 5, 6, 7, 8 } } };
 
+	// quad_weights[dimensionality][point_index] 
+	// weights for surface quadrature (order fits lower_face_members)
 	static constexpr safe_real quad_weights[3][9] = { { 1.0 }, { 2.0 / 3.0, 1.0 / 6.0, 1.0 / 6.0 }, { 16. / 36., 1. / 36., 4. / 36., 1. / 36., 4. / 36., 4.
 			/ 36., 1. / 36., 4. / 36., 1. / 36. } };
 
+	// weights for volume quadrature (order fits the 3-stencil numbering)
 	static constexpr safe_real vol_weights[3][27] = {
 	/**/{ 1. / 6., 4. / 6., 1. / 6. },
 	/**/{ 1. / 36., 4. / 36., 1. / 36., 4. / 36., 16. / 36., 4. / 36., 1. / 36., 4. / 36., 1. / 36. },
@@ -128,6 +150,8 @@ private:
 	/****/4. / 216., 16. / 216., 4. / 216., 16. / 216., 64. / 216., 16. / 216., 4. / 216., 16. / 216., 4. / 216.,
 	/****/1. / 216., 4. / 216., 1. / 216., 4. / 216., 16. / 216., 4. / 216., 1. / 216., 4. / 216., 1. / 216. } };
 
+	// location shift for each cell w.r.t. center cell
+	// or: location shift for each cell point w.r.t. center point of cell
 	static constexpr int face_locs[3][27][3] = {
 	/**/{ { -1 }, { 0 }, { 1 } },
 
@@ -147,6 +171,7 @@ private:
 	/**/{ -1, +0, +1 }, { +0, +0, +1 }, { +1, +0, +1 },
 	/**/{ -1, +1, +1 }, { +0, +1, +1 }, { +1, +1, +1 } } };
 
+	// offsets for indexing neighboring cells (?)
 	static constexpr int directions[3][27] = { {
 	/**/-H_DNX, +H_DN0, +H_DNX /**/
 	}, {
@@ -166,6 +191,9 @@ private:
 
 	} };
 
+	// all_indices[(hypothetical) ghost layer width][shift to neighbor point in any direction][point index]
+	// cell indices that are in "our" computational domain, i.e. inside a block of INX^dimensionality
+	// only used in flux kernel, to get indices of direct perpendicular neighbors
 	static std::array<std::array<std::vector<int>, NDIR>, H_BW> all_indices;
 
 	static void verify_3d_constdefs() {
@@ -315,6 +343,7 @@ public:
 		return k;
 	}
 
+	// linearize 3d to 1d index
 	static auto to_index(int j, int k, int l) {
 		if /*constexpr*/(NDIM == 1) {
 			return j;

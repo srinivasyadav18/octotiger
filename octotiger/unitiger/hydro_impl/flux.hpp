@@ -22,13 +22,14 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 	static constexpr auto faces = geo.face_pts();
 	static constexpr auto weights = geo.face_weight();
 	static constexpr auto xloc = geo.xloc();
-	static constexpr auto levi_civita = geo.levi_civita();
 
+	// spacing (cell width) in the current unitiger block
 	const auto dx = X[0][geo.H_DNX] - X[0][0];
 
 	safe_real amax = 0.0;
 	for (int dim = 0; dim < NDIM; dim++) {
 
+		// get indices of direct perpendicular (lower half shell) neighbors
 		const auto indices = geo.get_indexes(3, geo.face_pts()[dim][0]);
 
 		// zero-initialize F
@@ -42,18 +43,27 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 		for (const auto &i : indices) {
 			safe_real ap = 0.0, am = 0.0;
 			safe_real this_ap, this_am;
+			// for all 3-stencil idices d of the lower half shell faces
 			for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 				const auto d = faces[dim][fi];
+				// for each field f
 				for (int f = 0; f < nf_; f++) {
+					// value of Q[f][d][i]
 					UR[f] = Q[f][d][i];
+					// value of Q[f][on the opposite side of d on the current face][at i's lower neighbor in dimension dim]
 					UL[f] = Q[f][geo::flip_dim(d, dim)][i - geo.H_DN[dim]];
 				}
 				std::array < safe_real, NDIM > x;
 				std::array < safe_real, NDIM > vg;
 				for (int dim = 0; dim < NDIM; dim++) {
+					// location of the point currently under consideration: 
+					// X: cell mid point, x: current point
 					x[dim] = X[dim][i] + 0.5 * xloc[d][dim] * dx;
 				}
 				if constexpr (NDIM > 1) {
+					// omega == spin angular velocity of accretor (?)
+					// omega times location of current point, flipped for the two dimensions 
+					// (third unused? => grid always oriented in rotation plane of accretor?)
 					vg[0] = -omega * (X[1][i] + 0.5 * xloc[d][1] * dx);
 					vg[1] = +omega * (X[0][i] + 0.5 * xloc[d][0] * dx);
 					if constexpr (NDIM == 3) {
@@ -66,6 +76,7 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				safe_real amr, apr, aml, apl;
 				static thread_local std::vector<safe_real> FR(nf_), FL(nf_);
 
+				// flux FR, FL resulting from UR, UL, respectively
 				PHYS::template physical_flux<INX>(UR, FR, dim, amr, apr, x, vg);
 				PHYS::template physical_flux<INX>(UL, FL, dim, aml, apl, x, vg);
 				this_ap = std::max(std::max(apr, apl), safe_real(0.0));
@@ -73,11 +84,14 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 #pragma ivdep
 				for (int f = 0; f < nf_; f++) {
 					if (this_ap - this_am != 0.0) {
+						// ???
 						this_flux[f] = (this_ap * FL[f] - this_am * FR[f] + this_ap * this_am * (UR[f] - UL[f])) / (this_ap - this_am);
 					} else {
+						// if ap and am are both 0.0, flux is the average of FR and FL
 						this_flux[f] = (FL[f] + FR[f]) / 2.0;
 					}
 				}
+				// smallest negative (am) and largest (ap) positive number returned
 				am = std::min(am, this_am);
 				ap = std::max(ap, this_ap);
 #pragma ivdep
