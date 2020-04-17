@@ -153,7 +153,6 @@ set(header_files
     octotiger/channel.hpp
     octotiger/compute_factor.hpp
     octotiger/config.hpp
-    octotiger/const.hpp
     octotiger/container_device.hpp
     octotiger/defs.hpp
     octotiger/diagnostics.hpp

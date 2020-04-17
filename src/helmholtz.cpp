@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <octotiger/helmholtz.hpp>
 
+// This code from Timmes (http://cococubed.asu.edu/code_pages/eos.shtml), "helmholtz", was translated from FORTRAN 90.
+
 const double pi = 3.1415926535897932384e0, eulercon = 0.577215664901532861e0, a2rad = pi / 180.0e0, rad2a = 180.0e0
 		/ pi;
 
@@ -108,7 +110,7 @@ void read_helm_table() {
 	FILE* fp;
 	fp = fopen("helmholtz.table.dat", "rt");
 	if( fp == NULL ) {
-		printf( "Unable to load helmholtz.table.dat");
+		printf( "Unable to load helmholtz.table.dat\n");
 	}
 	tlo = 3.0;
 	thi = 13.0;
