@@ -86,8 +86,10 @@ void reconstruct_minmod(std::vector<std::vector<safe_real>> &q, const std::vecto
 	PROFILE();
 	static const cell_geometry<NDIM, INX> geo;
 	static constexpr auto dir = geo.direction();
+	// iterate all directions
 	for (int d = 0; d < geo.NDIR; d++) {
 		const auto di = dir[d];
+		// iterate block except 1-wide outermost layer
 		for (int j = 0; j < geo.H_NX_XM2; j++) {
 			for (int k = 0; k < geo.H_NX_YM2; k++) {
 				for (int l = 0; l < geo.H_NX_ZM2; l++) {
@@ -99,6 +101,9 @@ void reconstruct_minmod(std::vector<std::vector<safe_real>> &q, const std::vecto
 	}
 }
 
+/**
+ * @param disc = discontinuity threshold?
+ */
 template<int NDIM, int INX>
 void reconstruct_ppm(std::vector<std::vector<safe_real>> &q, const std::vector<safe_real> &u, bool smooth, bool disc_detect,
 		const std::vector<std::vector<double>> &disc) {
@@ -106,9 +111,12 @@ void reconstruct_ppm(std::vector<std::vector<safe_real>> &q, const std::vector<s
 
 	static const cell_geometry<NDIM, INX> geo;
 	static constexpr auto dir = geo.direction();
+	//D1 spans the whole block
 	static thread_local auto D1 = std::vector<safe_real>(geo.H_N3, 0.0);
+	// iterate directions: comparison (difference quotients) with lower half-shell
 	for (int d = 0; d < geo.NDIR / 2; d++) {
 		const auto di = dir[d];
+		// iterate block except 1-wide outermost layer
 		for (int j = 0; j < geo.H_NX_XM2; j++) {
 			for (int k = 0; k < geo.H_NX_YM2; k++) {
 #pragma ivdep
@@ -118,6 +126,7 @@ void reconstruct_ppm(std::vector<std::vector<safe_real>> &q, const std::vector<s
 				}
 			}
 		}
+		// iterate block except 1-wide outermost layer
 		for (int j = 0; j < geo.H_NX_XM2; j++) {
 			for (int k = 0; k < geo.H_NX_YM2; k++) {
 #pragma ivdep
@@ -125,6 +134,7 @@ void reconstruct_ppm(std::vector<std::vector<safe_real>> &q, const std::vector<s
 					const int i = geo.to_index(j + 1, k + 1, l + 1);
 					q[d][i] = 0.5 * (u[i] + u[i + di]);
 					q[d][i] += (1.0 / 6.0) * (D1[i] - D1[i + di]);
+					// use symmetry (half shell)
 					q[geo.flip(d)][i + di] = q[d][i];
 				}
 			}
@@ -135,8 +145,10 @@ void reconstruct_ppm(std::vector<std::vector<safe_real>> &q, const std::vector<s
 		constexpr auto eps2 = 0.001;
 		constexpr auto eta1 = 20.0;
 		constexpr auto eta2 = 0.05;
+		// iterate directions: comparison (difference quotients) with lower half-shell
 		for (int d = 0; d < geo.NDIR / 2; d++) {
 			const auto di = dir[d];
+			// iterate block except 2-wide outermost layer
 			for (int j = 0; j < geo.H_NX_XM4; j++) {
 				for (int k = 0; k < geo.H_NX_YM4; k++) {
 #pragma ivdep
@@ -173,7 +185,9 @@ void reconstruct_ppm(std::vector<std::vector<safe_real>> &q, const std::vector<s
 		}
 	}
 	if (!smooth) {
+		// iterate directions
 		for (int d = 0; d < geo.NDIR / 2; d++) {
+			// iterate block except 2-wide outermost layer
 			for (int j = 0; j < geo.H_NX_XM4; j++) {
 				for (int k = 0; k < geo.H_NX_YM4; k++) {
 #pragma ivdep
@@ -214,16 +228,20 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 	const auto dx = X[0][geo::H_DNX] - X[0][0];
 	const auto &U = PHYS::template pre_recon<INX>(U_, X, omega, angmom_index_ != -1);
 	const auto &cdiscs = PHYS::template find_contact_discs<INX>(U_);
+	// in case of no angular moment correction
 	if (angmom_index_ == -1 || NDIM == 1) {
 		for (int f = 0; f < nf_; f++) {
+			// update non-angular-moment states with reconstruct_ppm
 			if (f < lx_i || f > lx_i + geo::NANGMOM || NDIM == 1) {
 				reconstruct_ppm<NDIM, INX>(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
 			} else {
+				// update angular moment states with reconstruct_minmod
 				reconstruct_minmod<NDIM, INX>(Q[f], U[f]);
 			}
 		}
 
 	} else {
+		// update non-angular-moment states with reconstruct_ppm
 		for (int f = 0; f < angmom_index_; f++) {
 			reconstruct_ppm<NDIM, INX>(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
 		}
@@ -231,14 +249,18 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 		int sx_i = angmom_index_;
 		int zx_i = sx_i + NDIM;
 
+		// update non-angular-moment states with reconstruct_ppm
 		for (int f = sx_i; f < sx_i + NDIM; f++) {
 			reconstruct_ppm<NDIM, INX>(Q[f], U[f], true, false, cdiscs);
 		}
+		// update angular moment states with reconstruct_minmod
 		for (int f = zx_i; f < zx_i + geo::NANGMOM; f++) {
 			reconstruct_minmod<NDIM, INX>(Q[f], U[f]);
 		}
 
+		// iterate angular moments
 		for (int n = 0; n < geo::NANGMOM; n++) {
+			// iterate block except 2-wide outermost layer
 			for (int j = 0; j < geo::H_NX_XM4; j++) {
 				for (int k = 0; k < geo::H_NX_YM4; k++) {
 #pragma ivdep
@@ -252,8 +274,10 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 				for (int q = 0; q < NDIM; q++) {
 					const auto lc = levi_civita[n][m][q];
 					if (lc != 0) {
+						// iterate directions (all except identity)
 						for (int d = 0; d < geo::NDIR; d++) {
 							if (d != geo::NDIR / 2) {
+								// iterate block except 2-wide outermost layer
 								for (int j = 0; j < geo::H_NX_XM4; j++) {
 									for (int k = 0; k < geo::H_NX_YM4; k++) {
 #pragma ivdep
@@ -271,8 +295,10 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 		}
 		for (int q = 0; q < NDIM; q++) {
 			const auto f = sx_i + q;
+			// iterate directions (lower half shell)
 			for (int d = 0; d < geo::NDIR / 2; d++) {
 				const auto di = dir[d];
+				// iterate block except 2-wide outermost layer
 				for (int j = 0; j < geo::H_NX_XM4; j++) {
 					for (int k = 0; k < geo::H_NX_YM4; k++) {
 #pragma ivdep
@@ -293,6 +319,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 									b += 12.0 * AM[n][i] * lc * xloc[d][m] / (dx * (rho_l + rho_r));
 								}
 							}
+							// calculate flux limiter?
 							auto blim = maxmod(superbee(ur - u0, u0 - ul), b0);
 							b = minmod(blim, b);
 							qr += 0.5 * (b - b0);
@@ -320,6 +347,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 				}
 			}
 		}
+		// update non-angular-moment states with reconstruct_ppm
 		for (int f = angmom_index_ + geo::NANGMOM + NDIM; f < nf_; f++) {
 			reconstruct_ppm<NDIM, INX>(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
 		}

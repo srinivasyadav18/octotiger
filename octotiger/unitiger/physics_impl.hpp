@@ -257,6 +257,7 @@ void physics<NDIM>::set_fgamma(safe_real fg) {
 	fgamma_ = fg;
 }
 
+/*** Reconstruct uses this - GPUize****/
 template<int NDIM>
 template<int INX>
 const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(const hydro::state_type &U) {
