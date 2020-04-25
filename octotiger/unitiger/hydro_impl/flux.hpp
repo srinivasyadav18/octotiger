@@ -15,9 +15,13 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 
 	PROFILE();
 
-	static thread_local std::vector<safe_real> UR(nf_), UL(nf_), this_flux(nf_);
-
 	static const cell_geometry<NDIM, INX> geo;
+
+	static thread_local std::vector<std::vector<safe_real>> UR(geo.NFACEDIR, std::vector < safe_real > (nf_));
+	static thread_local std::vector<std::vector<safe_real>> UL(geo.NFACEDIR, std::vector < safe_real > (nf_));
+	static thread_local std::vector<std::vector<safe_real>> FR(geo.NFACEDIR, std::vector < safe_real > (nf_));
+	static thread_local std::vector<std::vector<safe_real>> FL(geo.NFACEDIR, std::vector < safe_real > (nf_));
+	static thread_local std::vector<safe_real> this_flux(nf_);
 
 	static constexpr auto faces = geo.face_pts();
 	static constexpr auto weights = geo.face_weight();
@@ -41,12 +45,12 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 
 		for (const auto &i : indices) {
 			safe_real ap = 0.0, am = 0.0;
-			safe_real this_ap, this_am;
+			safe_real this_ap[geo.NFACEDIR], this_am[geo.NFACEDIR];
 			for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 				const auto d = faces[dim][fi];
 				for (int f = 0; f < nf_; f++) {
-					UR[f] = Q[f][d][i];
-					UL[f] = Q[f][geo::flip_dim(d, dim)][i - geo.H_DN[dim]];
+					UR[fi][f] = Q[f][d][i];
+					UL[fi][f] = Q[f][geo::flip_dim(d, dim)][i - geo.H_DN[dim]];
 				}
 				std::array < safe_real, NDIM > x;
 				std::array < safe_real, NDIM > vg;
@@ -64,26 +68,45 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				}
 
 				safe_real amr, apr, aml, apl;
-				static thread_local std::vector<safe_real> FR(nf_), FL(nf_);
 
-				PHYS::template physical_flux<INX>(UR, FR, dim, amr, apr, x, vg);
-				PHYS::template physical_flux<INX>(UL, FL, dim, aml, apl, x, vg);
-				this_ap = std::max(std::max(apr, apl), safe_real(0.0));
-				this_am = std::min(std::min(amr, aml), safe_real(0.0));
+				PHYS::template physical_flux<INX>(UR[fi], FR[fi], dim, amr, apr, x, vg);
+				PHYS::template physical_flux<INX>(UL[fi], FL[fi], dim, aml, apl, x, vg);
+				this_ap[fi] = std::max(std::max(apr, apl), safe_real(0.0));
+				this_am[fi] = std::min(std::min(amr, aml), safe_real(0.0));
+			}
+			double ap_max = 0.0, am_min = 0.0;
+			if (experiment == 1) {
+				for (int fi = 0; fi < geo.NFACEDIR; fi++) {
+					ap_max = std::max(this_ap[fi], ap_max);
+					am_min = std::min(this_am[fi], am_min);
+				}
+			}
+			for (int fi = 0; fi < geo.NFACEDIR; fi++) {
+				double ap, am;
+				if (experiment == 1) {
+					ap = ap_max;
+					am = am_min;
+				} else if (experiment == 2) {
+					ap = this_ap[0];
+					am = this_am[0];
+				} else {
+					ap = this_ap[fi];
+					am = this_am[fi];
+				}
 #pragma ivdep
 				for (int f = 0; f < nf_; f++) {
 					if (this_ap - this_am != 0.0) {
-						this_flux[f] = (this_ap * FL[f] - this_am * FR[f] + this_ap * this_am * (UR[f] - UL[f])) / (this_ap - this_am);
+						this_flux[f] = (ap * FL[fi][f] - am * FR[fi][f] + ap * am * (UR[fi][f] - UL[fi][f])) / (ap - am);
 					} else {
-						this_flux[f] = (FL[f] + FR[f]) / 2.0;
+						this_flux[f] = (FL[fi][f] + FR[fi][f]) / 2.0;
 					}
 				}
-				am = std::min(am, this_am);
-				ap = std::max(ap, this_ap);
+				am = std::min(am, this_am[fi]);
+				ap = std::max(ap, this_ap[fi]);
 #pragma ivdep
 				for (int f = 0; f < nf_; f++) {
-                    // field update from flux
-                    F[dim][f][i] += weights[fi] * this_flux[f];
+					// field update from flux
+					F[dim][f][i] += weights[fi] * this_flux[f];
 				}
 			}
 			const auto this_amax = std::max(ap, safe_real(-am));
