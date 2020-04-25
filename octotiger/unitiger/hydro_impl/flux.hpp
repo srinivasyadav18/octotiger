@@ -82,21 +82,21 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				}
 			}
 			for (int fi = 0; fi < geo.NFACEDIR; fi++) {
-				double ap, am;
+				double ap0, am0;
 				if (experiment == 1) {
-					ap = ap_max;
-					am = am_min;
+					ap0 = ap_max;
+					am0 = am_min;
 				} else if (experiment == 2) {
-					ap = this_ap[0];
-					am = this_am[0];
+					ap0 = this_ap[0];
+					am0 = this_am[0];
 				} else {
-					ap = this_ap[fi];
-					am = this_am[fi];
+					ap0 = this_ap[fi];
+					am0 = this_am[fi];
 				}
 #pragma ivdep
 				for (int f = 0; f < nf_; f++) {
-					if (this_ap - this_am != 0.0) {
-						this_flux[f] = (ap * FL[fi][f] - am * FR[fi][f] + ap * am * (UR[fi][f] - UL[fi][f])) / (ap - am);
+					if (ap0 - am0 != 0.0) {
+						this_flux[f] = (ap0 * FL[fi][f] - am0 * FR[fi][f] + ap0 * am0 * (UR[fi][f] - UL[fi][f])) / (ap0 - am0);
 					} else {
 						this_flux[f] = (FL[fi][f] + FR[fi][f]) / 2.0;
 					}
