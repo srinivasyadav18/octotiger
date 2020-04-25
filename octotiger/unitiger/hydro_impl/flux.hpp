@@ -75,11 +75,9 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				this_am[fi] = std::min(std::min(amr, aml), safe_real(0.0));
 			}
 			double ap_max = 0.0, am_min = 0.0;
-			if (experiment == 1) {
-				for (int fi = 0; fi < geo.NFACEDIR; fi++) {
-					ap_max = std::max(this_ap[fi], ap_max);
-					am_min = std::min(this_am[fi], am_min);
-				}
+			for (int fi = 0; fi < geo.NFACEDIR; fi++) {
+				ap_max = std::max(this_ap[fi], ap_max);
+				am_min = std::min(this_am[fi], am_min);
 			}
 			for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 				double ap0, am0;
