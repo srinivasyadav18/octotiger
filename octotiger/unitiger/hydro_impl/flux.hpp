@@ -89,6 +89,9 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				} else if (experiment == 2) {
 					ap0 = this_ap[0];
 					am0 = this_am[0];
+				} else if (experiment == 3) {
+					ap0 = std::max(ap_max, am_min);
+					am0 = -ap0;
 				} else {
 					ap0 = this_ap[fi];
 					am0 = this_am[fi];
