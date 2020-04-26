@@ -262,7 +262,6 @@ const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(con
 	static thread_local std::vector<safe_real> P(geo.H_N3);
 	for (int j = 0; j < geo.H_NX_XM2; j++) {
 		for (int k = 0; k < geo.H_NX_YM2; k++) {
-#pragma ivdep
 			for (int l = 0; l < geo.H_NX_ZM2; l++) {
 				const int i = geo.to_index(j + 1, k + 1, l + 1);
 				const auto rho = U[rho_i][i];
@@ -283,7 +282,6 @@ const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(con
 		const auto di = dir[d];
 		for (int j = 0; j < geo.H_NX_XM4; j++) {
 			for (int k = 0; k < geo.H_NX_YM4; k++) {
-#pragma ivdep
 				for (int l = 0; l < geo.H_NX_ZM4; l++) {
 					constexpr auto K0 = 0.1;
 					const int i = geo.to_index(j + 2, k + 2, l + 2);

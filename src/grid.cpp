@@ -1725,21 +1725,30 @@ real grid::compute_fluxes() {
 			hydro.use_disc_detect(i);
 		}
 	}
+	static thread_local std::vector<std::vector<safe_real>> this_dudt(opts().n_fields, std::vector<safe_real>(H_N3));
 	for (int f = 0; f < opts().n_fields; f++) {
 		for (int i = 0; i < H_N3; i++) {
-			dUdt[f][i] = 0.0;
+			this_dudt[f][i] = 0.0;
 		}
 	}
 	hydro.use_smooth_recon(pot_i);
 	static thread_local auto f = std::vector<std::vector<std::vector<safe_real>>>(NDIM,
 			std::vector<std::vector<safe_real>>(opts().n_fields, std::vector<safe_real>(H_N3)));
 	const auto &q = hydro.reconstruct(U, X, omega);
-	physics<NDIM>::template derivative_source<INX>(dUdt, U, q, X, omega, dx);
+	physics<NDIM>::template derivative_source<INX>(this_dudt, U, q, X, omega, dx);
 	const auto max_lambda = hydro.flux(U, q, f, X, omega);
-
+	for (integer field = 0; field != opts().n_fields; ++field) {
+		for (integer i = 0; i < INX; ++i) {
+			for (integer j = 0; j < INX; ++j) {
+				for (integer k = 0; k < INX; ++k) {
+					dUdt[field][h0index(i,j,k)] = this_dudt[field][hindex(i + H_BW,j + H_BW,k + H_BW)];
+				}
+			}
+		}
+	}
 	for (int dim = 0; dim < NDIM; dim++) {
-		for (integer field = 0; field != opts().n_fields; ++field) {
 #pragma GCC ivdep
+		for (integer field = 0; field != opts().n_fields; ++field) {
 			for (integer i = 0; i <= INX; ++i) {
 				for (integer j = 0; j <= INX; ++j) {
 					for (integer k = 0; k <= INX; ++k) {
