@@ -15,13 +15,9 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 
 	PROFILE();
 
-	static const cell_geometry<NDIM, INX> geo;
+	static thread_local std::vector<safe_real> UR(nf_), UL(nf_), this_flux(nf_);
 
-	static thread_local std::vector<std::vector<safe_real>> UR(geo.NFACEDIR, std::vector < safe_real > (nf_));
-	static thread_local std::vector<std::vector<safe_real>> UL(geo.NFACEDIR, std::vector < safe_real > (nf_));
-	static thread_local std::vector<std::vector<safe_real>> FR(geo.NFACEDIR, std::vector < safe_real > (nf_));
-	static thread_local std::vector<std::vector<safe_real>> FL(geo.NFACEDIR, std::vector < safe_real > (nf_));
-	static thread_local std::vector<safe_real> this_flux(nf_);
+	static const cell_geometry<NDIM, INX> geo;
 
 	static constexpr auto faces = geo.face_pts();
 	static constexpr auto weights = geo.face_weight();
@@ -45,12 +41,12 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 
 		for (const auto &i : indices) {
 			safe_real ap = 0.0, am = 0.0;
-			safe_real this_ap[geo.NFACEDIR], this_am[geo.NFACEDIR];
+			safe_real this_ap, this_am;
 			for (int fi = 0; fi < geo.NFACEDIR; fi++) {
 				const auto d = faces[dim][fi];
 				for (int f = 0; f < nf_; f++) {
-					UR[fi][f] = Q[f][d][i];
-					UL[fi][f] = Q[f][geo::flip_dim(d, dim)][i - geo.H_DN[dim]];
+					UR[f] = Q[f][d][i];
+					UL[f] = Q[f][geo::flip_dim(d, dim)][i - geo.H_DN[dim]];
 				}
 				std::array < safe_real, NDIM > x;
 				std::array < safe_real, NDIM > vg;
@@ -68,42 +64,24 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				}
 
 				safe_real amr, apr, aml, apl;
+				static thread_local std::vector<safe_real> FR(nf_), FL(nf_);
 
-				PHYS::template physical_flux<INX>(UR[fi], FR[fi], dim, amr, apr, x, vg);
-				PHYS::template physical_flux<INX>(UL[fi], FL[fi], dim, aml, apl, x, vg);
-				this_ap[fi] = std::max(std::max(apr, apl), safe_real(0.0));
-				this_am[fi] = std::min(std::min(amr, aml), safe_real(0.0));
-			}
-			double ap_max = 0.0, am_min = 0.0;
-			for (int fi = 0; fi < geo.NFACEDIR; fi++) {
-				ap_max = std::max(this_ap[fi], ap_max);
-				am_min = std::min(this_am[fi], am_min);
-			}
-			for (int fi = 0; fi < geo.NFACEDIR; fi++) {
-				double ap0, am0;
-				if (experiment == 1) {
-					ap0 = ap_max;
-					am0 = am_min;
-				} else if (experiment == 2) {
-					ap0 = this_ap[0];
-					am0 = this_am[0];
-				} else if (experiment == 3) {
-					ap0 = std::max(ap_max, am_min);
-					am0 = -ap0;
-				} else {
-					ap0 = this_ap[fi];
-					am0 = this_am[fi];
+				PHYS::template physical_flux<INX>(UR, FR, dim, amr, apr, x, vg);
+				PHYS::template physical_flux<INX>(UL, FL, dim, aml, apl, x, vg);
+				if (experiment == 0 || fi == 0) {
+					this_ap = std::max(std::max(apr, apl), safe_real(0.0));
+					this_am = std::min(std::min(amr, aml), safe_real(0.0));
 				}
 #pragma ivdep
 				for (int f = 0; f < nf_; f++) {
-					if (ap0 - am0 != 0.0) {
-						this_flux[f] = (ap0 * FL[fi][f] - am0 * FR[fi][f] + ap0 * am0 * (UR[fi][f] - UL[fi][f])) / (ap0 - am0);
+					if (this_ap - this_am != 0.0) {
+						this_flux[f] = (this_ap * FL[f] - this_am * FR[f] + this_ap * this_am * (UR[f] - UL[f])) / (this_ap - this_am);
 					} else {
-						this_flux[f] = (FL[fi][f] + FR[fi][f]) / 2.0;
+						this_flux[f] = (FL[f] + FR[f]) / 2.0;
 					}
 				}
-				am = std::min(am, this_am[fi]);
-				ap = std::max(ap, this_ap[fi]);
+				am = std::min(am, this_am);
+				ap = std::max(ap, this_ap);
 #pragma ivdep
 				for (int f = 0; f < nf_; f++) {
 					// field update from flux
@@ -116,7 +94,22 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 			}
 		}
 	}
-	return amax;
+	if (experiment) {
+		auto dir = geo.direction();
+		safe_real rho_amax = 0.0;
+		const auto indices = geo.get_indexes(3, geo.NDIR / 2);
+		for (const auto &i : indices) {
+			safe_real drho_dt = 0.0;
+			for (int dim = 0; dim < NDIM; dim++) {
+				drho_dt -= F[dim][0][i + geo.H_DN[dim]] - F[dim][0][i];
+			}
+			rho_amax = std::max(rho_amax, -1.5 * drho_dt / U[0][i]);
+		}
+		return std::max(rho_amax, amax);
+	} else {
+		return amax;
+	}
 }
 
 #endif
+
