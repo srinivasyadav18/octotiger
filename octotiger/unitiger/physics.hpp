@@ -111,6 +111,38 @@ struct physics {
 	using eos_func = std::function<double(double,double,double, double)>;
 	using eos_func2 = std::function<std::pair<double,double>(double,double,double, double)>;
 
+	static void set_code_units(double g, double cm, double s) {
+		code_to_g = g;
+		code_to_cm = cm;
+		code_to_s = s;
+		mh = 1.6733e-24 / g;
+		kb = 1.380658e-16 * s * s / (g * cm * cm);
+		c = 2.99792458e10 * s / cm;
+		me = 9.1093897e-28 / g;
+		h = 6.6260755e-27 * s / (g * cm * cm);
+	}
+
+	static void set_segretain_eos() {
+		energy_from_pressure = segretain_energy_from_pressure;
+		pressure_from_energy = segretain_pressure_from_energy;
+		pressure_and_soundspeed = segretain_pressure_and_soundspeed;
+		T_from_energy = segretain_T_from_energy;
+	}
+
+
+	static eos_func energy_from_pressure;
+	static eos_func pressure_from_energy;
+	static eos_func T_from_energy;
+	static eos_func2 pressure_and_soundspeed;
+
+
+	static void set_atomic_data(const std::vector<double> a, const std::vector<double> z) {
+		for( int s = 0; s < n_species_; s++) {
+			A[s] = a[s];
+			Z[s] = z[s];
+		}
+	}
+
 private:
 	static safe_real rho_sink_radius_;
 	static safe_real rho_sink_floor_;
@@ -118,22 +150,10 @@ private:
 	constexpr static int n_species_ = 5;
 	static safe_real fgamma_;
 	static safe_real GM_;
-
-	static eos_func energy_from_pressure;
-	static eos_func pressure_from_energy;
-	static eos_func2 pressure_and_soundspeed;
 	static std::array<safe_real, n_species_> A;
 	static std::array<safe_real, n_species_> Z;
 
-	static double code_to_g, code_to_cm, code_to_s, mh, kb;
-
-	void set_code_units(double g, double cm, double s) {
-		code_to_g = g;
-		code_to_cm = cm;
-		code_to_s = s;
-		mh = 1.6733e-24 / code_to_g;
-		kb = 1.380658e-16 * code_to_s * code_to_s / (code_to_g * code_to_cm * code_to_cm);
-	}
+	static double code_to_g, code_to_cm, code_to_s, mh, kb, c, me, h;
 
 	static double ideal_pressure_from_energy(double rho, double e, double A, double Z) {
 		return (fgamma_ - 1.0) * e;
@@ -150,13 +170,68 @@ private:
 		return pcs;
 	}
 
+	static double ideal_T_from_energy(double rho, double e, double abar, double zbar) {
+		return (fgamma_ - 1.0) * e * abar * mh / (rho * kb * (zbar + 1));
+	}
+
+	static double segretain_pressure_from_energy(double rho, double e, double abar, double zbar) {
+		const auto mu = abar / zbar;
+		const auto B = mu * 8.0 * M_PI * mh / 3.0 * std::pow(me * c / h, 3);
+		const auto A = M_PI * std::pow(me * c, 4) * c / 3 / std::pow(h, 3);
+		const auto x = std::pow(rho / B, 1.0 / 3.0);
+		const auto Pdeg = A * (x * (2 * x * x - 3) * std::sqrt(x * x + 1) + 3 * asinh(x));
+		const auto hdeg = 8 * A / B * (std::sqrt(x * x + 1) - 1);
+		const auto Edeg = rho * hdeg - Pdeg;
+		return Pdeg + (fgamma_ - 1.0) * (e - Edeg);
+	}
+
+	static double segretain_energy_from_pressure(double rho, double p, double abar, double zbar) {
+		const auto mu = abar / zbar;
+		const auto B = mu * 8.0 * M_PI * mh / 3.0 * std::pow(me * c / h, 3);
+		const auto A = M_PI * std::pow(me * c, 4) * c / 3 / std::pow(h, 3);
+		const auto x = std::pow(rho / B, 1.0 / 3.0);
+		const auto Pdeg = A * (x * (2 * x * x - 3) * std::sqrt(x * x + 1) + 3 * asinh(x));
+		const auto hdeg = 8 * A / B * (std::sqrt(x * x + 1) - 1);
+		const auto Edeg = rho * hdeg - Pdeg;
+		return (p - Pdeg) / (fgamma_ - 1.0) + Edeg;
+	}
+
+	static std::pair<double, double> segretain_pressure_and_soundspeed(double rho, double e, double abar, double zbar) {
+		std::pair<double, double> rc;
+		const auto mu = abar / zbar;
+		const auto B = mu * 8.0 * M_PI * mh / 3.0 * std::pow(me * c / h, 3);
+		const auto A = M_PI * std::pow(me * c, 4) * c / 3 / std::pow(h, 3);
+		const auto x = std::pow(rho / B, 1.0 / 3.0);
+		const auto Pdeg = A * (x * (2 * x * x - 3) * std::sqrt(x * x + 1) + 3 * asinh(x));
+		const auto tmp = std::sqrt(x * x + 1);
+		const auto hdeg = 8 * A / B * (tmp - 1);
+		const auto Edeg = rho * hdeg - Pdeg;
+		rc.first = Pdeg + (fgamma_ - 1.0) * (e - Edeg);
+		const auto dP_drho = (1.0 / 3.0) * B * std::pow(x, 4)
+				* (8 * A * (x * x * (4 - 3 * fgamma_) + 3 * (tmp - 1) * (fgamma_ - 1)) / tmp + 3 * B * (fgamma_ - 1) * e / rho);
+		const auto dP_deps = B * std::pow(x, 3) * (fgamma_ - 1.0);
+		rc.second = std::sqrt(std::max(rc.first / rho / rho * dP_deps + dP_drho, 0.0));
+		return rc;
+	}
+
+	static double segretain_T_from_energy(double rho, double e, double abar, double zbar) {
+		const auto mu = abar / zbar;
+		const auto B = mu * 8.0 * M_PI * mh / 3.0 * std::pow(me * c / h, 3);
+		const auto A = M_PI * std::pow(me * c, 4) * c / 3 / std::pow(h, 3);
+		const auto x = std::pow(rho / B, 1.0 / 3.0);
+		const auto Pdeg = A * (x * (2 * x * x - 3) * std::sqrt(x * x + 1) + 3 * asinh(x));
+		const auto hdeg = 8 * A / B * (std::sqrt(x * x + 1) - 1);
+		const auto Edeg = rho * hdeg - Pdeg;
+		return (e - Edeg) * abar * mh / (rho * kb * (zbar + 1));
+	}
+
 };
 
 template<int NDIM>
-std::array<safe_real,physics<NDIM>::n_species_> physics<NDIM>::A = {1,1,1,1,1};
+std::array<safe_real, physics<NDIM>::n_species_> physics<NDIM>::A = { 1, 1, 1, 1, 1 };
 
 template<int NDIM>
-std::array<safe_real,physics<NDIM>::n_species_> physics<NDIM>::Z = {1,1,1,1,1};
+std::array<safe_real, physics<NDIM>::n_species_> physics<NDIM>::Z = { 1, 1, 1, 1, 1 };
 
 template<int NDIM>
 typename physics<NDIM>::eos_func physics<NDIM>::energy_from_pressure = ideal_energy_from_pressure;
@@ -165,13 +240,25 @@ template<int NDIM>
 typename physics<NDIM>::eos_func physics<NDIM>::pressure_from_energy = ideal_pressure_from_energy;
 
 template<int NDIM>
+typename physics<NDIM>::eos_func physics<NDIM>::T_from_energy = ideal_T_from_energy;
+
+template<int NDIM>
 typename physics<NDIM>::eos_func2 physics<NDIM>::pressure_and_soundspeed = ideal_pressure_and_soundspeed;
 
 template<int NDIM>
-double physics<NDIM>::mh;
+double physics<NDIM>::mh = 1.0;
 
 template<int NDIM>
-double physics<NDIM>::kb;
+double physics<NDIM>::kb = 1.0;
+
+template<int NDIM>
+double physics<NDIM>::c = 1.0;
+
+template<int NDIM>
+double physics<NDIM>::h = 1.0;
+
+template<int NDIM>
+double physics<NDIM>::me = 1.0;
 
 template<int NDIM>
 double physics<NDIM>::code_to_g;

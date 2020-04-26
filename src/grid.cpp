@@ -118,6 +118,7 @@ std::vector<std::string> grid::get_field_names() {
 		rc.push_back("locality");
 		rc.push_back("idle_rate");
 	}
+	rc.push_back("temperature");
 	return rc;
 }
 
@@ -250,6 +251,8 @@ std::vector<silo_var_t> grid::var_data() const {
 	const auto &x0 = opts().silo_offset_x;
 	const auto &y0 = opts().silo_offset_y;
 	const auto &z0 = opts().silo_offset_z;
+
+
 	for (auto l : str_to_index_hydro) {
 		unit = convert_hydro_units(l.second);
 		const int f = l.second;
@@ -331,6 +334,37 @@ std::vector<silo_var_t> grid::var_data() const {
 			s.push_back(std::move(this_s));
 		}
 	}
+
+
+	{
+		silo_var_t this_s("temperature");
+		int jjj = 0;
+		for (int i = 0; i < INX; i++) {
+			for (int j = 0; j < INX; j++) {
+				for (int k = 0; k < INX; k++) {
+					const int iii = hindex(k + H_BW - x0, j + H_BW - y0, i + H_BW - z0);
+					double abar = 0.0, zbar = 0.0;
+					for (int s = 0; s < opts().n_species; s++) {
+						abar += U[spc_i + s][iii] / opts().atomic_mass[s];
+						zbar += U[spc_i + s][iii] * opts().atomic_number[s] / opts().atomic_mass[s];
+					}
+					abar = U[rho_i][iii] / abar;
+					zbar *= abar / U[rho_i][iii];
+					const auto ek = (std::pow(U[sx_i][iii], 2) + std::pow(U[sy_i][iii], 2) + std::pow(U[sz_i][iii], 2)) / 2.0 / U[rho_i][iii];
+					auto ein = U[egas_i][iii] - ek;
+					if (ein < de_switch1 * U[egas_i][iii]) {
+						ein = U[ein_i][iii];
+					}
+					const auto T = physics<NDIM>::T_from_energy(U[rho_i][iii], ein, abar, zbar);
+					this_s(jjj) = T;
+					this_s.set_range(this_s(jjj));
+					jjj++;
+				}
+			}
+		}
+		s.push_back(std::move(this_s));
+	}
+
 	return std::move(s);
 }
 
@@ -1531,11 +1565,6 @@ std::vector<std::pair<std::string, std::string>> grid::get_scalar_expressions() 
 	rc.push_back(std::make_pair(std::string("ek"), std::string("(sx*sx+sy*sy+sz*sz)/2.0/rho")));
 	rc.push_back(std::make_pair(std::string("ei"), hpx::util::format("if( gt(egas-ek,{:e}*egas), egas-ek, ein)", opts().dual_energy_sw1)));
 	const auto kb = physcon().kb * std::pow(opts().code_to_cm / opts().code_to_s, 2) * opts().code_to_g;
-	if (opts().problem == MARSHAK) {
-		rc.push_back(std::make_pair(std::string("T"), std::string("(ei/rho)^(1.0/3.0)")));
-	} else {
-		rc.push_back(std::make_pair(std::string("T"), hpx::util::format("{:e} * ei / n", 1.0 / (kb / (fgamma - 1.0)))));
-	}
 	rc.push_back(std::make_pair(std::string("phi"), std::string("pot/rho")));
 	rc.push_back(std::make_pair(std::string("P"), hpx::util::format("{:e} * ei", (fgamma - 1.0))));
 	rc.push_back(
@@ -1594,6 +1623,17 @@ analytic_t grid::compute_analytic(real t) {
 }
 
 void grid::allocate() {
+
+	static hpx::lcos::local::once_flag flag;
+	hpx::lcos::local::call_once(flag, [this]() {
+		physics<NDIM>::set_fgamma(fgamma);
+		physics<NDIM>::set_atomic_data(opts().atomic_mass, opts().atomic_number);
+		physics<NDIM>::set_dual_energy_switches(opts().dual_energy_sw1, opts().dual_energy_sw2);
+		physics<NDIM>::set_code_units(opts().code_to_g, opts().code_to_cm, opts().code_to_s);
+		if (opts().eos == WD) {
+			physics<NDIM>::set_segretain_eos();
+		}
+	});
 
 	if (opts().radiation) {
 		rad_grid_ptr = std::make_shared<rad_grid>();
@@ -1706,11 +1746,6 @@ void grid::rad_init() {
 
 real grid::compute_fluxes() {
 	PROFILE();
-	static hpx::lcos::local::once_flag flag;
-	hpx::lcos::local::call_once(flag, [this]() {
-		physics<NDIM>::set_fgamma(fgamma);
-		physics<NDIM>::set_dual_energy_switches(opts().dual_energy_sw1, opts().dual_energy_sw2);
-	});
 
 	/******************************/
 //	hydro.set_low_order();
@@ -1741,7 +1776,7 @@ real grid::compute_fluxes() {
 		for (integer i = 0; i < INX; ++i) {
 			for (integer j = 0; j < INX; ++j) {
 				for (integer k = 0; k < INX; ++k) {
-					dUdt[field][h0index(i,j,k)] = this_dudt[field][hindex(i + H_BW,j + H_BW,k + H_BW)];
+					dUdt[field][h0index(i, j, k)] = this_dudt[field][hindex(i + H_BW, j + H_BW, k + H_BW)];
 				}
 			}
 		}
