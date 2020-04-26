@@ -154,7 +154,6 @@ void initialize(options _opts, std::vector<hpx::id_type> const& localities) {
 
 	options::all_localities = localities;
 	opts() = _opts;
-	physics<NDIM>::set_n_species(opts().n_species);
 	grid::get_omega() = opts().omega;
 #if !defined(_MSC_VER) && !defined(__APPLE__)
 	feenableexcept(FE_DIVBYZERO);

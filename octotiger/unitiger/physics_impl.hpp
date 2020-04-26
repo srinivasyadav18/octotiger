@@ -35,9 +35,18 @@ void physics<NDIM>::to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v
 		ein = u[ein_i];
 	}
 
+	safe_real abar = 0.0;
+	safe_real zbar = 0.0;
+	for (int s = 0; s < n_species_; s++) {
+		abar += u[spc_i + s] / A[s];
+		zbar += Z[s] * u[spc_i + s] / A[s];
+	}
+	abar = u[rho_i] / abar;
+	zbar *= abar;
 	v = u[sx_i + dim] * rhoinv;
-	p = (fgamma_ - 1.0) * ein;
-	cs = std::sqrt(fgamma_ * p * rhoinv);
+	auto tmp = pressure_and_soundspeed(u[rho_i], ein, abar, zbar);
+	cs = tmp.second;
+	p = tmp.first;
 }
 
 template<int NDIM>
@@ -133,7 +142,15 @@ void physics<NDIM>::derivative_source(hydro::state_type &dudt, const hydro::stat
 				div_V += 0.5 * weights[fi] * (upr + upl - umr - uml) / dx;
 			}
 		}
-		const auto p = std::max((fgamma_ - 1.0) * U[ein_i][i], 0.0);
+		double abar = 0.0;
+		double zbar = 0.0;
+		for (int si = 0; si < n_species_; si++) {
+			abar += U[spc_i + si][i] / A[si];
+			zbar += Z[si] * U[spc_i + si][i] / A[si];
+		}
+		abar = U[rho_i][i] / abar;
+		zbar *= abar / U[rho_i][i];
+		const auto p = pressure_from_energy(U[rho_i][i], U[ein_i][i], abar, zbar);
 		dudt[ein_i][i] -= p * div_V;
 	}
 }
@@ -201,9 +218,17 @@ const hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, co
 					V[egas_i][i] -= 0.5 * s * s * rhoinv;
 					s *= rhoinv;
 				}
+				double abar = 0.0;
+				double zbar = 0.0;
 				for (int si = 0; si < n_species_; si++) {
 					V[spc_i + si][i] *= rhoinv;
+					abar += V[spc_i + si][i] / A[si];
+					zbar += Z[si] * V[spc_i + si][i] / A[si];
 				}
+				abar = 1.0 / abar;
+				zbar *= abar;
+				V[egas_i][i] = pressure_from_energy(rho, V[egas_i][i], abar, zbar);
+				V[ein_i][i] = pressure_from_energy(rho, V[ein_i][i], abar, zbar);
 				V[pot_i][i] *= rhoinv;
 			}
 		}
@@ -274,7 +299,15 @@ const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(con
 				if (ein < de_switch_1 * U[egas_i][i]) {
 					ein = U[ein_i][i];
 				}
-				P[i] = (fgamma_ - 1.0) * ein;
+				safe_real abar = 0.0;
+				safe_real zbar = 0.0;
+				for (int s = 0; s < n_species_; s++) {
+					abar += U[spc_i + s][i] / A[s];
+					zbar += Z[s] * U[spc_i + s][i] / A[s];
+				}
+				abar = U[rho_i][i] / abar;
+				zbar *= abar;
+				P[i] = pressure_from_energy(U[rho_i][i], ein, abar, zbar);
 			}
 		}
 	}
@@ -339,6 +372,25 @@ void physics<NDIM>::post_recon(std::vector<std::vector<std::vector<safe_real>>> 
 							const auto rho = Q[rho_i][d][i];
 							Q[lx_i + n][d][i] *= rho;
 						}
+					}
+				}
+			}
+			for (int j = 0; j < geo.H_NX_XM4; j++) {
+				for (int k = 0; k < geo.H_NX_YM4; k++) {
+#pragma ivdep
+					for (int l = 0; l < geo.H_NX_ZM4; l++) {
+						const int i = geo.to_index(j + 2, k + 2, l + 2);
+						const auto rho = Q[rho_i][d][i];
+						double abar = 0.0;
+						double zbar = 0.0;
+						for (int s = 0; s < n_species_; s++) {
+							abar += Q[spc_i + s][d][i] / A[s];
+							zbar += Z[s] * Q[spc_i + s][d][i] / A[s];
+						}
+						abar = 1.0 / abar;
+						zbar *= abar;
+						Q[egas_i][d][i] = energy_from_pressure(rho, Q[egas_i][d][i], abar, zbar);
+						Q[ein_i][d][i] = energy_from_pressure(rho, Q[ein_i][d][i], abar, zbar);
 					}
 				}
 			}
@@ -462,11 +514,6 @@ void physics<NDIM>::analytic_solution(test_type test, hydro::state_type &U, cons
 		U[egas_i][i] = pre / (fgamma_ - 1.0) + 0.5 * den * vel * vel;
 		U[spc_i][i] = den;
 	}
-}
-
-template<int NDIM>
-void physics<NDIM>::set_n_species(int n) {
-	n_species_ = n;
 }
 
 template<int NDIM>
