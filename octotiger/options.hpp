@@ -82,7 +82,7 @@ public:
 	real code_to_cm;
 	real cfl;
 	real rho_floor;
-	real tau_floor;
+	real ein_floor;
 
 	size_t cuda_streams_per_locality;
 	size_t cuda_streams_per_gpu;
@@ -112,7 +112,7 @@ public:
 	template<class Arc>
 	void serialize(Arc &arc, unsigned) {
 		arc & rho_floor;
-		arc & tau_floor;
+		arc & ein_floor;
 		arc & cdisc_detect;
 		arc & experiment;
 		arc & unigrid;

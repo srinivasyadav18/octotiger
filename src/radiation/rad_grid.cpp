@@ -149,7 +149,7 @@ void node_client::send_rad_children(std::vector<real> &&data, const geo::octant 
 	hpx::apply<typename node_server::send_rad_children_action>(get_unmanaged_gid(), std::move(data), ci, cycle);
 }
 
-void rad_grid::rad_imp(std::vector<real> &egas, std::vector<real> &tau, std::vector<real> &sx, std::vector<real> &sy, std::vector<real> &sz,
+void rad_grid::rad_imp(std::vector<real> &egas, std::vector<real> &ein, std::vector<real> &sx, std::vector<real> &sy, std::vector<real> &sz,
 		const std::vector<real> &rho, real dt) {
 	PROFILE()
 	;
@@ -157,7 +157,7 @@ void rad_grid::rad_imp(std::vector<real> &egas, std::vector<real> &tau, std::vec
 	const real clight = physcon().c / opts().clight_retard;
 	const real clightinv = INVERSE(clight);
 	const real fgamma = grid::get_fgamma();
-	octotiger::radiation::radiation_kernel<er_i, fx_i, fy_i, fz_i>(d, rho, sx, sy, sz, egas, tau, fgamma, U, mmw, X_spc, Z_spc, dt, clightinv);
+	octotiger::radiation::radiation_kernel<er_i, fx_i, fy_i, fz_i>(d, rho, sx, sy, sz, egas, ein, fgamma, U, mmw, X_spc, Z_spc, dt, clightinv);
 }
 
 void rad_grid::set_dx(real _dx) {
@@ -262,7 +262,7 @@ void node_server::compute_radiation(real dt, real omega) {
 	const real this_dt = dt * INVERSE(real(nsteps));
 	auto &egas = grid_ptr->get_field(egas_i);
 	const auto &rho = grid_ptr->get_field(rho_i);
-	auto &tau = grid_ptr->get_field(tau_i);
+	auto &ein = grid_ptr->get_field(ein_i);
 	auto &sx = grid_ptr->get_field(sx_i);
 	auto &sy = grid_ptr->get_field(sy_i);
 	auto &sz = grid_ptr->get_field(sz_i);
@@ -272,7 +272,7 @@ void node_server::compute_radiation(real dt, real omega) {
 //		printf("Explicit\n");
 //	}
 	if (opts().rad_implicit) {
-		rgrid->rad_imp(egas, tau, sx, sy, sz, rho, 0.5 * dt);
+		rgrid->rad_imp(egas, ein, sx, sy, sz, rho, 0.5 * dt);
 	}
 	for (integer i = 0; i != nsteps; ++i) {
 		//	rgrid->sanity_check();
@@ -294,7 +294,7 @@ void node_server::compute_radiation(real dt, real omega) {
 
 	}
 	if (opts().rad_implicit) {
-		rgrid->rad_imp(egas, tau, sx, sy, sz, rho, 0.5 * dt);
+		rgrid->rad_imp(egas, ein, sx, sy, sz, rho, 0.5 * dt);
 	}
 //	rgrid->sanity_check();
 	all_rad_bounds();

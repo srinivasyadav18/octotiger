@@ -70,10 +70,10 @@ std::vector<real> radiation_test_problem(real x, real y, real z, real dx) {
 		u[rho_i] = 1.0e-20;
 		eint = 2.0e+15;
 	}
-	u[tau_i] = POWER(eint * u[rho_i], 1.0 / grid::get_fgamma());
+	u[ein_i] = eint * u[rho_i];
 //	u[sx_i] = 0.0; //u[rho_i] / 10.0;
 	const real fgamma = grid::get_fgamma();
-	u[egas_i] = POWER(u[tau_i], fgamma);
+	u[egas_i] = u[ein_i];
 	const real rhoinv = INVERSE(u[rho_i]);
 	u[egas_i] += u[sx_i] * u[sx_i] * rhoinv / 2.0;
 	u[egas_i] += u[sy_i] * u[sy_i] * rhoinv / 2.0;
@@ -103,7 +103,7 @@ bool refine_blast(integer level, integer max_level, real x, real y, real z, std:
 			if (std::abs(dudx[i][rho_i] / U[rho_i]) > 0.01) {
 				rc = rc || (level < max_level);
 			}
-			if (std::abs(dudx[i][tau_i]) > 0.01) {
+			if (std::abs(dudx[i][ein_i]) > 0.01) {
 				rc = rc || (level < max_level);
 			}
 		}
@@ -341,21 +341,7 @@ const real alpha = 1.0;
 std::vector<real> star(real x, real y, real z, real) {
 	const real fgamma = grid::get_fgamma();
 	std::vector<real> u(opts().n_fields, real(0));
-	if (opts().eos == WD) {
-		const real r = std::sqrt(x * x + y * y + z * z);
-		static struct_eos eos(1.0, 1.0);
-		physcon().A = eos.A;
-		physcon().B = eos.B();
-		normalize_constants();
-		const real rho = std::max(eos.density_at(r, 0.01), 1.0e-10);
-		const real ei = eos.energy(rho);
-		u[rho_i] = rho;
-		u[egas_i] = ei;
-		u[tau_i] = std::pow(std::max(ei - ztwd_energy(rho), 0.0), 1.0 / fgamma);
-		u[spc_i] = rho;
-		return u;
-	} else {
-
+\
 		x -= 0.0;
 		y -= 0.0;
 		z -= 0.0;
@@ -378,7 +364,7 @@ std::vector<real> star(real x, real y, real z, real) {
 		if (theta <= theta_min) {
 			u[egas_i] *= real(100);
 		}
-		u[tau_i] = std::pow(u[egas_i], (real(1) / real(fgamma)));
+		u[ein_i] = u[egas_i];
 
 		/*		const real r = std::sqrt(x * x + y * y + z * z);
 		 static struct_eos eos(0.0040083, 0.33593, 3.0, 1.5, 0.1808, 2.0);
@@ -393,7 +379,6 @@ std::vector<real> star(real x, real y, real z, real) {
 		 u[spc_i+1] = rho;
 		 }*/
 		return u;
-	}
 }
 
 std::vector<real> moving_star(real x, real y, real z, real dx) {
@@ -466,7 +451,7 @@ std::vector<real> equal_mass_binary(real x, real y, real z, real) {
 	u[rho_i] = std::pow(theta, n);
 	u[egas_i] = std::pow(theta, fgamma * n) * c0 / (fgamma - real(1));
 	u[egas_i] = std::max(u[egas_i], ei_floor);
-	u[tau_i] = std::pow(u[egas_i], (real(1) / real(fgamma)));
+	u[ein_i] = u[egas_i];
 	u[sx_i] = -DEFAULT_OMEGA * y * u[rho_i];
 	u[sy_i] = +DEFAULT_OMEGA * x * u[rho_i];
 	u[egas_i] += HALF * DEFAULT_OMEGA * DEFAULT_OMEGA * (x * x + y * y) * u[rho_i];

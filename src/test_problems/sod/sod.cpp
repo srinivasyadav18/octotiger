@@ -30,7 +30,7 @@ std::vector<real> sod_shock_tube_analytic(real x0, real y, real z, real t) {
 	U[sx_i] = s.rho * s.v / std::sqrt(3.0);
 	U[sy_i] = s.rho * s.v / std::sqrt(3.0);
 	U[sz_i] = s.rho * s.v / std::sqrt(3.0);
-	U[tau_i] = std::pow(U[egas_i], 1.0 / fgamma);
+	U[ein_i] = U[egas_i];
 	U[egas_i] += s.rho * s.v * s.v / 2.0;
 	U[spc_i] = s.rho;
 	return U;
