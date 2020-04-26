@@ -12,12 +12,12 @@
 
 template<int NDIM>
 struct physics {
-	static constexpr char const *field_names3[] = { "rho", "egas", "tau", "pot", "sx", "sy", "sz", "zx", "zy", "zz", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
-	static constexpr char const *field_names2[] = { "rho", "egas", "tau", "pot", "sx", "sy", "zz", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
-	static constexpr char const *field_names1[] = { "rho", "egas", "tau", "pot", "sx", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
+	static constexpr char const *field_names3[] = { "rho", "egas", "ein", "pot", "sx", "sy", "sz", "zx", "zy", "zz", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
+	static constexpr char const *field_names2[] = { "rho", "egas", "ein", "pot", "sx", "sy", "zz", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
+	static constexpr char const *field_names1[] = { "rho", "egas", "ein", "pot", "sx", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
 	static constexpr int rho_i = 0;
 	static constexpr int egas_i = 1;
-	static constexpr int tau_i = 2;
+	static constexpr int ein_i = 2;
 	static constexpr int pot_i = 3;
 	static constexpr int sx_i = 4;
 	static constexpr int sy_i = 5;
@@ -69,10 +69,11 @@ struct physics {
 	template<int INX>
 	static void post_process(hydro::state_type &U, const hydro::x_type& X, safe_real dx);
 
-	static void set_degenerate_eos(safe_real, safe_real);
-
 	template<int INX>
 	static void source(hydro::state_type &dudt, const hydro::state_type &U, const hydro::flux_type &F, const hydro::x_type X, safe_real omega, safe_real dx);
+
+	template<int INX>
+	static void derivative_source(hydro::state_type &dudt, const hydro::state_type &U, const std::vector<std::vector<std::vector<safe_real>>> &Q, const hydro::x_type X, safe_real omega, safe_real dx);
 
 	/*** Reconstruct uses this - GPUize****/
 	template<int INX>
@@ -112,10 +113,7 @@ private:
 	static int nf_;
 	static int n_species_;
 	static safe_real fgamma_;
-	static safe_real A_;
-	static safe_real B_;
 	static safe_real GM_;
-	static safe_real deg_pres(safe_real x);
 
 };
 
@@ -135,12 +133,6 @@ safe_real physics<NDIM>::rho_sink_floor_ = 0.0;
 
 template<int NDIM>
 safe_real physics<NDIM>::GM_ = 0.0;
-
-template<int NDIM>
-safe_real physics<NDIM>::A_ = 0.0;
-
-template<int NDIM>
-safe_real physics<NDIM>::B_ = 1.0;
 
 template<int NDIM>
 safe_real physics<NDIM>::de_switch_1 = 1e-3;
