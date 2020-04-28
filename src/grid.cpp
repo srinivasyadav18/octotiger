@@ -118,7 +118,9 @@ std::vector<std::string> grid::get_field_names() {
 		rc.push_back("locality");
 		rc.push_back("idle_rate");
 	}
-	rc.push_back("temperature");
+	rc.push_back("T");
+	rc.push_back("P");
+	rc.push_back("cs");
 	return rc;
 }
 
@@ -337,7 +339,9 @@ std::vector<silo_var_t> grid::var_data() const {
 
 
 	{
-		silo_var_t this_s("temperature");
+		silo_var_t this_t("T");
+		silo_var_t this_p("P");
+		silo_var_t this_cs("cs");
 		int jjj = 0;
 		for (int i = 0; i < INX; i++) {
 			for (int j = 0; j < INX; j++) {
@@ -350,20 +354,31 @@ std::vector<silo_var_t> grid::var_data() const {
 					}
 					abar = U[rho_i][iii] / abar;
 					zbar *= abar / U[rho_i][iii];
-					const auto ek = (std::pow(U[sx_i][iii], 2) + std::pow(U[sy_i][iii], 2) + std::pow(U[sz_i][iii], 2)) / 2.0 / U[rho_i][iii];
+					const auto ek = (std::pow(U[sx_i][iii], 2) + std::pow(U[sy_i][iii], 2) + std::pow(U[sz_i][iii], 2)) / 2.0 * (1.0/ U[rho_i][iii]);
 					auto ein = U[egas_i][iii] - ek;
 					if (ein < de_switch1 * U[egas_i][iii]) {
 						ein = U[ein_i][iii];
 					}
 					const auto T = physics<NDIM>::T_from_energy(U[rho_i][iii], ein, abar, zbar);
-					this_s(jjj) = T;
-					this_s.set_range(this_s(jjj));
+					const auto tmp = physics<NDIM>::pressure_and_soundspeed(U[rho_i][iii], ein, abar, zbar);
+					const real cm = opts().code_to_cm;
+					const real s = opts().code_to_s;
+					const real g = opts().code_to_g;
+					this_t(jjj) = T;
+					this_t.set_range(this_t(jjj));
+					this_p(jjj) = tmp.first * g / s * s / cm;
+					this_p.set_range(this_p(jjj));
+					this_cs(jjj) = tmp.second * cm / s;
+					this_cs.set_range(this_cs(jjj));
 					jjj++;
 				}
 			}
 		}
-		s.push_back(std::move(this_s));
+		s.push_back(std::move(this_t));
+		s.push_back(std::move(this_p));
+		s.push_back(std::move(this_cs));
 	}
+
 
 	return std::move(s);
 }
@@ -1534,17 +1549,23 @@ std::vector<std::pair<std::string, std::string>> grid::get_scalar_expressions() 
 	rc.push_back(std::make_pair(std::string("zy"), "ly + coord(quadmesh)[0]*sz - coord(quadmesh)[2]*sx"));
 	rc.push_back(std::make_pair(std::string("zz"), "lz - coord(quadmesh)[0]*sy + coord(quadmesh)[1]*sx"));
 
-	std::string n;
+	std::string n, ni, ne;
 	std::string X = "(";
 	std::string Z = "(";
 
 	for (integer i = 0; i < opts().n_species; i++) {
 		const real mu = opts().atomic_mass[i] / (opts().atomic_number[i] + 1.);
+		const real mui = opts().atomic_mass[i];
+		const real mue = opts().atomic_mass[i] / opts().atomic_number[i];
 		n += hpx::util::format("rho_{} / {:e} + ", int(i + 1), mu * physcon().mh * opts().code_to_g);
+		ni += hpx::util::format("rho_{} / {:e} + ", int(i + 1), mui * physcon().mh * opts().code_to_g);
+		ne += hpx::util::format("rho_{} / {:e} + ", int(i + 1), mue * physcon().mh * opts().code_to_g);
 		X += hpx::util::format("{:e} * rho_{} + ", opts().X[i], i + 1);
 		Z += hpx::util::format("{:e} * rho_{} + ", opts().Z[i], i + 1);
 	}
 	n += '0';
+	ni += '0';
+	ne += '0';
 	X += "0) / rho";
 	Z += "0) / rho";
 	rc.push_back(std::make_pair(std::string("sigma_T"), std::string("(1 + X) * 0.2 * T * T / ((T * T + 2.7e+11 * rho) * (1 + (T / 4.5e+8)^0.86))")));
@@ -1558,15 +1579,16 @@ std::vector<std::pair<std::string, std::string>> grid::get_scalar_expressions() 
 		rc.push_back(std::make_pair(std::string("kappa_P"), std::string("rho * 30.262 * sigma_xf")));
 	}
 	rc.push_back(std::make_pair(std::string("n"), std::move(n)));
+	rc.push_back(std::make_pair(std::string("ni"), std::move(ni)));
+	rc.push_back(std::make_pair(std::string("ne"), std::move(ne)));
 	rc.push_back(std::make_pair(std::string("X"), std::move(X)));
 	rc.push_back(std::make_pair(std::string("Y"), std::string("1.0 - X - Z")));
 	rc.push_back(std::make_pair(std::string("Z"), std::move(Z)));
 	rc.push_back(std::make_pair(std::string("etot_dual"), std::string("ei + ek")));
 	rc.push_back(std::make_pair(std::string("ek"), std::string("(sx*sx+sy*sy+sz*sz)/2.0/rho")));
-	rc.push_back(std::make_pair(std::string("ei"), hpx::util::format("if( gt(egas-ek,{:e}*egas), egas-ek, ein)", opts().dual_energy_sw1)));
+	rc.push_back(std::make_pair(std::string("ei_dual"), hpx::util::format("if( gt(egas-ek,{:e}*egas), egas-ek, ein)", opts().dual_energy_sw1)));
 	const auto kb = physcon().kb * std::pow(opts().code_to_cm / opts().code_to_s, 2) * opts().code_to_g;
 	rc.push_back(std::make_pair(std::string("phi"), std::string("pot/rho")));
-	rc.push_back(std::make_pair(std::string("P"), hpx::util::format("{:e} * ei", (fgamma - 1.0))));
 	rc.push_back(
 			std::make_pair(std::string("B_p"), hpx::util::format("{:e} * T^4", physcon().sigma / M_PI * opts().code_to_g * std::pow(opts().code_to_cm, 3))));
 	return std::move(rc);

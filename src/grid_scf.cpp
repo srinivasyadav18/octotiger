@@ -380,11 +380,6 @@ real grid::scf_update(real com, real omega, real c1, real c2, real c1_x, real c2
 				}
 				ASSERT_NONAN(new_rho);
 				rho = std::max((1.0 - w0) * rho + w0 * new_rho, rho_floor);
-				if (opts().eos == WD) {
-					eint = ztwd_energy(rho);
-				} else {
-					eint = std::max(0.0, this_struct_eos.pressure(rho) / (fgamma - 1.0));
-				}
 				if (new_rho < rho_int) {
 					rho = rho_floor;
 				}
@@ -403,6 +398,18 @@ real grid::scf_update(real com, real omega, real c1, real c2, real c1_x, real c2
 				}
 				real sx, sy;
 				U[spc_vac_i][iiih] = rho_floor;
+				if (opts().eos == WD) {
+					double abar = 0.0, zbar = 0.0;
+					for( int s = 0; s < opts().n_species; s++) {
+						abar += U[spc_i + s][iiih] / opts().atomic_mass[s];
+						zbar += U[spc_i + s][iiih] * opts().atomic_number[s]/ opts().atomic_mass[s];
+					}
+					abar = rho / abar;
+					zbar *= abar / rho;
+					eint = physics<NDIM>::ztwd_pressure_and_energy(rho,abar,zbar).second;
+				} else {
+					eint = std::max(0.0, this_struct_eos.pressure(rho) / (fgamma - 1.0));
+				}
 				if (opts().v1309) {
 					if (rho0 < this_struct_eos.get_cutoff_density()) {
 						U[spc_de_i][iiih] = U[spc_ae_i][iiih] = U[spc_dc_i][iiih] = U[spc_ac_i][iiih] = 0.0;

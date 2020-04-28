@@ -43,8 +43,8 @@ real find_T_rad_gas(real p, real rho, real mu) {
 }
 
 void these_units(real &m, real &l, real &t, real &k) {
-	const real Acgs = 6.00228e+22;
-	const real Bcgs = 2 * 9.81011e+5;
+	 const real Acgs = 6.00233345657677e+22;
+	const real Bcgs = 2 * 9.81019203218400e+05;
 	const real Gcgs = 6.67259e-8;
 	const real kbcgs = 1.380658e-16;
 	real m1, l1, t1, k1;
@@ -126,6 +126,8 @@ void normalize_constants() {
 		opts().code_to_s = 1.0 / t;
 		opts().code_to_cm = 1.0 / l;
 	}
+	physics<NDIM>::set_code_units(opts().code_to_g, opts().code_to_cm, opts().code_to_s);
+
 }
 
 void set_units(real m, real l, real t, real k) {

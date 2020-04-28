@@ -218,17 +218,6 @@ const hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, co
 					V[egas_i][i] -= 0.5 * s * s * rhoinv;
 					s *= rhoinv;
 				}
-				double abar = 0.0;
-				double zbar = 0.0;
-				for (int si = 0; si < n_species_; si++) {
-					V[spc_i + si][i] *= rhoinv;
-					abar += V[spc_i + si][i] / A[si];
-					zbar += Z[si] * V[spc_i + si][i] / A[si];
-				}
-				abar = 1.0 / abar;
-				zbar *= abar;
-				V[egas_i][i] = pressure_from_energy(rho, V[egas_i][i], abar, zbar);
-				V[ein_i][i] = pressure_from_energy(rho, V[ein_i][i], abar, zbar);
 				V[pot_i][i] *= rhoinv;
 			}
 		}
@@ -372,25 +361,6 @@ void physics<NDIM>::post_recon(std::vector<std::vector<std::vector<safe_real>>> 
 							const auto rho = Q[rho_i][d][i];
 							Q[lx_i + n][d][i] *= rho;
 						}
-					}
-				}
-			}
-			for (int j = 0; j < geo.H_NX_XM4; j++) {
-				for (int k = 0; k < geo.H_NX_YM4; k++) {
-#pragma ivdep
-					for (int l = 0; l < geo.H_NX_ZM4; l++) {
-						const int i = geo.to_index(j + 2, k + 2, l + 2);
-						const auto rho = Q[rho_i][d][i];
-						double abar = 0.0;
-						double zbar = 0.0;
-						for (int s = 0; s < n_species_; s++) {
-							abar += Q[spc_i + s][d][i] / A[s];
-							zbar += Z[s] * Q[spc_i + s][d][i] / A[s];
-						}
-						abar = 1.0 / abar;
-						zbar *= abar;
-						Q[egas_i][d][i] = energy_from_pressure(rho, Q[egas_i][d][i], abar, zbar);
-						Q[ein_i][d][i] = energy_from_pressure(rho, Q[ein_i][d][i], abar, zbar);
 					}
 				}
 			}
