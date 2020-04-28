@@ -140,12 +140,12 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 						safe_real sum = 0.0;
 						for (int n = 0; n < geo::group_size(gi); n++) {
 							const auto pair = geo::group_pair(gi, n);
-							sum += q[i + pair.first][pair.second];
+							sum += q[pair.second][i + pair.first];
 						}
 						sum /= safe_real(geo::group_size(gi));
 						for (int n = 0; n < geo::group_size(gi); n++) {
 							const auto pair = geo::group_pair(gi, n);
-							q[i + pair.first][pair.second] = sum;
+							q[pair.second][i + pair.first] = sum;
 						}
 					}
 				}
