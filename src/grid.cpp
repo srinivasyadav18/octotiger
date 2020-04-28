@@ -254,7 +254,6 @@ std::vector<silo_var_t> grid::var_data() const {
 	const auto &y0 = opts().silo_offset_y;
 	const auto &z0 = opts().silo_offset_z;
 
-
 	for (auto l : str_to_index_hydro) {
 		unit = convert_hydro_units(l.second);
 		const int f = l.second;
@@ -337,7 +336,6 @@ std::vector<silo_var_t> grid::var_data() const {
 		}
 	}
 
-
 	{
 		silo_var_t this_t("T");
 		silo_var_t this_p("P");
@@ -354,7 +352,7 @@ std::vector<silo_var_t> grid::var_data() const {
 					}
 					abar = U[rho_i][iii] / abar;
 					zbar *= abar / U[rho_i][iii];
-					const auto ek = (std::pow(U[sx_i][iii], 2) + std::pow(U[sy_i][iii], 2) + std::pow(U[sz_i][iii], 2)) / 2.0 * (1.0/ U[rho_i][iii]);
+					const auto ek = (std::pow(U[sx_i][iii], 2) + std::pow(U[sy_i][iii], 2) + std::pow(U[sz_i][iii], 2)) / 2.0 * (1.0 / U[rho_i][iii]);
 					auto ein = U[egas_i][iii] - ek;
 					if (ein < de_switch1 * U[egas_i][iii]) {
 						ein = U[ein_i][iii];
@@ -378,7 +376,6 @@ std::vector<silo_var_t> grid::var_data() const {
 		s.push_back(std::move(this_p));
 		s.push_back(std::move(this_cs));
 	}
-
 
 	return std::move(s);
 }
@@ -1654,6 +1651,8 @@ void grid::allocate() {
 		physics<NDIM>::set_code_units(opts().code_to_g, opts().code_to_cm, opts().code_to_s);
 		if (opts().eos == WD) {
 			physics<NDIM>::set_segretain_eos();
+		} else if (opts().eos == HELMHOLTZ) {
+			physics<NDIM>::set_helmholtz_eos();
 		}
 	});
 

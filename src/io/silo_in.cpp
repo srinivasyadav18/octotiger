@@ -94,7 +94,7 @@ void load_options_from_silo(std::string fname, DBfile *db) {
 			opts().code_to_s = rr(db, "code_to_s");
 			opts().code_to_cm = rr(db, "code_to_cm");
 			opts().n_species = ri(db, "n_species");
-			opts().eos = eos_type(ri(db, "eos"));
+	//		opts().eos = eos_type(ri(db, "eos"));
 			opts().gravity = ri(db, "gravity");
 			opts().hydro = ri(db, "hydro");
 			opts().omega = rr(db, "omega") * opts().code_to_s;

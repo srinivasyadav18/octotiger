@@ -9,6 +9,7 @@
 #include "octotiger/unitiger/safe_real.hpp"
 #include "octotiger/test_problems/blast.hpp"
 #include "octotiger/test_problems/exact_sod.hpp"
+#include "octotiger/helmholtz.hpp"
 #include <functional>
 
 template<int NDIM>
@@ -115,14 +116,23 @@ struct physics {
 		code_to_g = g;
 		code_to_cm = cm;
 		code_to_s = s;
-		mh = 1.6733e-24 / g;
+		mh = 1.6605402e-24 / g;
+		//		mh = 1.6733e-24 / g;
 		kb = 1.380658e-16 * s * s / (g * cm * cm);
 		const auto mp = 1.6726231e-24 / g;
 		const auto c = 2.99792458e10 * s / cm;
 		const auto me = 9.1093897e-28 / g;
 		const auto h = 6.6260755e-27 * s / (g * cm * cm);
-		B_ = 8.0 * M_PI * mp / 3.0 * std::pow(me * c / h, 3);
+		B_ = 8.0 * M_PI * mh / 3.0 * std::pow(me * c / h, 3);
 		A_ = M_PI * std::pow(me * c, 4) * c / 3 / std::pow(h, 3);
+	}
+
+	static void set_helmholtz_eos() {
+		pressure_from_energy = helmholtz_pressure_from_energy;
+		pressure_and_soundspeed = helmholtz_pressure_and_soundspeed;
+		T_from_energy = helmholtz_T_from_energy;
+		helmholtz_set_cgs_units(code_to_cm, code_to_g, code_to_s, 1);
+
 	}
 
 	static void set_segretain_eos() {

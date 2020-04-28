@@ -43,8 +43,8 @@ real find_T_rad_gas(real p, real rho, real mu) {
 }
 
 void these_units(real &m, real &l, real &t, real &k) {
-	 const real Acgs = 6.00233345657677e+22;
-	const real Bcgs = 2 * 9.81019203218400e+05;
+	const real Acgs = 6.00233345657677e+22;
+	const real Bcgs = 2 * 9.73932396315776e+05;
 	const real Gcgs = 6.67259e-8;
 	const real kbcgs = 1.380658e-16;
 	real m1, l1, t1, k1;
