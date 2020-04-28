@@ -366,7 +366,7 @@ std::vector<silo_var_t> grid::var_data() const {
 					const real g = opts().code_to_g;
 					this_t(jjj) = T;
 					this_t.set_range(this_t(jjj));
-					this_p(jjj) = tmp.first * g / s * s / cm;
+					this_p(jjj) = tmp.first * g / s / s / cm;
 					this_p.set_range(this_p(jjj));
 					this_cs(jjj) = tmp.second * cm / s;
 					this_cs.set_range(this_cs(jjj));

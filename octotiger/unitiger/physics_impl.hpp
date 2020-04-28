@@ -42,7 +42,7 @@ void physics<NDIM>::to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v
 		zbar += Z[s] * u[spc_i + s] / A[s];
 	}
 	abar = u[rho_i] / abar;
-	zbar *= abar;
+	zbar *= abar / u[rho_i];
 	v = u[sx_i + dim] * rhoinv;
 	auto tmp = pressure_and_soundspeed(u[rho_i], ein, abar, zbar);
 	cs = tmp.second;
@@ -295,7 +295,7 @@ const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(con
 					zbar += Z[s] * U[spc_i + s][i] / A[s];
 				}
 				abar = U[rho_i][i] / abar;
-				zbar *= abar;
+				zbar *= abar / U[rho_i][i];
 				P[i] = pressure_from_energy(U[rho_i][i], ein, abar, zbar);
 			}
 		}
