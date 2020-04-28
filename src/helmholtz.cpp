@@ -20,19 +20,7 @@ static double erg_to_code = 1.0, dyne_to_code = 1.0;
 double tlo, thi, tstp, tstpi, dlo, dhi, dstp, dstpi;
 double d[IMAX], t[JMAX];
 double f[IMAX][JMAX], fd[IMAX][JMAX], ft[IMAX][JMAX], fdd[IMAX][JMAX], ftt[IMAX][JMAX], fdt[IMAX][JMAX], fddt[IMAX][JMAX], fdtt[IMAX][JMAX], fddtt[IMAX][JMAX];
-double dpdf[IMAX][JMAX], dpdfd[IMAX][JMAX], dpdft[IMAX][JMAX], dpdfdt[IMAX][JMAX];
-double ef[IMAX][JMAX], efd[IMAX][JMAX], eft[IMAX][JMAX], efdt[IMAX][JMAX];
-double xf[IMAX][JMAX], xfd[IMAX][JMAX], xft[IMAX][JMAX], xfdt[IMAX][JMAX];
 double dt_sav[JMAX], dt2_sav[JMAX], dti_sav[JMAX], dt2i_sav[JMAX], dt3i_sav[JMAX], dd_sav[IMAX], dd2_sav[IMAX], ddi_sav[IMAX], dd2i_sav[IMAX], dd3i_sav[IMAX];
-double tion_lo, tion_hi, tion_stp, tion_stpi, dion_lo, dion_hi, dion_stp, dion_stpi;
-double dion[IMAX], tion[JMAX];
-double fion[IMAX][JMAX], fiond[IMAX][JMAX], fiont[IMAX][JMAX], fiondd[IMAX][JMAX], fiontt[IMAX][JMAX], fiondt[IMAX][JMAX], fionddt[IMAX][JMAX],
-		fiondtt[IMAX][JMAX], fionddtt[IMAX][JMAX];
-double dpiondf[IMAX][JMAX], dpiondfd[IMAX][JMAX], dpiondft[IMAX][JMAX], dpiondfdt[IMAX][JMAX];
-double efion[IMAX][JMAX], efiond[IMAX][JMAX], efiont[IMAX][JMAX], efiondt[IMAX][JMAX];
-double xfion[IMAX][JMAX], xfiond[IMAX][JMAX], xfiont[IMAX][JMAX], xfiondt[IMAX][JMAX];
-double dt_sav_ion[JMAX], dt2_sav_ion[JMAX], dti_sav_ion[JMAX], dt2i_sav_ion[JMAX], dt3i_sav_ion[JMAX], dd_sav_ion[IMAX], dd2_sav_ion[IMAX], ddi_sav_ion[IMAX],
-		dd2i_sav_ion[IMAX], dd3i_sav_ion[JMAX];
 
 #define psi0(z)   ((z)*(z)*(z) * ( (z) * (-6.0*(z) + 15.0) -10.0) + 1.0)
 #define dpsi0(z)  ((z)*(z) * ( (z) * (-30.0*(z) + 60.0) - 30.0))
