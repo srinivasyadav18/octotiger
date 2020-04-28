@@ -72,7 +72,6 @@ std::vector<real> radiation_test_problem(real x, real y, real z, real dx) {
 	}
 	u[ein_i] = eint * u[rho_i];
 //	u[sx_i] = 0.0; //u[rho_i] / 10.0;
-	const real fgamma = grid::get_fgamma();
 	u[egas_i] = u[ein_i];
 	const real rhoinv = INVERSE(u[rho_i]);
 	u[egas_i] += u[sx_i] * u[sx_i] * rhoinv / 2.0;

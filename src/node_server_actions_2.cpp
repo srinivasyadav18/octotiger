@@ -336,7 +336,6 @@ void node_server::force_nodes_to_exist(std::vector<node_location>&& locs) {
 	futs.reserve(geo::octant::count() + 2);
 	parent_list.reserve(locs.size());
 
-	integer index = 0;
 	for (auto& loc : locs) {
 		assert(loc != my_location);
 		if (loc.is_child_of(my_location)) {

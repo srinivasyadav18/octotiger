@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <octotiger/helmholtz.hpp>
 #include <octotiger/const.hpp>
+#include <atomic>
 
 using namespace std;
 
@@ -61,19 +62,6 @@ double dt_sav_ion[JMAX], dt2_sav_ion[JMAX], dti_sav_ion[JMAX], dt2i_sav_ion[JMAX
            + fi[30] *w1d*w2mt  + fi[31] *w1md*w2mt \
            + fi[32] *w2d*w2t   + fi[33] *w2md*w2t \
            + fi[34] *w2d*w2mt  + fi[35] *w2md*w2mt
-#define xpsi0(z)  ((z) * (z) * (2.0*(z) - 3.0) + 1.0)
-#define xdpsi0(z) ((z) * (6.0*(z) - 6.0))
-#define xpsi1(z)  ((z) * ( (z) * ((z) - 2.0) + 1.0))
-#define xdpsi1(z) ((z) * (3.0*(z) - 4.0) + 1.0)
-#define h3(i,j,w0t,w1t,w0mt,w1mt,w0d,w1d,w0md,w1md)  \
-             fi[0]  *w0d*w0t   +  fi[1]  *w0md*w0t \
-           + fi[2]  *w0d*w0mt  +  fi[3]  *w0md*w0mt \
-           + fi[4]  *w0d*w1t   +  fi[5]  *w0md*w1t \
-           + fi[6]  *w0d*w1mt  +  fi[7]  *w0md*w1mt \
-           + fi[8]  *w1d*w0t   +  fi[9] *w1md*w0t \
-           + fi[10] *w1d*w0mt  +  fi[11] *w1md*w0mt \
-           + fi[12] *w1d*w1t   +  fi[13] *w1md*w1t \
-           + fi[14] *w1d*w1mt  +  fi[15] *w1md*w1mt
 
 void read_helm_table();
 
@@ -173,7 +161,8 @@ static void eos_from_code(eos_t *eos) {
 	eos->cv *= erg_to_code / g_to_code / K_to_code;
 	eos->rho *= g_to_code / pow(cm_to_code, 3);
 }
-void helmholtz_eos(eos_t *eos) {
+
+void helmholtz_eos(eos_t *eos, bool energy, bool pressure, bool cs) {
 
 	int iat, jat;
 	double den, temp, abar, zbar, ytot1, ye, x, deni, xni, dxnidd, dpepdt, dpepdd, deepdt, dsepdt, dpiondd, dpiondt, deiondt, kt, pion, eion, pele, eele, sele,
@@ -274,152 +263,91 @@ void helmholtz_eos(eos_t *eos) {
 	mxt = 1.0 - xt;
 	mxd = 1.0 - xd;
 
-// the six density and six temperature basis functions
 	si0t = psi0(xt);
 	si1t = psi1(xt) * dt_sav[jat];
 	si2t = psi2(xt) * dt2_sav[jat];
-
 	si0mt = psi0(mxt);
 	si1mt = -psi1(mxt) * dt_sav[jat];
 	si2mt = psi2(mxt) * dt2_sav[jat];
-
-	si0d = psi0(xd);
-	si1d = psi1(xd) * dd_sav[iat];
-	si2d = psi2(xd) * dd2_sav[iat];
-
-	si0md = psi0(mxd);
-	si1md = -psi1(mxd) * dd_sav[iat];
-	si2md = psi2(mxd) * dd2_sav[iat];
-
-// derivatives of the weight functions
 	dsi0t = dpsi0(xt) * dti_sav[jat];
 	dsi1t = dpsi1(xt);
 	dsi2t = dpsi2(xt) * dt_sav[jat];
-
 	dsi0mt = -dpsi0(mxt) * dti_sav[jat];
 	dsi1mt = dpsi1(mxt);
 	dsi2mt = -dpsi2(mxt) * dt_sav[jat];
+	if( energy ) {
+		si0d = psi0(xd);
+		si1d = psi1(xd) * dd_sav[iat];
+		si2d = psi2(xd) * dd2_sav[iat];
+		si0md = psi0(mxd);
+		si1md = -psi1(mxd) * dd_sav[iat];
+		si2md = psi2(mxd) * dd2_sav[iat];
+		ddsi0t = ddpsi0(xt) * dt2i_sav[jat];
+		ddsi1t = ddpsi1(xt) * dti_sav[jat];
+		ddsi2t = ddpsi2(xt);
+		ddsi0mt = ddpsi0(mxt) * dt2i_sav[jat];
+		ddsi1mt = -ddpsi1(mxt) * dti_sav[jat];
+		ddsi2mt = ddpsi2(mxt);
+	}
+	if( pressure || cs) {
+		dsi0d = dpsi0(xd) * ddi_sav[iat];
+		dsi1d = dpsi1(xd);
+		dsi2d = dpsi2(xd) * dd_sav[iat];
+		dsi0md = -dpsi0(mxd) * ddi_sav[iat];
+		dsi1md = dpsi1(mxd);
+		dsi2md = -dpsi2(mxd) * dd_sav[iat];
+		ddsi0d = ddpsi0(xd) * dd2i_sav[iat];
+		ddsi1d = ddpsi1(xd) * ddi_sav[iat];
+		ddsi2d = ddpsi2(xd);
+		ddsi0md = ddpsi0(mxd) * dd2i_sav[iat];
+		ddsi1md = -ddpsi1(mxd) * ddi_sav[iat];
+		ddsi2md = ddpsi2(mxd);
+	}
 
-	dsi0d = dpsi0(xd) * ddi_sav[iat];
-	dsi1d = dpsi1(xd);
-	dsi2d = dpsi2(xd) * dd_sav[iat];
 
-	dsi0md = -dpsi0(mxd) * ddi_sav[iat];
-	dsi1md = dpsi1(mxd);
-	dsi2md = -dpsi2(mxd) * dd_sav[iat];
 
-// second derivatives of the weight functions
-	ddsi0t = ddpsi0(xt) * dt2i_sav[jat];
-	ddsi1t = ddpsi1(xt) * dti_sav[jat];
-	ddsi2t = ddpsi2(xt);
-
-	ddsi0mt = ddpsi0(mxt) * dt2i_sav[jat];
-	ddsi1mt = -ddpsi1(mxt) * dti_sav[jat];
-	ddsi2mt = ddpsi2(mxt);
-
-	ddsi0d = ddpsi0(xd) * dd2i_sav[iat];
-	ddsi1d = ddpsi1(xd) * ddi_sav[iat];
-	ddsi2d = ddpsi2(xd);
-
-	ddsi0md = ddpsi0(mxd) * dd2i_sav[iat];
-	ddsi1md = -ddpsi1(mxd) * ddi_sav[iat];
-	ddsi2md = ddpsi2(mxd);
-
-// the free energy
-	free = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, si0d, si1d, si2d, si0md, si1md, si2md);
-
-// derivative with respect to density
-	df_d = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
-
-// derivative with respect to temperature
-	df_t = h5(iat, jat, dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
-
-// derivative with respect to density**2
-	df_dd = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, ddsi0d, ddsi1d, ddsi2d, ddsi0md, ddsi1md, ddsi2md);
-
-// derivative with respect to temperature**2
-	df_tt = h5(iat, jat, ddsi0t, ddsi1t, ddsi2t, ddsi0mt, ddsi1mt, ddsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
-
-// derivative with respect to temperature and density
-	df_dt = h5(iat, jat, dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
-
-// now get the pressure derivative with density, chemical potential, and
-// electron positron number densities
-// get the interpolation weight functions
-	si0t = xpsi0(xt);
-	si1t = xpsi1(xt) * dt_sav[jat];
-
-	si0mt = xpsi0(mxt);
-	si1mt = -xpsi1(mxt) * dt_sav[jat];
-
-	si0d = xpsi0(xd);
-	si1d = xpsi1(xd) * dd_sav[iat];
-
-	si0md = xpsi0(mxd);
-	si1md = -xpsi1(mxd) * dd_sav[iat];
-
-// derivatives of weight functions
-	dsi0t = xdpsi0(xt) * dti_sav[jat];
-	dsi1t = xdpsi1(xt);
-
-	dsi0mt = -xdpsi0(mxt) * dti_sav[jat];
-	dsi1mt = xdpsi1(mxt);
-
-	dsi0d = xdpsi0(xd) * ddi_sav[iat];
-	dsi1d = xdpsi1(xd);
-
-	dsi0md = -xdpsi0(mxd) * ddi_sav[iat];
-	dsi1md = xdpsi1(mxd);
 
 // the desired electron-positron thermodynamic quantities
 
-	x = din * din;
-	pele = x * df_d;
-	dpepdd = ye * (x * df_dd + 2.0 * din * df_d);
-	dpepdt = x * df_dt;
-
-	x = ye * ye;
-	sele = -df_t * ye;
-	dsepdt = -df_tt * ye;
-
-	eele = ye * free + temp * sele;
-	deepdt = temp * dsepdt;
-
-	eos->p = pele + pion;
-	eos->e = eele + eion;
-	eos->cv = deiondt + deepdt;
-	dpgasdd = dpiondd + dpepdd;
-	dpgasdt = dpiondt + dpepdt;
-	x = (eos->p * deni * deni) * (dpgasdt / eos->cv) + dpgasdd;
-	if (eos->cv < 0.0) {
-		//	printf( "%e %e \n", eos->rho, eos->T );
-		//	abort();
+	if (pressure || cs) {
+		df_d = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
+		df_dd = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, ddsi0d, ddsi1d, ddsi2d, ddsi0md, ddsi1md, ddsi2md);
+		df_dt = h5(iat, jat, dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
+		x = din * din;
+		pele = x * df_d;
+		dpepdd = ye * (x * df_dd + 2.0 * din * df_d);
+		dpepdt = x * df_dt;
 	}
-	if (x < 0.0) {
-		//	printf("cs is negative rho=%e T=%e p=%e dpgasdd=%e dpgasdt=%e cv=%e E=%e\n", eos->rho, eos->T, eos->p, dpgasdd, dpgasdt, eos->cv, eos->e );
-//		abort();
-		eos->cs = 0.0;
-	} else {
-		eos->cs = sqrt(x);
+	if (energy) {
+		free = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, si0d, si1d, si2d, si0md, si1md, si2md);
+		df_t = h5(iat, jat, dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
+		df_tt = h5(iat, jat, ddsi0t, ddsi1t, ddsi2t, ddsi0mt, ddsi1mt, ddsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
+		x = ye * ye;
+		sele = -df_t * ye;
+		dsepdt = -df_tt * ye;
+		eele = ye * free + temp * sele;
+		deepdt = temp * dsepdt;
+	}
+	if (pressure || cs) {
+		eos->p = pele + pion;
+	}
+	if (energy) {
+		eos->e = eele + eion;
+		eos->cv = deiondt + deepdt;
+	}
+	if (cs) {
+		dpgasdd = dpiondd + dpepdd;
+		dpgasdt = dpiondt + dpepdt;
+		x = (eos->p * deni * deni) * (dpgasdt / eos->cv) + dpgasdd;
+		if (x < 0.0) {
+			eos->cs = 0.0;
+		} else {
+			eos->cs = sqrt(x);
+		}
 	}
 	eos_to_code(eos);
 
 }
-
-void helmholtz_ztwd(double *p_ptr, double *e_ptr, double zbar, double rho) {
-	const double A = 6.023e+22;
-	const double B = 9.7595e+5 * zbar;
-	double x;
-	x = pow(rho / B, 1.0 / 3.0);
-	if (x > 0.1) {
-		*p_ptr = A * (x * (2.0 * x * x - 3.0) * sqrt(x * x + 1.0) + 3.0 * log(x + sqrt(x * x + 1.0)));
-	} else {
-		*p_ptr = A * 1.6 * pow(x, 5);
-	}
-	*e_ptr = A * (8.0 * pow(x, 3) * (sqrt(x * x + 1.0) - 1.0)) - *p_ptr / rho;
-}
-
-
 
 double helmholtz_pressure_from_energy(double rho, double E, double abar, double zbar) {
 	eos_t eos;
@@ -428,6 +356,7 @@ double helmholtz_pressure_from_energy(double rho, double E, double abar, double 
 	eos.abar = abar;
 	eos.zbar = zbar;
 	helmholtz_compute_T(&eos);
+	helmholtz_eos(&eos, false, true, false);
 	return eos.p;
 }
 
@@ -449,27 +378,39 @@ std::pair<double, double> helmholtz_pressure_and_soundspeed(double rho, double E
 	eos.abar = abar;
 	eos.zbar = zbar;
 	helmholtz_compute_T(&eos);
+	helmholtz_eos(&eos, false, true, true);
 	rc.first = eos.p;
 	rc.second = eos.cs;
 	return rc;
+}
+
+static std::atomic<unsigned long long> num_iters(0);
+static std::atomic<unsigned long long> num_calls(0);
+
+double helmholtz_iters_per_call() {
+	return (double) num_iters / num_calls;
+}
+
+void helmholtz_reset_counters() {
+	num_iters = num_calls = 0;
+
 }
 
 void helmholtz_compute_T(eos_t *eos) {
 
 	const double e0 = eos->e;
 	eos->T = 0.0;
-	helmholtz_eos(eos);
+	helmholtz_eos(eos, true, true, true);
 	double ed = eos->e * eos->rho;
 	double pd = eos->p;
 	double cs = eos->cs;
-	double alpha = 1.0;
 	const auto mh = 1.6733e-24 * g_to_code;
 	const auto kb = 1.380658e-16 * erg_to_code / K_to_code;
 
 	eos->T = (2.0 / 3.0) * (e0 - ed / eos->rho) * eos->abar / (eos->zbar + 1) * mh / kb;
-
+	double tmin = 0.0;
+	double tmax = 1e+15;
 //	printf( "Guessing %e for T\n", eos->T);
-	auto dt_min = std::numeric_limits<double>::max();
 	if (eos->T <= 0.0) {
 		eos->p = pd;
 		eos->cs = cs;
@@ -477,16 +418,20 @@ void helmholtz_compute_T(eos_t *eos) {
 		int iters = 0;
 		double f;
 		do {
-			helmholtz_eos(eos);
+			helmholtz_eos(eos, true, false, false);
 			f = eos->e - e0;
+			if (f < 0) {
+				tmin = eos->T;
+			} else {
+				tmax = eos->T;
+			}
 			auto dT = -f / eos->cv;
-			if( std::abs(dT) > dt_min) {
-				dT = 0.99*(dT > 0.0 ? dt_min : -dt_min);
-			}
-			eos->T += dT;
-			if( std::abs(dT) < dt_min) {
-				dt_min = std::abs(dT);
-			}
+			double oldT = eos->T;
+			double newT = eos->T + dT;
+			constexpr auto a = 0.9;
+			newT = std::min(newT, (1 - a) * oldT + a * tmax);
+			newT = std::max(newT, (1 - a) * oldT + a * tmin);
+			eos->T = newT;
 			if (iters > 90) {
 				printf("%i %e %e %e %e %e\n", iters, f / e0, eos->T, eos->cv, eos->rho, dT);
 			}
@@ -495,7 +440,9 @@ void helmholtz_compute_T(eos_t *eos) {
 				printf("Helmholtz solver failed to converge\n");
 				abort();
 			}
-		} while (std::abs(f / e0) >= 1.0e-9);
+		} while (std::abs(f / e0) >= 1.0e-6);
+		num_iters += iters;
+		num_calls++;
 	}
 }
 

@@ -199,7 +199,6 @@ real grid::convert_gravity_units(int i) {
 	real val = 1.0;
 	const real cm = opts().code_to_cm;
 	const real s = opts().code_to_s;
-	const real g = opts().code_to_g;
 	if (i == phi_i) {
 		val *= cm * cm / s / s;
 	} else {
@@ -468,10 +467,7 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 	};
 
 	constexpr integer spc_ac_i = spc_i;
-	constexpr integer spc_ae_i = spc_i + 1;
 	constexpr integer spc_dc_i = spc_i + 2;
-	constexpr integer spc_de_i = spc_i + 3;
-	constexpr integer spc_vac_i = spc_i + 4;
 
 	const auto in_star = [&](integer j, integer k, integer l) {
 		if (opts().problem != DWD) {
@@ -542,8 +538,6 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 				x = X[XDIM][iii];
 				y = X[YDIM][iii];
 				z = X[ZDIM][iii];
-				const real o2 = diags.omega * diags.omega;
-				const real rhoinv = 1.0 * INVERSE(U[rho_i][iii]);
 				const real vx = U[sx_i][iii] * INVERSE(U[rho_i][iii]);
 				const real vy = U[sy_i][iii] * INVERSE(U[rho_i][iii]);
 				const real vz = U[sz_i][iii] * INVERSE(U[rho_i][iii]);
@@ -850,8 +844,6 @@ line_of_centers_t grid::line_of_centers(const std::pair<space_vector, space_vect
 			for (integer k = H_BW; k != H_NX - H_BW; ++k) {
 				const integer iii = hindex(i, j, k);
 				const integer iiig = gindex(i - H_BW, j - H_BW, k - H_BW);
-				const auto R2 = std::sqrt(X[XDIM][iii] * X[XDIM][iii] + X[YDIM][iii] * X[YDIM][iii]);
-				const real dV = dx * dx * dx;
 				/*		for (integer d = 0; d != NDIM; ++d) {
 				 loc.core1_s[d] += U[sx_i + d][iii] * U[spc_ac_i][iii]
 				 / U[rho_i][iii]* dV;
@@ -1584,7 +1576,6 @@ std::vector<std::pair<std::string, std::string>> grid::get_scalar_expressions() 
 	rc.push_back(std::make_pair(std::string("etot_dual"), std::string("ei + ek")));
 	rc.push_back(std::make_pair(std::string("ek"), std::string("(sx*sx+sy*sy+sz*sz)/2.0/rho")));
 	rc.push_back(std::make_pair(std::string("ei_dual"), hpx::util::format("if( gt(egas-ek,{:e}*egas), egas-ek, ein)", opts().dual_energy_sw1)));
-	const auto kb = physcon().kb * std::pow(opts().code_to_cm / opts().code_to_s, 2) * opts().code_to_g;
 	rc.push_back(std::make_pair(std::string("phi"), std::string("pot/rho")));
 	rc.push_back(
 			std::make_pair(std::string("B_p"), hpx::util::format("{:e} * T^4", physcon().sigma / M_PI * opts().code_to_g * std::pow(opts().code_to_cm, 3))));
@@ -1680,7 +1671,6 @@ void grid::allocate() {
 	}
 	L.resize(G_N3);
 	L_c.resize(G_N3);
-	integer nlevel = 0;
 	com_ptr.resize(2);
 
 	set_coordinates();
@@ -2006,7 +1996,6 @@ void grid::compute_sources(real t, real rotational_time) {
 			for (integer k = H_BW; k != H_NX - H_BW; ++k) {
 				const integer iii0 = h0index(i - H_BW, j - H_BW, k - H_BW);
 				const integer iii = hindex(i, j, k);
-				const integer iiif = findex(i - H_BW, j - H_BW, k - H_BW);
 				const integer iiig = gindex(i - H_BW, j - H_BW, k - H_BW);
 				const real rho = U[rho_i][iii];
 				if (opts().gravity) {

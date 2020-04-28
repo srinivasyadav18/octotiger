@@ -47,7 +47,6 @@ real struct_eos::enthalpy_to_density(real h) const {
 		const real b = B();
 		const real f0 = (h * b) * INVERSE(8 * A) * (1.0 + wd_eps);
 		real x;
-		real c0 = 1.0e-3;
 		x = (SQRT(2 * f0 + f0 * f0));
 		const real rho = b * x * x * x;
 		return rho;
@@ -110,10 +109,6 @@ real struct_eos::HE() const {
 }
 real struct_eos::density_to_enthalpy(real d) const {
 	if (opts().eos == WD) {
-		//	return stellar_enthalpy_from_rho_mu_s(d, 4.0 / 3.0, 1.0);
-		const real mu = 4.0 / 3.0;
-		//		printf( "%e %e\n", d0(), A);
-		//	printf( "%e\n", eps);
 		const real b = B();
 		const real x = POWER(d * INVERSE(b), 1.0 / 3.0);
 		real h;
@@ -361,7 +356,6 @@ void struct_eos::initialize(real &mass, real &radius) {
 		real dr = dr0;
 		real d;
 		integer i = 0;
-		const real hcut = density_to_enthalpy(rho_cut);
 		do {
 			if (hdot != 0.0) {
 				dr = std::max(std::min(dr0, std::abs(h * INVERSE(hdot)) / 2.0), dr0 * 1.0e-6);

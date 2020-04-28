@@ -370,7 +370,6 @@ real grid::scf_update(real com, real omega, real c1, real c2, real c1_x, real c2
 				phi_eff -= omega * ti_omega * R * R;
 				phi_eff += (omega + ti_omega) * ti_omega * cx * x;
 				real new_rho, eint;
-				const auto smallest = 1.0e-20;
 				if (g <= 0.0) {
 					ASSERT_NONAN(phi_eff);
 					ASSERT_NONAN(C);
@@ -498,7 +497,6 @@ void node_server::run_scf(std::string const& data_dir) {
 			jorb0 = jorb;
 		}
 		real spin_ratio = (j1 + j2) * INVERSE (jorb);
-		real this_m = (diags.m[0] + diags.m[1]);
 		solve_gravity(false, false);
 		auto axis = grid_ptr->find_axis();
 		auto loc = line_of_centers(axis);
@@ -540,14 +538,11 @@ void node_server::run_scf(std::string const& data_dir) {
 		}
 		static real rhoc1 = 1.0e-3 * rho1;
 		if (opts().v1309) {
-			const real rho_min = 0.5 * std::min(rhoc1, params.struct_eos2->dE());
 			rhoc1 *= INVERSE(POWER(spin_ratio * 3.0, w0));
 			params.struct_eos1->set_cutoff_density(rhoc1);
 			params.struct_eos2->set_cutoff_density(rhoc1);
 		}
 
-		real h_1 = params.struct_eos1->h0();
-		real h_2 = params.struct_eos2->h0();
 
 		real c_1, c_2;
 		if (scf_options::equal_struct_eos) {
@@ -653,7 +648,6 @@ void node_server::run_scf(std::string const& data_dir) {
 			set_AB(e2->A, e2->B());
 		}
 //		printf( "%e %e\n", grid::get_A(), grid::get_B());
-		const real dx = axis.second[0];
 		//	printf( "%e %e %e\n", rho1_max.first, rho2_max.first, l1_x);
 		scf_update(com, omega, c_1, c_2, rho1_max.first, rho2_max.first, l1_x, *e1, *e2);
 		solve_gravity(false, false);

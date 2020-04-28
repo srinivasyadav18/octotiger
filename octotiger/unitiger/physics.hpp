@@ -119,7 +119,6 @@ struct physics {
 		mh = 1.6605402e-24 / g;
 		//		mh = 1.6733e-24 / g;
 		kb = 1.380658e-16 * s * s / (g * cm * cm);
-		const auto mp = 1.6726231e-24 / g;
 		const auto c = 2.99792458e10 * s / cm;
 		const auto me = 9.1093897e-28 / g;
 		const auto h = 6.6260755e-27 * s / (g * cm * cm);
@@ -221,7 +220,6 @@ private:
 
 	static double segretain_T_from_energy(double rho, double e, double abar, double zbar) {
 		const auto tmp = ztwd_pressure_and_energy(rho, abar, zbar);
-		const double Pdeg = tmp.first;
 		const double Edeg = tmp.second;
 		return (e - Edeg) * abar * mh / (rho * kb * (zbar + 1));
 	}

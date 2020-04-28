@@ -101,7 +101,6 @@ void output_stage1(std::string fname, int cycle) {
 			   [](node_location loc, node_registry::node_ptr ptr) {
 				const auto *this_ptr = ptr.get_ptr().get();
 				assert(this_ptr);
-				const real dx = TWO / real(1 << loc.level()) / real(INX);
 				mesh_vars_t rc(loc);
 				const std::string suffix = oct_to_str(loc.to_id());
 				const grid &gridref = this_ptr->get_hydro_grid();
@@ -114,7 +113,6 @@ void output_stage1(std::string fname, int cycle) {
 }
 
 node_list_t output_stage2(std::string fname, int cycle) {
-	const int this_id = hpx::get_locality_id();
 	const int nfields = grid::get_field_names().size();
 	std::string this_fname = fname + std::string(".") + std::to_string(INX) + std::string(".silo");
 	all_mesh_vars.clear();
@@ -155,7 +153,6 @@ node_list_t output_stage2(std::string fname, int cycle) {
 
 void output_stage3(std::string fname, int cycle, int gn, int gb, int ge) {
 	const int this_id = hpx::get_locality_id();
-	const int nfields = grid::get_field_names().size();
 	std::string this_fname = fname + ".silo.data/" + std::to_string(gn) + std::string(".silo");
 	double dtime = silo_output_rotation_time();
 	hpx::threads::run_as_os_thread([&this_fname, this_id, &dtime, gb, gn, ge](integer cycle) {
@@ -244,7 +241,6 @@ void output_stage3(std::string fname, int cycle, int gn, int gb, int ge) {
 void output_stage4(std::string fname, int cycle) {
 	const int nfields = grid::get_field_names().size();
 	std::string this_fname = fname + std::string(".silo");
-	double dtime = silo_output_rotation_time();
 	double rtime = silo_output_rotation_time();
 	hpx::threads::run_as_os_thread(
 			[&this_fname, fname, nfields, &rtime](int cycle) {
@@ -282,7 +278,6 @@ void output_stage4(std::string fname, int cycle) {
 
 				const int n_total_domains = mesh_names.size();
 
-				int opt1 = DB_CARTESIAN;
 				int mesh_type = DB_QUADMESH;
 				int one = 1;
 				int dj = DB_ABUTTING;

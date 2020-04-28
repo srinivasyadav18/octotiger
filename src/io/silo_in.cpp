@@ -34,7 +34,6 @@ static std::mutex silo_mtx_;
 template<class T>
 struct read_silo_var {
 	T operator()(DBfile *db, const char *name) const {
-		int one = 1;
 		T var;
 		if (DBReadVar(db, name, &var) != 0) {
 			std::cout << "Unable to read " << name << " \n";
@@ -60,9 +59,6 @@ struct node_entry_t {
 using dir_map_type = std::unordered_map<node_location::node_id, node_entry_t>;
 
 static time_t start_time = time(nullptr);
-static integer start_step = 0;
-static int timestamp;
-static int steps_elapsed;
 static DBfile *db_;
 static dir_map_type node_dir_;
 
@@ -222,10 +218,8 @@ node_server::node_server(const node_location &loc) :
 node_server::node_server(const node_location &loc, silo_load_t load) :
 		my_location(loc) {
 //	printf("Distributing %s on %i\n", loc.to_str().c_str(), int(hpx::get_locality_id()));
-	const auto &localities = opts().all_localities;
 	initialize(0.0, 0.0);
 	step_num = gcycle = hcycle = rcycle = 0;
-	int nc = 0;
 	static const auto hydro_names = grid::get_hydro_field_names();
 	is_refined = false;
 	for (integer f = 0; f < hydro_names.size(); f++) {
@@ -260,7 +254,6 @@ void load_data_from_silo(std::string fname, node_server *root_ptr, hpx::id_type 
 	const auto tstart = time(NULL);
 
 	const integer nprocs = opts().all_localities.size();
-	static int sz = localities.size();
 	DBfile *db = GET(hpx::threads::run_as_os_thread(DBOpenReal, fname.c_str(), DB_UNKNOWN, DB_READ));
 	silo_epoch() = GET(hpx::threads::run_as_os_thread(read_silo_var<integer>(), db, "epoch"));
 	silo_epoch()++;std
@@ -272,7 +265,6 @@ void load_data_from_silo(std::string fname, node_server *root_ptr, hpx::id_type 
 		DBmultimesh *master_mesh = GET(hpx::threads::run_as_os_thread([&]() {
 			return DBGetMultimesh(db, "quadmesh");
 		}));
-		const int chunk_size = std::ceil(real(master_mesh->nblocks) / real(sz));
 		hpx::threads::run_as_os_thread([&]() {
 			const read_silo_var<integer> ri;
 			node_count = ri(db, "node_count");

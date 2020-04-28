@@ -12,7 +12,6 @@
 
 template<class U>
 U temperature(U rho, U e, U mmw) {
-	constexpr U gm1 = U(2.0) / U(3.0);
 	return std::pow((e * INVERSE(rho)), 1.0/4.0);
 }
 

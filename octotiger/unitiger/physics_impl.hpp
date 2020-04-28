@@ -160,13 +160,12 @@ template<int INX>
 void physics<NDIM>::source(hydro::state_type &dudt, const hydro::state_type &U, const hydro::flux_type &F, const hydro::x_type X, safe_real omega,
 		safe_real dx) {
 	static const cell_geometry<NDIM, INX> geo;
-	static constexpr auto levi_civita = geo.levi_civita();
 	for (const auto &i : geo.find_indices(geo.H_BW, geo.H_NX - geo.H_BW)) {
-		if constexpr (NDIM == 3) {
+		if (NDIM == 3) {
 			dudt[lx_i][i] += U[ly_i][i] * omega;
 			dudt[ly_i][i] -= U[lx_i][i] * omega;
 		}
-		if constexpr (NDIM >= 2) {
+		if (NDIM >= 2) {
 			dudt[sx_i][i] += U[sy_i][i] * omega;
 			dudt[sy_i][i] -= U[sx_i][i] * omega;
 		}
@@ -205,7 +204,6 @@ const hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, co
 	static const auto indices = geo.find_indices(0, geo.H_NX);
 	static thread_local hydro::state_type V;
 	V = U;
-	const auto dx = X[0][geo.H_DNX] - X[0][0];
 	for (int j = 0; j < geo.H_NX_X; j++) {
 		for (int k = 0; k < geo.H_NX_Y; k++) {
 #pragma ivdep
@@ -278,7 +276,6 @@ const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(con
 		for (int k = 0; k < geo.H_NX_YM2; k++) {
 			for (int l = 0; l < geo.H_NX_ZM2; l++) {
 				const int i = geo.to_index(j + 1, k + 1, l + 1);
-				const auto rho = U[rho_i][i];
 				const auto rhoinv = 1.0 / U[rho_i][i];
 				safe_real ek = 0.0;
 				for (int dim = 0; dim < NDIM; dim++) {
@@ -329,11 +326,9 @@ void physics<NDIM>::post_recon(std::vector<std::vector<std::vector<safe_real>>> 
 	const auto dx = X[0][geo.H_DNX] - X[0][0];
 	const auto xloc = geo.xloc();
 	static constexpr auto levi_civita = geo.levi_civita();
-	auto dir = geo.direction();
 
 	for (int d = 0; d < geo.NDIR; d++) {
 		if (d != geo.NDIR / 2) {
-			const auto di = dir[d];
 
 			for (int n = 0; n < geo.NANGMOM; n++) {
 				for (int q = 0; q < NDIM; q++) {
@@ -345,7 +340,6 @@ void physics<NDIM>::post_recon(std::vector<std::vector<std::vector<safe_real>>> 
 #pragma ivdep
 									for (int l = 0; l < geo.H_NX_ZM4; l++) {
 										const int i = geo.to_index(j + 2, k + 2, l + 2);
-										const auto rho = Q[rho_i][d][i];
 										Q[lx_i + n][d][i] += lc * (X[m][i] + 0.5 * xloc[d][m] * dx) * Q[sx_i + q][d][i];
 									}
 								}
@@ -515,11 +509,6 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 		}
 		break;
 	}
-	const auto xlocs = geo.xloc();
-	const auto weights = geo.volume_weight();
-	std::array < safe_real, NDIM > x;
-	safe_real rho = 0, vx = 0, vy = 0, vz = 0, p = 0, r;
-	safe_real x2, xsum;
 	for (int dim = 0; dim < NDIM; dim++) {
 		X[dim].resize(geo.H_N3);
 	}
@@ -543,8 +532,6 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 		for (int f = 0; f < nf_; f++) {
 			U[f][i] = 0.0;
 		}
-		const auto xlocs = geo.xloc();
-		const auto weights = geo.volume_weight();
 		std::array < safe_real, NDIM > x;
 		double rho = 0, vx = 0, vy = 0, vz = 0, p = 0, r;
 		safe_real x2, xsum, xhalf;
@@ -607,10 +594,10 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 //				rho = 1.0;
 //				/**************/
 			vx = v * X[0][i] / r;
-			if constexpr (NDIM >= 2) {
+			if (NDIM >= 2) {
 				vy = v * X[1][i] / r;
 			}
-			if constexpr (NDIM == 3) {
+			if  (NDIM == 3) {
 				vz = v * X[2][i] / r;
 			}
 			U[rho_i][i] += rho;
@@ -648,11 +635,11 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 		U[sx_i][i] += (rho * vx);
 		U[egas_i][i] += (p / (fgamma_ - 1.0) + 0.5 * rho * vx * vx);
 		U[ein_i][i] += p / (fgamma_ - 1.0);
-		if constexpr (NDIM >= 2) {
+		if  (NDIM >= 2) {
 			U[sy_i][i] += rho * vy;
 			U[egas_i][i] += 0.5 * rho * vy * vy;
 		}
-		if constexpr (NDIM >= 3) {
+		if  (NDIM >= 3) {
 			U[sz_i][i] += rho * vz;
 			U[egas_i][i] += 0.5 * rho * vz * vz;
 		}

@@ -633,7 +633,6 @@ void node_server::collect_radiation_bounds() {
 	rad_grid_ptr->clear_amr();
 	for (auto const &dir : geo::direction::full_set()) {
 		if (!neighbors[dir].empty()) {
-			const integer width = H_BW;
 			auto bdata = rad_grid_ptr->get_boundary(dir);
 			neighbors[dir].send_rad_boundary(std::move(bdata), dir.flip(), rcycle);
 		}
@@ -992,7 +991,7 @@ void rad_grid::complete_rad_amr_boundary() {
 							}
 						}
 					}
-					double zx = 0, zy = 0, zz = 0, rho = 0;
+					double zx = 0, zy = 0, zz = 0;
 					for (int ir = 0; ir < 2; ir++) {
 						for (int jr = 0; jr < 2; jr++) {
 							for (int kr = 0; kr < 2; kr++) {
@@ -1044,7 +1043,7 @@ void rad_grid::complete_rad_amr_boundary() {
 					const int iiir = hindex(i, j, k);
 					if (is_coarse[iii0]) {
 						int ir, jr, kr;
-						if constexpr (H_BW % 2 == 0) {
+						if (H_BW % 2 == 0) {
 							ir = i % 2;
 							jr = j % 2;
 							kr = k % 2;

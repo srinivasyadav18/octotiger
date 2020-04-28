@@ -64,7 +64,6 @@ void these_units(real &m, real &l, real &t, real &k) {
 		real m2 = std::pow(A / G, 1.5) / (B * B);
 		real l2 = std::sqrt(A / G) / B;
 		real t2 = 1.0 / std::sqrt(B * G);
-		real k2 = (m2 * l2 * l2) / (t2 * t2) / kb;
 		m = m2 / m1;
 		l = l2 / l1;
 		t = t2 / t1;
