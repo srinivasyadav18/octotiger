@@ -462,13 +462,14 @@ void helmholtz_compute_T(eos_t *eos) {
 	double ed = eos->e * eos->rho;
 	double pd = eos->p;
 	double cs = eos->cs;
-
+	double alpha = 1.0;
 	const auto mh = 1.6733e-24 * g_to_code;
 	const auto kb = 1.380658e-16 * erg_to_code / K_to_code;
 
 	eos->T = (2.0 / 3.0) * (e0 - ed / eos->rho) * eos->abar / (eos->zbar + 1) * mh / kb;
 
 //	printf( "Guessing %e for T\n", eos->T);
+	auto dt_min = std::numeric_limits<double>::max();
 	if (eos->T <= 0.0) {
 		eos->p = pd;
 		eos->cs = cs;
@@ -478,15 +479,21 @@ void helmholtz_compute_T(eos_t *eos) {
 		do {
 			helmholtz_eos(eos);
 			f = eos->e - e0;
-			const auto dT = -f / eos->cv;
+			auto dT = -f / eos->cv;
+			if( std::abs(dT) > dt_min) {
+				dT = 0.99*(dT > 0.0 ? dt_min : -dt_min);
+			}
 			eos->T += dT;
+			if( std::abs(dT) < dt_min) {
+				dt_min = std::abs(dT);
+			}
 			if (iters > 90) {
 				printf("%i %e %e %e %e %e\n", iters, f / e0, eos->T, eos->cv, eos->rho, dT);
 			}
 			iters++;
-			if (iters > 100) {
+			if (iters > 1000) {
 				printf("Helmholtz solver failed to converge\n");
-				break;
+				abort();
 			}
 		} while (std::abs(f / e0) >= 1.0e-9);
 	}
