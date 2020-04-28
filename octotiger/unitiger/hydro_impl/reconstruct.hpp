@@ -130,6 +130,28 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 			}
 		}
 	}
+	if (experiment == 1) {
+		for (int j = 0; j < geo.H_NX_XM2; j++) {
+			for (int k = 0; k < geo.H_NX_YM2; k++) {
+#pragma ivdep
+				for (int l = 0; l < geo.H_NX_ZM2; l++) {
+					const int i = geo.to_index(j + 1, k + 1, l + 1);
+					for (int gi = 0; gi < geo::group_count(); gi++) {
+						safe_real sum = 0.0;
+						for (int n = 0; n < geo::group_size(gi); n++) {
+							const auto pair = geo::group_pair(gi, n);
+							sum += q[i + pair.first][pair.second];
+						}
+						sum /= safe_real(geo::group_size(gi));
+						for (int n = 0; n < geo::group_size(gi); n++) {
+							const auto pair = geo::group_pair(gi, n);
+							q[i + pair.first][pair.second] = sum;
+						}
+					}
+				}
+			}
+		}
+	}
 	if (disc_detect) {
 		constexpr auto eps = 0.01;
 		constexpr auto eps2 = 0.001;
@@ -319,23 +341,27 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 							b = minmod(blim, b);
 							qr += 0.5 * (b - b0);
 							ql -= 0.5 * (b - b0);
-							if (ur > u0 && u0 > ul) {
-								if (qr > ur) {
-									ql -= (qr - ur);
-									qr = ur;
-								} else if (ql < ul) {
-									qr -= (ql - ul);
-									ql = ul;
-								}
-							} else if (ur < u0 && u0 < ul) {
-								if (qr < ur) {
-									ql -= (qr - ur);
-									qr = ur;
-								} else if (ql > ul) {
-									qr -= (ql - ul);
-									ql = ul;
-								}
-							}
+//							if (ur > u0 && u0 > ul) {
+//								if (qr > ur) {
+//									printf( "!\n");
+//									ql -= (qr - ur);
+//									qr = ur;
+//								} else if (ql < ul) {
+//									printf( "!\n");
+//									qr -= (ql - ul);
+//									ql = ul;
+//								}
+//							} else if (ur < u0 && u0 < ul) {
+//								if (qr < ur) {
+//									printf( "!\n");
+//									ql -= (qr - ur);
+//									qr = ur;
+//								} else if (ql > ul) {
+//									printf( "!\n");
+//									qr -= (ql - ul);
+//									ql = ul;
+//								}
+//							}
 							make_monotone(qr, u0, ql);
 						}
 					}

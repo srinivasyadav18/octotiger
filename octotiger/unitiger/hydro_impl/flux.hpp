@@ -68,10 +68,8 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 
 				PHYS::template physical_flux<INX>(UR, FR, dim, amr, apr, x, vg);
 				PHYS::template physical_flux<INX>(UL, FL, dim, aml, apl, x, vg);
-				if (experiment == 0 || fi == 0) {
-					this_ap = std::max(std::max(apr, apl), safe_real(0.0));
-					this_am = std::min(std::min(amr, aml), safe_real(0.0));
-				}
+				this_ap = std::max(std::max(apr, apl), safe_real(0.0));
+				this_am = std::min(std::min(amr, aml), safe_real(0.0));
 #pragma ivdep
 				for (int f = 0; f < nf_; f++) {
 					if (this_ap - this_am != 0.0) {
@@ -94,21 +92,7 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 			}
 		}
 	}
-	if (experiment) {
-		auto dir = geo.direction();
-		safe_real rho_amax = 0.0;
-		const auto indices = geo.get_indexes(3, geo.NDIR / 2);
-		for (const auto &i : indices) {
-			safe_real drho_dt = 0.0;
-			for (int dim = 0; dim < NDIM; dim++) {
-				drho_dt -= F[dim][0][i + geo.H_DN[dim]] - F[dim][0][i];
-			}
-			rho_amax = std::max(rho_amax, -1.5 * drho_dt / U[0][i]);
-		}
-		return std::max(rho_amax, amax);
-	} else {
-		return amax;
-	}
+	return amax;
 }
 
 #endif
