@@ -130,7 +130,7 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 			}
 		}
 	}
-	if (experiment == 1) {
+	if (experiment > 0) {
 		for (int j = 0; j < geo.H_NX_XM2; j++) {
 			for (int k = 0; k < geo.H_NX_YM2; k++) {
 #pragma ivdep
@@ -325,6 +325,10 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 							const auto &u0 = U[f][i];
 							const auto &ul = U[f][i - di];
 							const auto b0 = qr - ql;
+							double c;
+							if (experiment == 2) {
+								c = 0.5 * (qr + ql) - u0;
+							}
 							auto b = b0;
 							for (int n = 0; n < geo::NANGMOM; n++) {
 								for (int m = 0; m < NDIM; m++) {
@@ -339,29 +343,16 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 								blim = b0;
 							}
 							b = minmod(blim, b);
-							qr += 0.5 * (b - b0);
-							ql -= 0.5 * (b - b0);
-//							if (ur > u0 && u0 > ul) {
-//								if (qr > ur) {
-//									printf( "!\n");
-//									ql -= (qr - ur);
-//									qr = ur;
-//								} else if (ql < ul) {
-//									printf( "!\n");
-//									qr -= (ql - ul);
-//									ql = ul;
-//								}
-//							} else if (ur < u0 && u0 < ul) {
-//								if (qr < ur) {
-//									printf( "!\n");
-//									ql -= (qr - ur);
-//									qr = ur;
-//								} else if (ql > ul) {
-//									printf( "!\n");
-//									qr -= (ql - ul);
-//									ql = ul;
-//								}
-//							}
+							if (experiment != 2) {
+								qr += 0.5 * (b - b0);
+								ql -= 0.5 * (b - b0);
+							} else {
+								if (b0 != 0) {
+									c *= std::abs(b) / std::abs(b0);
+								}
+								qr = u0 + 0.5 * b + c;
+								ql = u0 - 0.5 * b + c;
+							}
 							make_monotone(qr, u0, ql);
 						}
 					}
