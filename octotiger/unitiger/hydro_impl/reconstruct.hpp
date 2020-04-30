@@ -130,28 +130,28 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 			}
 		}
 	}
-	if (experiment > 0) {
-		for (int j = 0; j < geo.H_NX_XM2; j++) {
-			for (int k = 0; k < geo.H_NX_YM2; k++) {
-#pragma ivdep
-				for (int l = 0; l < geo.H_NX_ZM2; l++) {
-					const int i = geo.to_index(j + 1, k + 1, l + 1);
-					for (int gi = 0; gi < geo::group_count(); gi++) {
-						safe_real sum = 0.0;
-						for (int n = 0; n < geo::group_size(gi); n++) {
-							const auto pair = geo::group_pair(gi, n);
-							sum += q[pair.second][i + pair.first];
-						}
-						sum /= safe_real(geo::group_size(gi));
-						for (int n = 0; n < geo::group_size(gi); n++) {
-							const auto pair = geo::group_pair(gi, n);
-							q[pair.second][i + pair.first] = sum;
-						}
-					}
-				}
-			}
-		}
-	}
+//	if (experiment > 0) {
+//		for (int j = 0; j < geo.H_NX_XM2; j++) {
+//			for (int k = 0; k < geo.H_NX_YM2; k++) {
+//#pragma ivdep
+//				for (int l = 0; l < geo.H_NX_ZM2; l++) {
+//					const int i = geo.to_index(j + 1, k + 1, l + 1);
+//					for (int gi = 0; gi < geo::group_count(); gi++) {
+//						safe_real sum = 0.0;
+//						for (int n = 0; n < geo::group_size(gi); n++) {
+//							const auto pair = geo::group_pair(gi, n);
+//							sum += q[pair.second][i + pair.first];
+//						}
+//						sum /= safe_real(geo::group_size(gi));
+//						for (int n = 0; n < geo::group_size(gi); n++) {
+//							const auto pair = geo::group_pair(gi, n);
+//							q[pair.second][i + pair.first] = sum;
+//						}
+//					}
+//				}
+//			}
+//		}
+//	}
 	if (disc_detect) {
 		constexpr auto eps = 0.01;
 		constexpr auto eps2 = 0.001;
@@ -216,6 +216,12 @@ inline safe_real maxmod(safe_real a, safe_real b) {
 	return (std::copysign(0.5, a) + std::copysign(0.5, b)) * std::max(std::abs(a), std::abs(b));
 }
 
+inline safe_real superbee(safe_real a, safe_real b) {
+	const auto absa = std::abs(a);
+	const auto absb = std::abs(b);
+	return (std::copysign(0.5, a) + std::copysign(0.5, b)) * std::max(std::min(2.0 * absa, absb), std::min(2.0 * absb, absa));
+}
+
 inline safe_real vanleer(safe_real a, safe_real b) {
 	const auto abs_a = std::abs(a);
 	const auto abs_b = std::abs(b);
@@ -271,7 +277,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 		int zx_i = sx_i + NDIM;
 
 		for (int f = sx_i; f < sx_i + NDIM; f++) {
-			reconstruct_ppm(Q[f], U[f], true, false, cdiscs);
+			reconstruct_ppm(Q[f], U[f], experiment == 0, false, cdiscs);
 		}
 		for (int f = zx_i; f < zx_i + geo::NANGMOM; f++) {
 			reconstruct_minmod<NDIM, INX>(Q[f], U[f]);
@@ -325,10 +331,6 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 							const auto &u0 = U[f][i];
 							const auto &ul = U[f][i - di];
 							const auto b0 = qr - ql;
-							double c;
-							if (experiment == 2) {
-								c = 0.5 * (qr + ql) - u0;
-							}
 							auto b = b0;
 							for (int n = 0; n < geo::NANGMOM; n++) {
 								for (int m = 0; m < NDIM; m++) {
@@ -336,24 +338,61 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 									b += 12.0 * AM[n][i] * lc * xloc[d][m] / (dx * (rho_l + rho_r));
 								}
 							}
-							double blim;
-							if ((ur - u0) * (u0 - ul) <= 0.0) {
-								blim = 0.0;
-							} else {
-								blim = b0;
-							}
-							b = minmod(blim, b);
-							if (experiment != 2) {
+							if (experiment == 0) {
+								b = minmod(b, b0);
 								qr += 0.5 * (b - b0);
 								ql -= 0.5 * (b - b0);
-							} else {
-								if (b0 != 0) {
-									c *= std::abs(b) / std::abs(b0);
+								make_monotone(qr, u0, ql);
+							} else if (experiment == 1) {
+								auto c = 0.5 * (qr + ql) - u0;
+								b = minmod(b, maxmod(vanleer(ur - u0, u0 - ul), b0));
+								if (b0 != 0.0) {
+									const auto f = std::min(std::abs(b / b0), 1.0);
+									c *= f;
 								}
 								qr = u0 + 0.5 * b + c;
 								ql = u0 - 0.5 * b + c;
+								if (ur > u0 && u0 > ul) {
+									if (qr > ur) {
+										ql -= (qr - ur);
+										qr = ur;
+									} else if (ql < ul) {
+										qr -= (ql - ul);
+										ql = ul;
+									}
+								} else if (ur < u0 && u0 < ul) {
+									if (qr < ur) {
+										ql -= (qr - ur);
+										qr = ur;
+									} else if (ql > ul) {
+										qr -= (ql - ul);
+										ql = ul;
+									}
+								}
+								make_monotone(qr, u0, ql);
+							} else {
+								if (qr != ql) {
+									if (b < b0) {
+										auto theta = 1 - b / b0;
+										theta = std::min(theta, 1.0);
+										theta = std::max(theta, 0.0);
+										qr = qr * (1 - theta) + u0 * theta;
+										ql = ql * (1 - theta) + u0 * theta;
+									} else {
+										const auto slp = superbee(ur - u0, u0 - ul);
+										const auto lr = u0 + 0.5 * slp;
+										const auto ll = u0 - 0.5 * slp;
+										if (slp > b0) {
+											auto theta = (b - b0) / (slp - b0);
+											theta = std::min(theta, 1.0);
+											theta = std::max(theta, 0.0);
+											qr = qr * (1 - theta) + lr * theta;
+											ql = ql * (1 - theta) + ll * theta;
+										}
+
+									}
+								}
 							}
-							make_monotone(qr, u0, ql);
 						}
 					}
 				}
@@ -364,6 +403,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 		}
 
 	}
+#define TVD_TEST
 
 #ifdef TVD_TEST
 	{
