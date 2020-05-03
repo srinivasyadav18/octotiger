@@ -5,8 +5,11 @@
 #include <octotiger/helmholtz.hpp>
 #include <octotiger/const.hpp>
 #include <atomic>
+#include <hpx/lcos/local/mutex.hpp>
 
 using namespace std;
+
+static bool initialized = false;
 
 #define IMAX 1081
 #define JMAX 401
@@ -51,15 +54,13 @@ double dt_sav[JMAX], dt2_sav[JMAX], dti_sav[JMAX], dt2i_sav[JMAX], dt3i_sav[JMAX
            + fi[32] *w2d*w2t   + fi[33] *w2md*w2t \
            + fi[34] *w2d*w2mt  + fi[35] *w2md*w2mt
 
+
 void read_helm_table();
 
-struct init_helmholtz_t {
-	init_helmholtz_t() {
-		read_helm_table();
-	}
-};
-
-static init_helmholtz_t init_helmholtz;
+void helmholtz_initialize() {
+	read_helm_table();
+	initialized = true;
+}
 
 void read_helm_table() {
 	int i, j;
@@ -124,6 +125,7 @@ void read_helm_table() {
 
 void helmholtz_set_cgs_units(double cm, double g, double s, double K) {
 //	printf("Setting cgs units cm = %e g = %e s = %e K = %e\n", cm, g, s, K);
+	assert( initialized );
 	cm_to_code = cm;
 	g_to_code = g;
 	s_to_code = s;
@@ -133,6 +135,7 @@ void helmholtz_set_cgs_units(double cm, double g, double s, double K) {
 }
 
 static void eos_to_code(eos_t *eos) {
+	assert( initialized );
 	eos->p /= dyne_to_code / pow(cm_to_code, 2);
 	eos->e /= erg_to_code / g_to_code;
 	eos->T /= K_to_code;
@@ -142,6 +145,7 @@ static void eos_to_code(eos_t *eos) {
 }
 
 static void eos_from_code(eos_t *eos) {
+	assert( initialized );
 	eos->p *= dyne_to_code / pow(cm_to_code, 2);
 	eos->e *= erg_to_code / g_to_code;
 	eos->T *= K_to_code;
@@ -150,7 +154,8 @@ static void eos_from_code(eos_t *eos) {
 	eos->rho *= g_to_code / pow(cm_to_code, 3);
 }
 
-void helmholtz_eos(eos_t *eos, bool energy, bool pressure, bool cs) {
+void helmholtz_eos(eos_t *eos) {
+	assert( initialized );
 
 	int iat, jat;
 	double den, temp, abar, zbar, ytot1, ye, x, deni, xni, dxnidd, dpepdt, dpepdd, deepdt, dsepdt, dpiondd, dpiondt, deiondt, kt, pion, eion, pele, eele, sele,
@@ -263,92 +268,77 @@ void helmholtz_eos(eos_t *eos, bool energy, bool pressure, bool cs) {
 	dsi0mt = -dpsi0(mxt) * dti_sav[jat];
 	dsi1mt = dpsi1(mxt);
 	dsi2mt = -dpsi2(mxt) * dt_sav[jat];
-	if( energy ) {
-		si0d = psi0(xd);
-		si1d = psi1(xd) * dd_sav[iat];
-		si2d = psi2(xd) * dd2_sav[iat];
-		si0md = psi0(mxd);
-		si1md = -psi1(mxd) * dd_sav[iat];
-		si2md = psi2(mxd) * dd2_sav[iat];
-		ddsi0t = ddpsi0(xt) * dt2i_sav[jat];
-		ddsi1t = ddpsi1(xt) * dti_sav[jat];
-		ddsi2t = ddpsi2(xt);
-		ddsi0mt = ddpsi0(mxt) * dt2i_sav[jat];
-		ddsi1mt = -ddpsi1(mxt) * dti_sav[jat];
-		ddsi2mt = ddpsi2(mxt);
-	}
-	if( pressure || cs) {
-		dsi0d = dpsi0(xd) * ddi_sav[iat];
-		dsi1d = dpsi1(xd);
-		dsi2d = dpsi2(xd) * dd_sav[iat];
-		dsi0md = -dpsi0(mxd) * ddi_sav[iat];
-		dsi1md = dpsi1(mxd);
-		dsi2md = -dpsi2(mxd) * dd_sav[iat];
-		ddsi0d = ddpsi0(xd) * dd2i_sav[iat];
-		ddsi1d = ddpsi1(xd) * ddi_sav[iat];
-		ddsi2d = ddpsi2(xd);
-		ddsi0md = ddpsi0(mxd) * dd2i_sav[iat];
-		ddsi1md = -ddpsi1(mxd) * ddi_sav[iat];
-		ddsi2md = ddpsi2(mxd);
-	}
-
-
-
+	si0d = psi0(xd);
+	si1d = psi1(xd) * dd_sav[iat];
+	si2d = psi2(xd) * dd2_sav[iat];
+	si0md = psi0(mxd);
+	si1md = -psi1(mxd) * dd_sav[iat];
+	si2md = psi2(mxd) * dd2_sav[iat];
+	ddsi0t = ddpsi0(xt) * dt2i_sav[jat];
+	ddsi1t = ddpsi1(xt) * dti_sav[jat];
+	ddsi2t = ddpsi2(xt);
+	ddsi0mt = ddpsi0(mxt) * dt2i_sav[jat];
+	ddsi1mt = -ddpsi1(mxt) * dti_sav[jat];
+	ddsi2mt = ddpsi2(mxt);
+	dsi0d = dpsi0(xd) * ddi_sav[iat];
+	dsi1d = dpsi1(xd);
+	dsi2d = dpsi2(xd) * dd_sav[iat];
+	dsi0md = -dpsi0(mxd) * ddi_sav[iat];
+	dsi1md = dpsi1(mxd);
+	dsi2md = -dpsi2(mxd) * dd_sav[iat];
+	ddsi0d = ddpsi0(xd) * dd2i_sav[iat];
+	ddsi1d = ddpsi1(xd) * ddi_sav[iat];
+	ddsi2d = ddpsi2(xd);
+	ddsi0md = ddpsi0(mxd) * dd2i_sav[iat];
+	ddsi1md = -ddpsi1(mxd) * ddi_sav[iat];
+	ddsi2md = ddpsi2(mxd);
 
 // the desired electron-positron thermodynamic quantities
 
-	if (pressure || cs) {
-		df_d = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
-		df_dd = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, ddsi0d, ddsi1d, ddsi2d, ddsi0md, ddsi1md, ddsi2md);
-		df_dt = h5(iat, jat, dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
-		x = din * din;
-		pele = x * df_d;
-		dpepdd = ye * (x * df_dd + 2.0 * din * df_d);
-		dpepdt = x * df_dt;
-	}
-	if (energy) {
-		free = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, si0d, si1d, si2d, si0md, si1md, si2md);
-		df_t = h5(iat, jat, dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
-		df_tt = h5(iat, jat, ddsi0t, ddsi1t, ddsi2t, ddsi0mt, ddsi1mt, ddsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
-		x = ye * ye;
-		sele = -df_t * ye;
-		dsepdt = -df_tt * ye;
-		eele = ye * free + temp * sele;
-		deepdt = temp * dsepdt;
-	}
-	if (pressure || cs) {
-		eos->p = pele + pion;
-	}
-	if (energy) {
-		eos->e = eele + eion;
-		eos->cv = deiondt + deepdt;
-	}
-	if (cs) {
-		dpgasdd = dpiondd + dpepdd;
-		dpgasdt = dpiondt + dpepdt;
-		x = (eos->p * deni * deni) * (dpgasdt / eos->cv) + dpgasdd;
-		if (x < 0.0) {
-			eos->cs = 0.0;
-		} else {
-			eos->cs = sqrt(x);
-		}
+	df_d = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
+	df_dd = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, ddsi0d, ddsi1d, ddsi2d, ddsi0md, ddsi1md, ddsi2md);
+	df_dt = h5(iat, jat, dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
+	x = din * din;
+	pele = x * df_d;
+	dpepdd = ye * (x * df_dd + 2.0 * din * df_d);
+	dpepdt = x * df_dt;
+	free = h5(iat, jat, si0t, si1t, si2t, si0mt, si1mt, si2mt, si0d, si1d, si2d, si0md, si1md, si2md);
+	df_t = h5(iat, jat, dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
+	df_tt = h5(iat, jat, ddsi0t, ddsi1t, ddsi2t, ddsi0mt, ddsi1mt, ddsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
+	x = ye * ye;
+	sele = -df_t * ye;
+	dsepdt = -df_tt * ye;
+	eele = ye * free + temp * sele;
+	deepdt = temp * dsepdt;
+	eos->p = pele + pion;
+	eos->e = eele + eion;
+	eos->cv = deiondt + deepdt;
+	dpgasdd = dpiondd + dpepdd;
+	dpgasdt = dpiondt + dpepdt;
+	x = (eos->p * deni * deni) * (dpgasdt / eos->cv) + dpgasdd;
+	if (x < 0.0) {
+		eos->cs = 0.0;
+	} else {
+		eos->cs = sqrt(x);
 	}
 	eos_to_code(eos);
 
 }
 
 double helmholtz_pressure_from_energy(double rho, double E, double abar, double zbar) {
+	assert( initialized );
 	eos_t eos;
 	eos.rho = rho;
 	eos.e = E / rho;
 	eos.abar = abar;
 	eos.zbar = zbar;
 	helmholtz_compute_T(&eos);
-	helmholtz_eos(&eos, false, true, false);
+//	helmholtz_eos(&eos, false, true, false);
 	return eos.p;
 }
 
 double helmholtz_T_from_energy(double rho, double E, double abar, double zbar) {
+	assert( initialized );
 	eos_t eos;
 	eos.rho = rho;
 	eos.e = E / rho;
@@ -359,6 +349,7 @@ double helmholtz_T_from_energy(double rho, double E, double abar, double zbar) {
 }
 
 std::pair<double, double> helmholtz_pressure_and_soundspeed(double rho, double E, double abar, double zbar) {
+	assert( initialized );
 	std::pair<double, double> rc;
 	eos_t eos;
 	eos.rho = rho;
@@ -366,7 +357,7 @@ std::pair<double, double> helmholtz_pressure_and_soundspeed(double rho, double E
 	eos.abar = abar;
 	eos.zbar = zbar;
 	helmholtz_compute_T(&eos);
-	helmholtz_eos(&eos, false, true, true);
+//f	helmholtz_eos(&eos, false, true, true);
 	rc.first = eos.p;
 	rc.second = eos.cs;
 	return rc;
@@ -374,39 +365,49 @@ std::pair<double, double> helmholtz_pressure_and_soundspeed(double rho, double E
 
 static std::atomic<unsigned long long> num_iters(0);
 static std::atomic<unsigned long long> num_calls(0);
+static std::atomic<unsigned long long> max_calls( 0);
+
 
 double helmholtz_iters_per_call() {
+	assert( initialized );
 	return (double) num_iters / num_calls;
 }
 
-void helmholtz_reset_counters() {
-	num_iters = num_calls = 0;
+double helmholtz_max_iters() {
+	assert( initialized );
+	return max_calls;
+}
 
+void helmholtz_reset_counters() {
+	assert( initialized );
+	num_iters = num_calls = 0;
+	max_calls = 0;
 }
 
 void helmholtz_compute_T(eos_t *eos) {
-
+	assert( initialized );
+	const double table_tmin = 3000;
 	const double e0 = eos->e;
-	eos->T = 0.0;
-	helmholtz_eos(eos, true, true, true);
+	eos->T = table_tmin;
+	int iters = 0;
+	helmholtz_eos(eos);
+	iters++;
 	double ed = eos->e * eos->rho;
 	double pd = eos->p;
 	double cs = eos->cs;
-	const auto mh = 1.6733e-24 * g_to_code;
-	const auto kb = 1.380658e-16 * erg_to_code / K_to_code;
-
-	eos->T = (2.0 / 3.0) * (e0 - ed / eos->rho) * eos->abar / (eos->zbar + 1) * mh / kb;
-	double tmin = 0.0;
+	const auto mh = amu / g_to_code;
+	const auto kb = kerg / erg_to_code * K_to_code;
+	const auto c0 = mh / kb;
+	eos->T = (2.0 / 3.0) * (e0 - ed / eos->rho) * eos->abar / (eos->zbar + 1) * c0 + table_tmin;
+	double tmin = table_tmin;
 	double tmax = 1e+15;
-//	printf( "Guessing %e for T\n", eos->T);
-	if (eos->T <= 0.0) {
+	if (eos->T <= table_tmin) {
 		eos->p = pd;
 		eos->cs = cs;
 	} else {
-		int iters = 0;
 		double f;
 		do {
-			helmholtz_eos(eos, true, false, false);
+			helmholtz_eos(eos);
 			f = eos->e - e0;
 			if (f < 0) {
 				tmin = eos->T;
@@ -414,23 +415,26 @@ void helmholtz_compute_T(eos_t *eos) {
 				tmax = eos->T;
 			}
 			auto dT = -f / eos->cv;
+			if( iters > 90) {
+				printf("%i %e %e %e %e %e\n", iters, f / e0, eos->T, eos->cv, eos->rho, dT);
+			}
 			double oldT = eos->T;
 			double newT = eos->T + dT;
 			constexpr auto a = 0.9;
 			newT = std::min(newT, (1 - a) * oldT + a * tmax);
 			newT = std::max(newT, (1 - a) * oldT + a * tmin);
 			eos->T = newT;
-			if (iters > 90) {
-				printf("%i %e %e %e %e %e\n", iters, f / e0, eos->T, eos->cv, eos->rho, dT);
-			}
 			iters++;
 			if (iters > 1000) {
 				printf("Helmholtz solver failed to converge\n");
 				abort();
 			}
 		} while (std::abs(f / e0) >= 1.0e-6);
-		num_iters += iters;
-		num_calls++;
+	}
+	num_iters += iters;
+	num_calls++;
+	if( iters > max_calls) {
+		max_calls.exchange(iters);
 	}
 }
 

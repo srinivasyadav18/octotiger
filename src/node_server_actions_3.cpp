@@ -643,6 +643,7 @@ future<real> node_server::local_step(integer steps) {
 									time_elapsed, rotational_time);
 							if( opts().eos == HELMHOLTZ) {
 								printf( " %e", helmholtz_iters_per_call());
+								printf( " %e", helmholtz_max_iters());
 								helmholtz_reset_counters();
 							}
 							printf( "\n");

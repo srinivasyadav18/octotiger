@@ -127,6 +127,7 @@ struct physics {
 	}
 
 	static void set_helmholtz_eos() {
+		helmholtz_initialize();
 		pressure_from_energy = helmholtz_pressure_from_energy;
 		pressure_and_soundspeed = helmholtz_pressure_and_soundspeed;
 		T_from_energy = helmholtz_T_from_energy;
