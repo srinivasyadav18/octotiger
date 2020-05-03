@@ -222,7 +222,6 @@ set(header_files
     octotiger/radiation/cuda_kernel.hpp
     octotiger/radiation/implicit.hpp
     octotiger/radiation/kernel_interface.hpp
-    octotiger/radiation/opacities.hpp
     octotiger/radiation/rad_grid.hpp
     octotiger/test_problems/rotating_star.hpp
 )
