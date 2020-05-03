@@ -1654,6 +1654,9 @@ void grid::allocate() {
 		eos->set_units(opts().code_to_g, opts().code_to_cm, opts().code_to_s);
 		eos->set_fgamma(fgamma);
 		physics<NDIM>::set_stellar_eos(eos);
+		if( opts().radiation) {
+			rad_grid::set_eos(eos);
+		}
 	});
 
 	if (opts().radiation) {

@@ -153,11 +153,13 @@ namespace octotiger { namespace radiation {
         std::vector<real>& ei,
         real const fgamma,
         std::vector<std::vector<real>>& U,
-        std::vector<real> const& mmw,
+        std::vector<real> const& abar,
+        std::vector<real> const& zbar,
         std::vector<real> const& X_spc,
         std::vector<real> const& Z_spc,
         real dt,
-        real const clightinv)
+        real const clightinv,
+		stellar_eos* eos)
     {
 #if defined(OCTOTIGER_DUMP_RADIATION_CASES)
         static std::atomic_size_t next_index(0);
@@ -173,7 +175,7 @@ namespace octotiger { namespace radiation {
 #endif
 
         radiation_cpu_kernel<er_i, fx_i, fy_i, fz_i>(d, rho, sx, sy, sz, egas,
-            ei, fgamma, U, mmw, X_spc, Z_spc, dt, clightinv);
+            ei, fgamma, U, abar, zbar, X_spc, Z_spc, dt, clightinv, eos);
 
 #if defined(OCTOTIGER_DUMP_RADIATION_CASES)
         hpx::threads::run_as_os_thread([&]() {

@@ -27,6 +27,9 @@ public:
 	virtual std::pair<double, double> pressure_and_soundspeed(double rho, double ene, double abar, double zbar) = 0;
 	virtual double T_from_energy(double rho, double ene, double abar, double zbar) = 0;
 	virtual double energy_from_T(double rho, double T, double abar, double zbar) = 0;
+	virtual double kappa_R(double rho, double T, double X, double Z);
+	virtual double kappa_p(double rho, double T, double X, double Z);
+	virtual double B_p(double rho, double T);
 };
 
 #endif /* OCTOTIGER_STELLAR_EOS_HPP_ */

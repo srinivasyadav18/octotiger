@@ -249,19 +249,22 @@ hpx::future<void> grid::static_change_units(real m, real l, real t, real k) {
 	return f;
 }
 
-void mean_ion_weight(const specie_state_t<> species, real &mmw, real &X, real &Z) {
+void mean_ion_weight(const specie_state_t<> species, real &abar, real& zbar, real &X, real &Z) {
 //	real N;
 	real mtot = 0.0;
 	real ntot = 0.0;
 	X = Z = 0;
+	zbar = 0.0;
 	for (integer i = 0; i != opts().n_species; ++i) {
 		const real m = species[i];
-		ntot += m * (opts().atomic_number[i] + 1.0) / opts().atomic_mass[i];
+		ntot += m / opts().atomic_mass[i];
+		zbar += m * opts().atomic_number[i] / opts().atomic_mass[i];
 		X += m * opts().X[i];
 		Z += m * opts().Z[i];
 		mtot += m;
 	}
-	mmw = mtot / ntot;
+	abar = mtot / ntot;
+	zbar *= abar / mtot;
 	X /= mtot;
 	Z /= mtot;
 }
