@@ -125,7 +125,6 @@ void normalize_constants() {
 		opts().code_to_s = 1.0 / t;
 		opts().code_to_cm = 1.0 / l;
 	}
-	physics<NDIM>::set_code_units(opts().code_to_g, opts().code_to_cm, opts().code_to_s);
 
 }
 

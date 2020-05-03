@@ -52,17 +52,4 @@ U B_p(U rho, U e, U mmw) {
 	}
 }
 
-template<class U>
-U dB_p_de(U rho, U e, U mmw) {
-	if (opts().problem == MARSHAK) {
-		return  U((physcon().c/4.0 * M_PI ));
-	} else {
-		if (e == U(0)) {
-			return U(0);
-		} else {
-			return 4.0 * B_p(rho, e, mmw) / e;
-		}
-	}
-}
-
 #endif /* SRC_RADIATION_OPACITIES_HPP_ */

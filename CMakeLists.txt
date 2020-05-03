@@ -98,7 +98,6 @@ set(source_files
     src/grid_fmm.cpp
     src/grid_output.cpp
     src/grid_scf.cpp
-    src/helmholtz.cpp
     src/lane_emden.cpp
     src/new.cpp
     src/node_client.cpp
@@ -138,6 +137,10 @@ set(source_files
     src/multipole_interactions/multipole_cpu_kernel.cpp
     src/radiation/cuda_kernel.cu
     src/radiation/rad_grid.cpp
+    src/stellar_eos/helmholtz.cpp
+    src/stellar_eos/ideal.cpp
+    src/stellar_eos/segretain.cpp
+    src/stellar_eos/stellar_eos.cpp
     src/test_problems/marshak/marshak.cpp
     src/test_problems/rotating_star/rotating_star.cpp
     src/test_problems/blast/sedov.cpp
@@ -153,7 +156,6 @@ set(header_files
     octotiger/channel.hpp
     octotiger/compute_factor.hpp
     octotiger/config.hpp
-    octotiger/const.hpp
     octotiger/container_device.hpp
     octotiger/defs.hpp
     octotiger/diagnostics.hpp
@@ -164,7 +166,6 @@ set(header_files
     octotiger/grid_flattened_indices.hpp
     octotiger/grid_fmm.hpp
     octotiger/grid_scf.hpp
-    octotiger/helmholtz.hpp
     octotiger/interaction_types.hpp
     octotiger/lane_emden.hpp
     octotiger/node_client.hpp
@@ -184,6 +185,10 @@ set(header_files
     octotiger/simd.hpp
     octotiger/space_vector.hpp
     octotiger/state.hpp
+    octotiger/stellar_eos/stellar_eos.hpp
+    octotiger/stellar_eos/ideal_eos.hpp
+    octotiger/stellar_eos/segretain_eos.hpp
+    octotiger/stellar_eos/helmholtz_eos.hpp
     octotiger/struct_eos.hpp
     octotiger/taylor.hpp
     octotiger/util.hpp

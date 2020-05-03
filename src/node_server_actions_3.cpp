@@ -11,7 +11,6 @@
 #include "octotiger/problem.hpp"
 #include "octotiger/real.hpp"
 #include "octotiger/util.hpp"
-#include "octotiger/helmholtz.hpp"
 
 #include <hpx/include/lcos.hpp>
 #include <hpx/include/run_as.hpp>
@@ -641,11 +640,11 @@ future<real> node_server::local_step(integer steps) {
 						{
 							printf("%i %e %e %e %e", int(step_num), double(current_time), double(dt_),
 									time_elapsed, rotational_time);
-							if( opts().eos == HELMHOLTZ) {
-								printf( " %e", helmholtz_iters_per_call());
-								printf( " %e", helmholtz_max_iters());
-								helmholtz_reset_counters();
-							}
+//							if( opts().eos == HELMHOLTZ) {
+//								printf( " %e", helmholtz_iters_per_call());
+//								printf( " %e", helmholtz_max_iters());
+//								helmholtz_reset_counters();
+//							}
 							printf( "\n");
 						});  // do not wait for output to finish
 			}

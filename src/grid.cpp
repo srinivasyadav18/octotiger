@@ -5,6 +5,9 @@
 
 #include "octotiger/radiation/rad_grid.hpp"
 #include "octotiger/test_problems/exact_sod.hpp"
+#include "octotiger/stellar_eos/ideal_eos.hpp"
+#include "octotiger/stellar_eos/segretain_eos.hpp"
+#include "octotiger/stellar_eos/helmholtz_eos.hpp"
 
 #include <fenv.h>
 
@@ -356,8 +359,8 @@ std::vector<silo_var_t> grid::var_data() const {
 					if (ein < de_switch1 * U[egas_i][iii]) {
 						ein = U[ein_i][iii];
 					}
-					const auto T = physics<NDIM>::T_from_energy(U[rho_i][iii], ein, abar, zbar);
-					const auto tmp = physics<NDIM>::pressure_and_soundspeed(U[rho_i][iii], ein, abar, zbar);
+					const auto T = eos->T_from_energy(U[rho_i][iii], ein, abar, zbar);
+					const auto tmp = eos->pressure_and_soundspeed(U[rho_i][iii], ein, abar, zbar);
 					const real cm = opts().code_to_cm;
 					const real s = opts().code_to_s;
 					const real g = opts().code_to_g;
@@ -1632,6 +1635,8 @@ analytic_t grid::compute_analytic(real t) {
 	return a;
 }
 
+stellar_eos* grid::eos;
+
 void grid::allocate() {
 
 	static hpx::lcos::local::once_flag flag;
@@ -1639,12 +1644,16 @@ void grid::allocate() {
 		physics<NDIM>::set_fgamma(fgamma);
 		physics<NDIM>::set_atomic_data(opts().atomic_mass, opts().atomic_number);
 		physics<NDIM>::set_dual_energy_switches(opts().dual_energy_sw1, opts().dual_energy_sw2);
-		physics<NDIM>::set_code_units(opts().code_to_g, opts().code_to_cm, opts().code_to_s);
-		if (opts().eos == WD) {
-			physics<NDIM>::set_segretain_eos();
+		if (opts().eos == IDEAL) {
+			eos = new ideal_eos;
+		} else if (opts().eos == WD) {
+			eos = new segretain_eos;
 		} else if (opts().eos == HELMHOLTZ) {
-			physics<NDIM>::set_helmholtz_eos();
+			eos = new helm_eos;
 		}
+		eos->set_units(opts().code_to_g, opts().code_to_cm, opts().code_to_s);
+		eos->set_fgamma(fgamma);
+		physics<NDIM>::set_stellar_eos(eos);
 	});
 
 	if (opts().radiation) {
@@ -1757,6 +1766,7 @@ void grid::rad_init() {
 
 real grid::compute_fluxes() {
 	PROFILE();
+	hydro_computer<NDIM, INX, physics<NDIM>> hydro;
 
 	/******************************/
 //	hydro.set_low_order();

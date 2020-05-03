@@ -9,7 +9,8 @@
 #include "octotiger/unitiger/safe_real.hpp"
 #include "octotiger/test_problems/blast.hpp"
 #include "octotiger/test_problems/exact_sod.hpp"
-#include "octotiger/helmholtz.hpp"
+#include "octotiger/stellar_eos/stellar_eos.hpp"
+#include "octotiger/stellar_eos/ideal_eos.hpp"
 #include <functional>
 
 template<int NDIM>
@@ -31,6 +32,7 @@ struct physics {
 	static constexpr int spc_i = 4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2));
 	static safe_real de_switch_1;
 	static safe_real de_switch_2;
+	static stellar_eos* eos;
 
 	enum test_type {
 		SOD, BLAST, KH, CONTACT, KEPLER
@@ -112,38 +114,6 @@ struct physics {
 	using eos_func = std::function<double(double,double,double, double)>;
 	using eos_func2 = std::function<std::pair<double,double>(double,double,double, double)>;
 
-	static void set_code_units(double g, double cm, double s) {
-		code_to_g = g;
-		code_to_cm = cm;
-		code_to_s = s;
-		mh = 1.6605402e-24 / g;
-		//		mh = 1.6733e-24 / g;
-		kb = 1.380658e-16 * s * s / (g * cm * cm);
-		const auto c = 2.99792458e10 * s / cm;
-		const auto me = 9.1093897e-28 / g;
-		const auto h = 6.6260755e-27 * s / (g * cm * cm);
-		B_ = 8.0 * M_PI * mh / 3.0 * std::pow(me * c / h, 3);
-		A_ = M_PI * std::pow(me * c, 4) * c / 3 / std::pow(h, 3);
-	}
-
-	static void set_helmholtz_eos() {
-		helmholtz_initialize();
-		pressure_from_energy = helmholtz_pressure_from_energy;
-		pressure_and_soundspeed = helmholtz_pressure_and_soundspeed;
-		T_from_energy = helmholtz_T_from_energy;
-		helmholtz_set_cgs_units(code_to_cm, code_to_g, code_to_s, 1);
-
-	}
-
-	static void set_segretain_eos() {
-		pressure_from_energy = segretain_pressure_from_energy;
-		pressure_and_soundspeed = segretain_pressure_and_soundspeed;
-		T_from_energy = segretain_T_from_energy;
-	}
-
-	static eos_func pressure_from_energy;
-	static eos_func T_from_energy;
-	static eos_func2 pressure_and_soundspeed;
 
 	static void set_atomic_data(const std::vector<double> a, const std::vector<double> z) {
 		for (int s = 0; s < n_species_; s++) {
@@ -151,23 +121,10 @@ struct physics {
 			Z[s] = z[s];
 		}
 	}
-	static std::pair<double,double> ztwd_pressure_and_energy(double rho,  double abar, double zbar) {
-		std::pair<double,double> rc;
-		const auto mu = abar / zbar;
-		const auto x = std::pow(rho / B_ / mu, 1.0 / 3.0);
-		double Pdeg;
-		double Edeg;
-		if (x < 0.01) {
-			Pdeg = 1.6 * A_ * x * x * x * x * x;
-			Edeg = 2.4 * A_ * x * x * x * x * x;
-		} else {
-			Pdeg = A_ * (x * (2 * x * x - 3) * std::sqrt(x * x + 1) + 3 * asinh(x));
-			const auto hdeg = 8 * A_ / (mu*B_) * (std::sqrt(1 + x * x) - 1);
-			Edeg = rho * hdeg - Pdeg;
-		}
-		rc.first = Pdeg;
-		rc.second = Edeg;
-		return rc;
+
+	static void set_stellar_eos(stellar_eos* e) {
+		delete eos;
+		eos = e;
 	}
 
 private:
@@ -180,51 +137,6 @@ private:
 	static std::array<safe_real, n_species_> A;
 	static std::array<safe_real, n_species_> Z;
 
-	static double code_to_g, code_to_cm, code_to_s, mh, kb, A_, B_;
-
-	static double ideal_pressure_from_energy(double rho, double e, double, double) {
-		return (fgamma_ - 1.0) * e;
-	}
-
-	static std::pair<double, double> ideal_pressure_and_soundspeed(double rho, double e, double abar, double zbar) {
-		std::pair<double, double> pcs;
-		pcs.first = ideal_pressure_from_energy(rho, e, abar, zbar);
-		pcs.second = std::sqrt(std::max(fgamma_ * pcs.first / rho, 0.0));
-		return pcs;
-	}
-
-	static double ideal_T_from_energy(double rho, double e, double abar, double zbar) {
-		return (fgamma_ - 1.0) * e * abar * mh / (rho * kb * (zbar + 1));
-	}
-
-
-	static double segretain_pressure_from_energy(double rho, double e, double abar, double zbar) {
-		const auto tmp = ztwd_pressure_and_energy(rho, abar, zbar);
-		const double Pdeg = tmp.first;
-		const double Edeg = tmp.second;
-		return Pdeg + (fgamma_ - 1.0) * (e - Edeg);
-	}
-
-	static std::pair<double, double> segretain_pressure_and_soundspeed(double rho, double e, double abar, double zbar) {
-		std::pair<double, double> rc;
-		const auto mu = abar / zbar;
-		const auto tmp = ztwd_pressure_and_energy(rho, abar, zbar);
-		const double Pdeg = tmp.first;
-		const double Edeg = tmp.second;
-		const auto x = std::pow(rho / B_ / mu, 1.0 / 3.0);
-		const auto dPdeg_drho = 8 * A_ * x * x / B_ / mu / std::sqrt(x * x + 1);
-		const auto cs2 = dPdeg_drho + fgamma_ * (fgamma_ - 1) * (e - Edeg) / rho;
-		rc.first = Pdeg + (fgamma_-1)*(e-Edeg);
-		rc.second = std::sqrt(std::max(cs2, 0.0));
-		return rc;
-	}
-
-	static double segretain_T_from_energy(double rho, double e, double abar, double zbar) {
-		const auto tmp = ztwd_pressure_and_energy(rho, abar, zbar);
-		const double Edeg = tmp.second;
-		return (e - Edeg) * abar * mh / (rho * kb * (zbar + 1));
-	}
-
 };
 
 template<int NDIM>
@@ -234,36 +146,7 @@ template<int NDIM>
 std::array<safe_real, physics<NDIM>::n_species_> physics<NDIM>::Z = { 1, 1, 1, 1, 1 };
 
 template<int NDIM>
-typename physics<NDIM>::eos_func physics<NDIM>::pressure_from_energy = ideal_pressure_from_energy;
-
-template<int NDIM>
-typename physics<NDIM>::eos_func physics<NDIM>::T_from_energy = ideal_T_from_energy;
-
-template<int NDIM>
-typename physics<NDIM>::eos_func2 physics<NDIM>::pressure_and_soundspeed = ideal_pressure_and_soundspeed;
-
-template<int NDIM>
-double physics<NDIM>::mh = 1.0;
-
-template<int NDIM>
-double physics<NDIM>::A_ = 1.0;
-
-template<int NDIM>
-double physics<NDIM>:: B_ = 1.0;
-
-template<int NDIM>
-double physics<NDIM>::kb = 1.0;
-
-
-
-template<int NDIM>
-double physics<NDIM>::code_to_g;
-
-template<int NDIM>
-double physics<NDIM>::code_to_cm;
-
-template<int NDIM>
-double physics<NDIM>::code_to_s;
+stellar_eos* physics<NDIM>::eos = new ideal_eos;
 
 //definitions of the declarations (and initializations) of the static constexpr variables
 template<int NDIM>

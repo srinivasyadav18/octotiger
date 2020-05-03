@@ -44,7 +44,7 @@ void physics<NDIM>::to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v
 	abar = u[rho_i] / abar;
 	zbar *= abar / u[rho_i];
 	v = u[sx_i + dim] * rhoinv;
-	auto tmp = pressure_and_soundspeed(u[rho_i], ein, abar, zbar);
+	auto tmp = eos->pressure_and_soundspeed(u[rho_i], ein, abar, zbar);
 	cs = tmp.second;
 	p = tmp.first;
 }
@@ -150,7 +150,7 @@ void physics<NDIM>::derivative_source(hydro::state_type &dudt, const hydro::stat
 		}
 		abar = U[rho_i][i] / abar;
 		zbar *= abar / U[rho_i][i];
-		const auto p = pressure_from_energy(U[rho_i][i], U[ein_i][i], abar, zbar);
+		const auto p = eos->pressure_from_energy(U[rho_i][i], U[ein_i][i], abar, zbar);
 		dudt[ein_i][i] -= p * div_V;
 	}
 }
@@ -293,7 +293,7 @@ const std::vector<std::vector<safe_real>>& physics<NDIM>::find_contact_discs(con
 				}
 				abar = U[rho_i][i] / abar;
 				zbar *= abar / U[rho_i][i];
-				P[i] = pressure_from_energy(U[rho_i][i], ein, abar, zbar);
+				P[i] = eos->pressure_from_energy(U[rho_i][i], ein, abar, zbar);
 			}
 		}
 	}
