@@ -18,14 +18,21 @@ const real wdcons = (2.216281751e32 / 1.989e+33);
 
 constexpr real struct_eos::G;
 
-constexpr real wd_eps = 0.000;
+constexpr real wd_T = 1000.0;
+
+
+void struct_eos::set_wd_T0(double t, double abar, double zbar) {
+	wd_T0 = t;
+	wd_eps = physcon().kb * d0() * t * (zbar + 1) / abar / physcon().mh / ztwd_pressure(d0());
+
+}
 
 real struct_eos::energy(real d) const {
-	const auto b = B();
-	const auto edeg = ztwd_energy(d, A, b);
-	const real fgamma = grid::get_fgamma();
+	const auto b = physcon().B;
+	const auto edeg = ztwd_energy(d);
+	const auto pdeg = ztwd_pressure(d);
 	const auto x = std::pow(d / b, 1.0 / 3.0);
-	const auto egas = (1.0 / fgamma) * (8.0 * A / b * (sqrt(x * x + 1) - 1)) * d * wd_eps;
+	const auto egas = 1.5 * pdeg * wd_eps;
 	return edeg + egas;
 //	return std::max(d * density_to_enthalpy(d) - pressure(d), 0.0);
 }
@@ -188,7 +195,7 @@ void struct_eos::set_d0_using_struct_eos(real newd, const struct_eos &other) {
 }
 
 struct_eos::struct_eos(real M, real R) :
-		rho_cut(0.0) {
+		rho_cut(0.0),wd_eps(0) {
 //B = 1.0;
 	real m, r;
 	d0_ = M * INVERSE(R * R * R);
@@ -210,7 +217,7 @@ struct_eos::struct_eos(real M, real R) :
 }
 
 struct_eos::struct_eos(real M, const struct_eos &other) :
-		rho_cut(0.0) {
+		rho_cut(0.0),wd_eps(0) {
 	d0_ = other.d0_;
 //B = 1.0;
 //	printf("!!!!!!!!!!!!!!!!!!!\n");
@@ -287,7 +294,7 @@ real struct_eos::dh_dr(real h, real hdot, real r) const {
 }
 
 struct_eos::struct_eos(real M, real R, real _n_C, real _n_E, real core_frac, real mu) :
-		M0(1.0), R0(1.0), n_C(_n_C), n_E(_n_E), rho_cut(0.0) {
+		M0(1.0), R0(1.0), n_C(_n_C), n_E(_n_E), rho_cut(0.0),wd_eps(0) {
 	real m, r, cm;
 	real interface_core_density;
 	const auto func = [&](real icd) {

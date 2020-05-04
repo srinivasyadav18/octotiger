@@ -44,7 +44,7 @@ real find_T_rad_gas(real p, real rho, real mu) {
 
 void these_units(real &m, real &l, real &t, real &k) {
 	const real Acgs = 6.00233345657677e+22;
-	const real Bcgs = 2 * 9.73932396315776e+05;
+	const real Bcgs = 2 * 9.73931565123750e+05;
 	const real Gcgs = 6.67259e-8;
 	const real kbcgs = 1.380658e-16;
 	real m1, l1, t1, k1;
@@ -224,6 +224,7 @@ void set_AB(real a, real b) {
 	physcon().A = a;
 	physcon().B = b;
 	normalize_constants();
+	grid::set_units();
 }
 
 HPX_PLAIN_ACTION(grid::static_change_units, static_change_units_action);
