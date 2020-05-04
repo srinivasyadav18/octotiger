@@ -20,22 +20,7 @@ constexpr real struct_eos::G;
 
 constexpr real wd_T = 1000.0;
 
-void struct_eos::set_wd_T0(double t, double abar, double zbar) {
-	wd_T0 = t;
-	wd_eps = physcon().kb * d0() * t * (zbar + 1) / abar / physcon().mh / ztwd_pressure(d0());
-
-}
-
-real struct_eos::energy(real d) const {
-	const auto b = physcon().B;
-	const auto edeg = ztwd_energy(d);
-	const auto pdeg = ztwd_pressure(d);
-	const auto x = std::pow(d / b, 1.0 / 3.0);
-	const auto K = wd_eps * ztwd_pressure(d0()) / std::pow(d0(), 4.0 / 3.0);
-	const auto egas = 1.5 * K * std::pow(d, 4.0 / 3.0);
-	return edeg + egas;
-//	return std::max(d * density_to_enthalpy(d) - pressure(d), 0.0);
-}
+#define N53
 
 void struct_eos::conversion_factors(real &m, real &l, real &t) const {
 	real b = B();
@@ -49,8 +34,31 @@ void struct_eos::conversion_factors(real &m, real &l, real &t) const {
 	t = 2.7637632869 * INVERSE(s_fact);
 }
 
+real struct_eos::energy(real d) const {
+	const auto b = physcon().B;
+	const auto edeg = ztwd_energy(d);
+	const auto pdeg = ztwd_pressure(d);
+	const auto x = std::pow(d / b, 1.0 / 3.0);
+#ifndef N53
+	const auto K = wd_eps * ztwd_pressure(d0()) / std::pow(d0(), 4.0 / 3.0);
+	const auto egas = 1.5 * K * std::pow(d, 4.0 / 3.0);
+#else
+	const auto K = wd_eps * ztwd_pressure(d0()) / std::pow(d0(), 5.0 / 3.0);
+	const auto egas = 1.5 * K * std::pow(d, 5.0 / 3.0);
+#endif
+	return edeg + egas;
+//	return std::max(d * density_to_enthalpy(d) - pressure(d), 0.0);
+}
+
+void struct_eos::set_wd_T0(double t, double abar, double zbar) {
+	wd_T0 = t;
+	wd_eps = physcon().kb * d0() * t * (zbar + 1) / abar / physcon().mh / ztwd_pressure(d0(), A, B());
+
+}
+
 real struct_eos::enthalpy_to_density(real h) const {
 	if (opts().eos == WD) {
+#ifndef N53
 		const real b = B();
 		const auto K = wd_eps * ztwd_pressure(d0()) / std::pow(d0(), 4.0 / 3.0);
 		const auto h0 = 8.0 * A / b;
@@ -58,6 +66,24 @@ real struct_eos::enthalpy_to_density(real h) const {
 		const auto b0 = 4.0 * (h + h0) * K * std::pow(b, 1.0 / 3.0);
 		const auto c0 = -(h * h + 2.0 * h * h0);
 		const auto x = (-b0 + sqrt(b0 * b0 - 4.0 * a0 * c0)) / (2.0 * a0);
+#else
+		const real b = B();
+		const auto K = wd_eps * ztwd_pressure(d0(), A, b) / std::pow(d0(), 5.0 / 3.0);
+		double x2;
+		const auto h0 = 8.0 * A / b;
+		if (K != 0.0) {
+			const auto a0 = 25. / 4. * K * K * pow(b, 4. / 3.);
+			const auto b0 = -((h + h0) * 2.5 * K * pow(b, 2. / 3.) + h0 * h0);
+			const auto c0 = h * h + 2 * h0 * h;
+			x2 = (-b0 - std::sqrt(b0 * b0 - 4.0 * a0 * c0)) / (2.0 * a0);
+//			if( c0 != 0.0 ) {
+//				printf( "%e %e %e %e\n", x2, b0 * b0 ,4.0 * a0 * c0, a0);
+//			}
+		} else {
+			x2 = std::pow((h + h0) / h0, 2) - 1;
+		}
+		const auto x = sqrt(x2);
+#endif
 		const real rho = b * x * x * x;
 		return rho;
 	} else {
@@ -117,6 +143,7 @@ real struct_eos::HC() const {
 real struct_eos::HE() const {
 	return P0() * INVERSE(dE()) * (1.0 + n_E);
 }
+
 real struct_eos::density_to_enthalpy(real d) const {
 	if (opts().eos == WD) {
 		const real b = B();

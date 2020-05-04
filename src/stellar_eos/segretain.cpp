@@ -39,7 +39,7 @@ double segretain_eos::pressure_from_energy(double rho, double e, double abar, do
 	const auto tmp = ztwd_pressure_and_energy(rho, abar, zbar);
 	const double Pd = tmp.first;
 	const double Ed = tmp.second;
-//	e = std::max(e, Ed);
+	e = std::max(e, Ed);
 //	printf( "%e %e %e\n", Pdeg, Edeg, e);
 	return Pd + (fgamma - 1.0) * (e - Ed);
 }
@@ -50,7 +50,7 @@ std::pair<double, double> segretain_eos::pressure_and_soundspeed(double rho, dou
 	const auto tmp = ztwd_pressure_and_energy(rho, abar, zbar);
 	const double Pd = tmp.first;
 	const double Ed = tmp.second;
-//	e = std::max(e, Ed);
+	e = std::max(e, Ed);
 	const auto x = std::pow(rho / B / mu, 1.0 / 3.0);
 	const auto dPddx = 8.0 * A * std::pow(x, 4) / std::sqrt(x * x + 1);
 	const auto dEddx = x < 0.01 ? 12.0 * A * std::pow(x, 4) : 24.0 * A * x * x * (std::sqrt(x * x + 1) - 1);
@@ -71,6 +71,7 @@ std::pair<double, double> segretain_eos::pressure_and_soundspeed(double rho, dou
 double segretain_eos::T_from_energy(double rho, double e, double abar, double zbar) {
 	const auto tmp = ztwd_pressure_and_energy(rho, abar, zbar);
 	const double Edeg = tmp.second;
+	e = std::max(e, Edeg);
 	return (fgamma - 1) * (e - Edeg) * abar * amu / (rho * kb * (zbar + 1));
 }
 
