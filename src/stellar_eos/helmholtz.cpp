@@ -331,6 +331,7 @@ void helm_eos::helmholtz_eos(eos_t *eos) {
 	dpgasdt = dpiondt + dpepdt;
 	x = (eos->p * deni * deni) * (dpgasdt / eos->cv) + dpgasdd;
 	if (x < 0.0) {
+//		printf( "%e\n", x );
 		eos->cs = 0.0;
 	} else {
 		eos->cs = sqrt(x);

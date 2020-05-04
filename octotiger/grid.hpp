@@ -180,6 +180,9 @@ public:
 	static bool is_hydro_field(const std::string&);
 	static std::vector<std::string> get_field_names();
 	static std::vector<std::string> get_hydro_field_names();
+	static void set_units() {
+		eos->set_units(opts().code_to_g, opts().code_to_cm, opts().code_to_s);
+	}
 
 	std::vector<multipole>& get_M() {
 		return *M_ptr;

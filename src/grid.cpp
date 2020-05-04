@@ -1635,7 +1635,7 @@ analytic_t grid::compute_analytic(real t) {
 	return a;
 }
 
-stellar_eos* grid::eos;
+stellar_eos *grid::eos;
 
 void grid::allocate() {
 
@@ -1654,7 +1654,7 @@ void grid::allocate() {
 		eos->set_units(opts().code_to_g, opts().code_to_cm, opts().code_to_s);
 		eos->set_fgamma(fgamma);
 		physics<NDIM>::set_stellar_eos(eos);
-		if( opts().radiation) {
+		if (opts().radiation) {
 			rad_grid::set_eos(eos);
 		}
 	});

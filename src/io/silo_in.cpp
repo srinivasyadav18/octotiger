@@ -142,6 +142,7 @@ void load_open(std::string fname, dir_map_type map) {
 }
 
 void load_close() {
+	grid::set_units();
 	DBClose(db_);
 }
 
