@@ -147,6 +147,13 @@ real struct_eos::HE() const {
 real struct_eos::density_to_enthalpy(real d) const {
 	if (opts().eos == WD) {
 		const real b = B();
+#ifndef N53
+		const auto K = wd_eps * ztwd_pressure(d0()) / std::pow(d0(), 4.0 / 3.0);
+		const auto hideal = 4 * K * pow(d,1.0/3.0);
+#else
+		const auto K = wd_eps * ztwd_pressure(d0(), A, b) / std::pow(d0(), 5.0 / 3.0);
+		const auto hideal = 2.5 * K * pow(d, 2.0 / 3.0);
+#endif
 		const real x = POWER(d * INVERSE(b), 1.0 / 3.0);
 		real h;
 		if (x > 0.01) {
@@ -154,7 +161,7 @@ real struct_eos::density_to_enthalpy(real d) const {
 		} else {
 			h = (8.0 * A * INVERSE(b)) * (0.5 * x * x);
 		}
-		return h;
+		return h + hideal;
 	} else {
 		if (d >= dC()) {
 			return P0() * (1.0 * INVERSE(dC()) * (1.0 + n_C) * (POWER(d * INVERSE( dC()), 1.0 * INVERSE( n_C)) - 1.0) + 1.0 * INVERSE(dE()) * (1.0 + n_E));
