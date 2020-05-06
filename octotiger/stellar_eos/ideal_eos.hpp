@@ -7,5 +7,4 @@ public:
 	double pressure_from_energy(double rho, double ene, double abar, double zbar);
 	std::pair<double, double> pressure_and_soundspeed(double rho, double ene, double abar, double zbar);
 	double T_from_energy(double rho, double ene, double abar, double zbar);
-	double energy_from_T(double rho, double T, double abar, double zbar);
 };

@@ -17,7 +17,3 @@ std::pair<double, double> ideal_eos::pressure_and_soundspeed(double rho, double 
 double ideal_eos::T_from_energy(double rho, double ene, double abar, double zbar) {
 	return (fgamma - 1) * ene * amu * abar / (rho * kb * (zbar + 1));
 }
-
-double ideal_eos::energy_from_T(double rho, double T, double abar, double zbar) {
-	return 1.0 / (fgamma - 1) * rho * T * kb * (zbar + 1) / (amu * abar);
-}

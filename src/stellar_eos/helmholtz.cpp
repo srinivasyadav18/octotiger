@@ -37,16 +37,6 @@ double helm_eos::T_from_energy(double rho, double ene, double abar, double zbar)
 	return eos.T;
 }
 
-double helm_eos::energy_from_T(double rho, double T, double abar, double zbar) {
-	eos_t eos;
-	eos.rho = rho;
-	eos.T = T;
-	eos.abar = abar;
-	eos.zbar = zbar;
-	helmholtz_eos(&eos);
-	return eos.e * eos.rho;
-}
-
 helm_eos::helm_eos() {
 	read_helm_table();
 }
@@ -60,14 +50,6 @@ void helm_eos::read_helm_table() {
 		printf("Unable to load helmholtz.table.dat\n");
 		abort();
 	}
-	tlo = 3.0;
-	thi = 13.0;
-	tstp = (thi - tlo) / double(JMAX - 1);
-	tstpi = 1.0 / tstp;
-	dlo = -12.0;
-	dhi = 15.0;
-	dstp = (dhi - dlo) / double(IMAX - 1);
-	dstpi = 1.0 / dstp;
 
 // read the helmholtz free energy and its derivatives
 	for (j = 0; j < JMAX; j++) {
@@ -143,51 +125,49 @@ void helm_eos::helmholtz_eos(eos_t *eos) {
 
 	constexpr auto kerg = 1.380650424e-16;
 	constexpr auto avo = 6.0221417930e23;
+	std::array<double, 36> fi;
+//	int iat, jat;
+//	double den, temp, abar, zbar, ytot1, ye, x, deni, xni, dxnidd, dpepdt, dpepdd, deepdt, dsepdt, dpiondd, dpiondt, deiondt, kt, pion, eion, pele, eele, sele,
+//			dpgasdd, dpgasdt, free, df_d, df_t, df_tt, df_dt, df_dd, xt, xd, mxt, mxd;
 
-	int iat, jat;
-	double den, temp, abar, zbar, ytot1, ye, x, deni, xni, dxnidd, dpepdt, dpepdd, deepdt, dsepdt, dpiondd, dpiondt, deiondt, kt, pion, eion, pele, eele, sele,
-			dpgasdd, dpgasdt, free, df_d, df_t, df_tt, df_dt, df_dd, xt, xd, mxt, mxd, si0t, si1t, si2t, si0mt, si1mt, si2mt, si0d, si1d, si2d, si0md, si1md,
-			si2md, dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md, ddsi0t, ddsi1t, ddsi2t, ddsi0mt, ddsi1mt, ddsi2mt,
-			din, fi[36], ddsi0d, ddsi1d, ddsi2d, ddsi0md, ddsi1md, ddsi2md;
-
-	const auto psi0 = [](double z) {
+	static const auto psi0 = [](double z) {
 		return (z * z * z * (z * (-6.0 * z + 15.0) - 10.0) + 1.0);
 	};
 
-	const auto dpsi0 = [](double z) {
+	static const auto dpsi0 = [](double z) {
 		return (z * z * (z * (-30.0 * z + 60.0) - 30.0));
 	};
 
-	const auto ddpsi0 = [](double z) {
+	static const auto ddpsi0 = [](double z) {
 		return (z * (z * (-120.0 * z + 180.0) - 60.0));
 	};
 
-	const auto psi1 = [](double z) {
+	static const auto psi1 = [](double z) {
 		return (z * (z * z * (z * (-3.0 * z + 8.0) - 6.0) + 1.0));
 	};
 
-	const auto dpsi1 = [](double z) {
+	static const auto dpsi1 = [](double z) {
 		return (z * z * (z * (-15.0 * z + 32.0) - 18.0) + 1.0);
 	};
 
-	const auto ddpsi1 = [](double z) {
+	static const auto ddpsi1 = [](double z) {
 		return (z * (z * (-60.0 * z + 96.0) - 36.0));
 	};
 
-	const auto psi2 = [](double z) {
+	static const auto psi2 = [](double z) {
 		return (0.5 * z * z * (z * (z * (-z + 3.0) - 3.0) + 1.0));
 	};
 
-	const auto dpsi2 = [](double z) {
+	static const auto dpsi2 = [](double z) {
 		return (0.5 * z * (z * (z * (-5.0 * z + 12.0) - 9.0) + 2.0));
 	};
 
-	const auto ddpsi2 = [](double z) {
+	static const auto ddpsi2 = [](double z) {
 		return (0.5 * (z * (z * (-20.0 * z + 36.0) - 18.0) + 2.0));
 	};
 
-	const auto h5 = [&fi](const double w0t, const double w1t, const double w2t, const double w0mt, const double w1mt, const double w2mt, const double w0d,
-			const double w1d, const double w2d, const double w0md, const double w1md, const double w2md) {
+	const auto h5 = [&fi](const double w0t, const double w1t, const double w2t, const double w0mt, const double w1mt, const double w2mt,
+			const double w0d, const double w1d, const double w2d, const double w0md, const double w1md, const double w2md) {
 		return fi[0] * w0d * w0t + fi[1] * w0md * w0t + fi[2] * w0d * w0mt + fi[3] * w0md * w0mt + fi[4] * w0d * w1t + fi[5] * w0md * w1t + fi[6] * w0d * w1mt
 				+ fi[7] * w0md * w1mt + fi[8] * w0d * w2t + fi[9] * w0md * w2t + fi[10] * w0d * w2mt + fi[11] * w0md * w2mt + fi[12] * w1d * w0t
 				+ fi[13] * w1md * w0t + fi[14] * w1d * w0mt + fi[15] * w1md * w0mt + fi[16] * w2d * w0t + fi[17] * w2md * w0t + fi[18] * w2d * w0mt
@@ -198,34 +178,34 @@ void helm_eos::helmholtz_eos(eos_t *eos) {
 
 	eos_from_code(eos);
 
-	den = eos->rho;
-	temp = std::max(eos->T, 3e3);
-	abar = eos->abar;
-	zbar = eos->zbar;
+	const auto &den = eos->rho;
+	const auto temp = std::max(eos->T, 3e3);
+	const auto &abar = eos->abar;
+	const auto &zbar = eos->zbar;
 
-	ytot1 = 1.0 / abar;
-	ye = std::max(1.0e-16, ytot1 * zbar);
+	const auto ytot1 = 1.0 / abar;
+	const auto ye = std::max(1.0e-16, ytot1 * zbar);
 
 // initialize
-	deni = 1.0 / den;
-	kt = kerg * temp;
+	const auto deni = 1.0 / den;
+	const auto kt = kerg * temp;
 
 // ion section:
-	xni = avo * ytot1 * den;
-	dxnidd = avo * ytot1;
+	const auto xni = avo * ytot1 * den;
+	const auto dxnidd = avo * ytot1;
 
-	pion = xni * kt;
-	dpiondd = dxnidd * kt;
-	dpiondt = xni * kerg;
+	const auto pion = xni * kt;
+	const auto dpiondd = dxnidd * kt;
+	const auto dpiondt = xni * kerg;
 
-	eion = 1.5 * pion * deni;
-	deiondt = 1.5 * dpiondt * deni;
+	const auto eion = 1.5 * pion * deni;
+	const auto deiondt = 1.5 * dpiondt * deni;
 
-	din = ye * den;
+	const auto din = ye * den;
 
-	jat = int((log10(temp) - tlo) * tstpi) + 1;
+	auto jat = int((log10(temp) - tlo) * tstpi) + 1;
 	jat = std::max(1, std::min(jat, JMAX - 1));
-	iat = int((log10(din) - dlo) * dstpi) + 1;
+	auto iat = int((log10(din) - dlo) * dstpi) + 1;
 	iat = std::max(1, std::min(iat, IMAX - 1));
 	--jat;
 	--iat;
@@ -266,72 +246,70 @@ void helm_eos::helmholtz_eos(eos_t *eos) {
 	fi[34] = fddtt[iat][jat + 1];
 	fi[35] = fddtt[iat + 1][jat + 1];
 
-	xt = std::max((temp - t[jat]) * dti_sav[jat], 0.0);
-	xd = std::max((din - d[iat]) * ddi_sav[iat], 0.0);
-	mxt = 1.0 - xt;
-	mxd = 1.0 - xd;
+	const auto xt = std::max((temp - t[jat]) * dti_sav[jat], 0.0);
+	const auto xd = std::max((din - d[iat]) * ddi_sav[iat], 0.0);
+	const auto mxt = 1.0 - xt;
+	const auto mxd = 1.0 - xd;
 
-	si0t = psi0(xt);
-	si1t = psi1(xt) * dt_sav[jat];
-	si2t = psi2(xt) * dt2_sav[jat];
-	si0mt = psi0(mxt);
-	si1mt = -psi1(mxt) * dt_sav[jat];
-	si2mt = psi2(mxt) * dt2_sav[jat];
-	dsi0t = dpsi0(xt) * dti_sav[jat];
-	dsi1t = dpsi1(xt);
-	dsi2t = dpsi2(xt) * dt_sav[jat];
-	dsi0mt = -dpsi0(mxt) * dti_sav[jat];
-	dsi1mt = dpsi1(mxt);
-	dsi2mt = -dpsi2(mxt) * dt_sav[jat];
-	si0d = psi0(xd);
-	si1d = psi1(xd) * dd_sav[iat];
-	si2d = psi2(xd) * dd2_sav[iat];
-	si0md = psi0(mxd);
-	si1md = -psi1(mxd) * dd_sav[iat];
-	si2md = psi2(mxd) * dd2_sav[iat];
-	ddsi0t = ddpsi0(xt) * dt2i_sav[jat];
-	ddsi1t = ddpsi1(xt) * dti_sav[jat];
-	ddsi2t = ddpsi2(xt);
-	ddsi0mt = ddpsi0(mxt) * dt2i_sav[jat];
-	ddsi1mt = -ddpsi1(mxt) * dti_sav[jat];
-	ddsi2mt = ddpsi2(mxt);
-	dsi0d = dpsi0(xd) * ddi_sav[iat];
-	dsi1d = dpsi1(xd);
-	dsi2d = dpsi2(xd) * dd_sav[iat];
-	dsi0md = -dpsi0(mxd) * ddi_sav[iat];
-	dsi1md = dpsi1(mxd);
-	dsi2md = -dpsi2(mxd) * dd_sav[iat];
-	ddsi0d = ddpsi0(xd) * dd2i_sav[iat];
-	ddsi1d = ddpsi1(xd) * ddi_sav[iat];
-	ddsi2d = ddpsi2(xd);
-	ddsi0md = ddpsi0(mxd) * dd2i_sav[iat];
-	ddsi1md = -ddpsi1(mxd) * ddi_sav[iat];
-	ddsi2md = ddpsi2(mxd);
+	const auto si0t = psi0(xt);
+	const auto si1t = psi1(xt) * dt_sav[jat];
+	const auto si2t = psi2(xt) * dt2_sav[jat];
+	const auto si0mt = psi0(mxt);
+	const auto si1mt = -psi1(mxt) * dt_sav[jat];
+	const auto si2mt = psi2(mxt) * dt2_sav[jat];
+	const auto dsi0t = dpsi0(xt) * dti_sav[jat];
+	const auto dsi1t = dpsi1(xt);
+	const auto dsi2t = dpsi2(xt) * dt_sav[jat];
+	const auto dsi0mt = -dpsi0(mxt) * dti_sav[jat];
+	const auto dsi1mt = dpsi1(mxt);
+	const auto dsi2mt = -dpsi2(mxt) * dt_sav[jat];
+	const auto si0d = psi0(xd);
+	const auto si1d = psi1(xd) * dd_sav[iat];
+	const auto si2d = psi2(xd) * dd2_sav[iat];
+	const auto si0md = psi0(mxd);
+	const auto si1md = -psi1(mxd) * dd_sav[iat];
+	const auto si2md = psi2(mxd) * dd2_sav[iat];
+	const auto ddsi0t = ddpsi0(xt) * dt2i_sav[jat];
+	const auto ddsi1t = ddpsi1(xt) * dti_sav[jat];
+	const auto ddsi2t = ddpsi2(xt);
+	const auto ddsi0mt = ddpsi0(mxt) * dt2i_sav[jat];
+	const auto ddsi1mt = -ddpsi1(mxt) * dti_sav[jat];
+	const auto ddsi2mt = ddpsi2(mxt);
+	const auto dsi0d = dpsi0(xd) * ddi_sav[iat];
+	const auto dsi1d = dpsi1(xd);
+	const auto dsi2d = dpsi2(xd) * dd_sav[iat];
+	const auto dsi0md = -dpsi0(mxd) * ddi_sav[iat];
+	const auto dsi1md = dpsi1(mxd);
+	const auto dsi2md = -dpsi2(mxd) * dd_sav[iat];
+	const auto ddsi0d = ddpsi0(xd) * dd2i_sav[iat];
+	const auto ddsi1d = ddpsi1(xd) * ddi_sav[iat];
+	const auto ddsi2d = ddpsi2(xd);
+	const auto ddsi0md = ddpsi0(mxd) * dd2i_sav[iat];
+	const auto ddsi1md = -ddpsi1(mxd) * ddi_sav[iat];
+	const auto ddsi2md = ddpsi2(mxd);
 
-
-	df_d = h5(si0t, si1t, si2t, si0mt, si1mt, si2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
-	df_dd = h5(si0t, si1t, si2t, si0mt, si1mt, si2mt, ddsi0d, ddsi1d, ddsi2d, ddsi0md, ddsi1md, ddsi2md);
-	df_dt = h5(dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
-	x = din * din;
-	pele = x * df_d;
-	dpepdd = ye * (x * df_dd + 2.0 * din * df_d);
-	dpepdt = x * df_dt;
-	free = h5(si0t, si1t, si2t, si0mt, si1mt, si2mt, si0d, si1d, si2d, si0md, si1md, si2md);
-	df_t = h5(dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
-	df_tt = h5(ddsi0t, ddsi1t, ddsi2t, ddsi0mt, ddsi1mt, ddsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
+	const auto df_d = h5(si0t, si1t, si2t, si0mt, si1mt, si2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
+	const auto df_dd = h5(si0t, si1t, si2t, si0mt, si1mt, si2mt, ddsi0d, ddsi1d, ddsi2d, ddsi0md, ddsi1md, ddsi2md);
+	const auto df_dt = h5(dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, dsi0d, dsi1d, dsi2d, dsi0md, dsi1md, dsi2md);
+	auto x = din * din;
+	const auto pele = x * df_d;
+	const auto dpepdd = ye * (x * df_dd + 2.0 * din * df_d);
+	const auto dpepdt = x * df_dt;
+	const auto free = h5(si0t, si1t, si2t, si0mt, si1mt, si2mt, si0d, si1d, si2d, si0md, si1md, si2md);
+	const auto df_t = h5(dsi0t, dsi1t, dsi2t, dsi0mt, dsi1mt, dsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
+	const auto df_tt = h5(ddsi0t, ddsi1t, ddsi2t, ddsi0mt, ddsi1mt, ddsi2mt, si0d, si1d, si2d, si0md, si1md, si2md);
 	x = ye * ye;
-	sele = -df_t * ye;
-	dsepdt = -df_tt * ye;
-	eele = ye * free + temp * sele;
-	deepdt = temp * dsepdt;
+	const auto sele = -df_t * ye;
+	const auto dsepdt = -df_tt * ye;
+	const auto eele = ye * free + temp * sele;
+	const auto deepdt = temp * dsepdt;
 	eos->p = pele + pion;
 	eos->e = eele + eion;
 	eos->cv = deiondt + deepdt;
-	dpgasdd = dpiondd + dpepdd;
-	dpgasdt = dpiondt + dpepdt;
+	const auto dpgasdd = dpiondd + dpepdd;
+	const auto dpgasdt = dpiondt + dpepdt;
 	x = (eos->p * deni * deni) * (dpgasdt / eos->cv) + dpgasdd;
 	if (x < 0.0) {
-//		printf( "%e\n", x );
 		eos->cs = 0.0;
 	} else {
 		eos->cs = sqrt(x);
