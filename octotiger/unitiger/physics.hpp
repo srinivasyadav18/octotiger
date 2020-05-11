@@ -76,7 +76,7 @@ struct physics {
 
 	/*** Reconstruct uses this - GPUize****/
 	template<int INX>
-	static const hydro::state_type& pre_recon(const hydro::state_type &U, const hydro::x_type X, safe_real omega, bool angmom);
+	static hydro::state_type& pre_recon(const hydro::state_type &U, const hydro::x_type X, safe_real omega, bool angmom);
 	/*** Reconstruct uses this - GPUize****/
 	template<int INX>
 	static void post_recon(std::vector<std::vector<std::vector<safe_real>>> &Q, const hydro::x_type X, safe_real omega, bool angmom);

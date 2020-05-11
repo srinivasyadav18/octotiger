@@ -162,7 +162,7 @@ void physics<NDIM>::source(hydro::state_type &dudt, const hydro::state_type &U, 
 
 template<int NDIM>
 template<int INX>
-const hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, const hydro::x_type X, safe_real omega, bool angmom) {
+hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, const hydro::x_type X, safe_real omega, bool angmom) {
 	PROFILE();
 	static const cell_geometry<NDIM, INX> geo;
 	static const auto indices = geo.find_indices(0, geo.H_NX);
