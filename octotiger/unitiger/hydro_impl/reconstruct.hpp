@@ -377,17 +377,17 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 				}
 			}
 		}
-	}
-	for (int q = 0; q < NDIM; q++) {
-		const auto f = sx_i + q;
-		for (int d = 0; d < geo::NDIR; d++) {
-			if (d != geo::NDIR / 2) {
-				for (int j = 0; j < geo::H_NX_XM4; j++) {
-					for (int k = 0; k < geo::H_NX_YM4; k++) {
-#pragma ivdep
-						for (int l = 0; l < geo::H_NX_ZM4; l++) {
-							const int i = geo::to_index(j + 2, k + 2, l + 2);
-							Q[f][d][i] *= Q[0][d][i];
+		for (int q = 0; q < NDIM; q++) {
+			const auto f = sx_i + q;
+			for (int d = 0; d < geo::NDIR; d++) {
+				if (d != geo::NDIR / 2) {
+					for (int j = 0; j < geo::H_NX_XM4; j++) {
+						for (int k = 0; k < geo::H_NX_YM4; k++) {
+	#pragma ivdep
+							for (int l = 0; l < geo::H_NX_ZM4; l++) {
+								const int i = geo::to_index(j + 2, k + 2, l + 2);
+								Q[f][d][i] *= Q[0][d][i];
+							}
 						}
 					}
 				}
