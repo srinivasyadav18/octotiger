@@ -224,6 +224,12 @@ inline safe_real vanleer(safe_real a, safe_real b) {
 	}
 }
 
+inline safe_real superbee(safe_real a, safe_real b) {
+	const auto abs_a = std::abs(a);
+	const auto abs_b = std::abs(b);
+	return (std::copysign(0.5, a) + std::copysign(0.5, b)) * std::max(std::min(2 * abs_a, b), std::min(abs_a, 2 * abs_b));
+}
+
 inline safe_real ospre(safe_real a, safe_real b) {
 	const auto a2 = a * a;
 	const auto b2 = b * b;
@@ -333,29 +339,35 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 									b += 12.0 * AM[n][i] * lc * xloc[d][m] / (dx * (rho_l + rho_r));
 								}
 							}
+							const auto qr0 = qr;
+							const auto ql0 = ql;
+							qr += 0.5 * b;
+							ql -= 0.5 * b;
 							if (b != 0.0) {
-								qr += 0.5 * b;
-								ql -= 0.5 * b;
 								const auto di = dir[d];
 								const auto &u0 = U[f][i];
 								const auto &ur = U[f][i + di];
 								const auto &ul = U[f][i - di];
 								const auto &ur2 = U[f][i + 2 * di];
 								const auto &ul2 = U[f][i - 2 * di];
+								const auto ur0 = u0 + 0.5 * superbee(ur - u0, u0 - ul);
+								const auto ul0 = u0 - 0.5 * superbee(ur - u0, u0 - ul);
 								if (ur > u0 && u0 > ul) {
-									if (qr - u0 != 0) {
-										theta = std::min(theta, (std::max(u0, std::min(ur, qr)) - u0) / (qr - u0));
+									if (qr - qr0 != 0) {
+										theta = std::min(theta, (std::max(u0, std::min(ur0, qr)) - qr0) / (qr - qr0));
 									}
-									if (ql - u0 != 0) {
-										theta = std::min(theta, (std::min(u0, std::max(ul, ql)) - u0) / (ql - u0));
+									if (ql - ql0 != 0) {
+										theta = std::min(theta, (std::min(u0, std::max(ul0, ql)) - ql0) / (ql - ql0));
 									}
+	//								printf("%e\n", theta);
 								} else if (ur < u0 && u0 < ul) {
-									if (qr - u0 != 0) {
-										theta = std::min(theta, (std::min(u0, std::max(ur, qr)) - u0) / (qr - u0));
+									if (qr - qr0 != 0) {
+										theta = std::min(theta, (std::min(u0, std::max(ur0, qr)) - qr0) / (qr - qr0));
 									}
-									if (ql - u0 != 0) {
-										theta = std::min(theta, (std::max(u0, std::min(ul, ql)) - u0) / (ql - u0));
+									if (ql - ql0 != 0) {
+										theta = std::min(theta, (std::max(u0, std::min(ul0, ql)) - ql0) / (ql - ql0));
 									}
+		//							printf("%e\n", theta);
 								} else {
 									theta = 0.0;
 								}
@@ -363,8 +375,8 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 							} else {
 								theta = 1;
 							}
-							qr = qr * theta + u0 * (1 - theta);
-							ql = ql * theta + u0 * (1 - theta);
+							qr = qr * theta + qr0 * (1 - theta);
+							ql = ql * theta + ql0 * (1 - theta);
 						}
 					}
 				}
