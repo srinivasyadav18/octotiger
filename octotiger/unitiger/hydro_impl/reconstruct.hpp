@@ -247,7 +247,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 	static constexpr auto dir = geo::direction();
 
 	const auto dx = X[0][geo::H_DNX] - X[0][0];
-	auto& U = PHYS::template pre_recon<INX>(U_, X, omega, angmom_index_ != -1);
+	auto U = PHYS::template pre_recon<INX>(U_, X, omega, angmom_index_ != -1);
 	const auto &cdiscs = PHYS::template find_contact_discs<INX>(U_);
 	for (int f = 0; f < nf_; f++) {
 		reconstruct_ppm(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
