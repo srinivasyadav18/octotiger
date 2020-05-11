@@ -1864,7 +1864,7 @@ real grid::compute_positivity_speed_limit() const {
 			}
 		}
 	}
-	return max_lambda;
+	return max_lambda / opts().dt_max;
 }
 
 void grid::set_min_level(integer l) {
