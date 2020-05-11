@@ -333,12 +333,9 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 									b += 12.0 * AM[n][i] * lc * xloc[d][m] / (dx * (rho_l + rho_r));
 								}
 							}
-							auto qr0 = qr;
-							auto ql0 = ql;
-							qr += 0.5 * b;
-							ql -= 0.5 * b;
-							make_monotone(ql, u0, qr);
 							if (b != 0.0) {
+								qr += 0.5 * b;
+								ql -= 0.5 * b;
 								const auto di = dir[d];
 								const auto &u0 = U[f][i];
 								const auto &ur = U[f][i + di];
@@ -346,22 +343,18 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 								const auto &ur2 = U[f][i + 2 * di];
 								const auto &ul2 = U[f][i - 2 * di];
 								if (ur > u0 && u0 > ul) {
-									const auto ur0 = std::min(ur - (1.0 / 3.0) * minmod(ur2 - ur, ur - u0), ur);
-									const auto ul0 = std::max(ul + (1.0 / 3.0) * minmod(u0 - ul, ul - ul2), ul);
-									if (qr - qr0 != 0) {
-										theta = std::min(theta, (std::max(u0, std::min(ur0, qr)) - qr0) / (qr - qr0));
+									if (qr - u0 != 0) {
+										theta = std::min(theta, (std::max(u0, std::min(ur, qr)) - u0) / (qr - u0));
 									}
-									if (ql - ql0 != 0) {
-										theta = std::min(theta, (std::min(u0, std::max(ul0, ql)) - ql0) / (ql - ql0));
+									if (ql - u0 != 0) {
+										theta = std::min(theta, (std::min(u0, std::max(ul, ql)) - u0) / (ql - u0));
 									}
 								} else if (ur < u0 && u0 < ul) {
-									const auto ur0 = std::max(ur - (1.0 / 3.0) * minmod(ur2 - ur, ur - u0), ur);
-									const auto ul0 = std::min(ul + (1.0 / 3.0) * minmod(u0 - ul, ul - ul2), ul);
-									if (qr - qr0 != 0) {
-										theta = std::min(theta, (std::min(u0, std::max(ur0, qr)) - qr0) / (qr - qr0));
+									if (qr - u0 != 0) {
+										theta = std::min(theta, (std::min(u0, std::max(ur, qr)) - u0) / (qr - u0));
 									}
-									if (ql - ql0 != 0) {
-										theta = std::min(theta, (std::max(u0, std::min(ul0, ql)) - ql0) / (ql - ql0));
+									if (ql - u0 != 0) {
+										theta = std::min(theta, (std::max(u0, std::min(ul, ql)) - u0) / (ql - u0));
 									}
 								} else {
 									theta = 0.0;
@@ -370,8 +363,8 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 							} else {
 								theta = 1;
 							}
-							qr = qr * theta + qr0 * (1 - theta);
-							ql = ql * theta + ql0 * (1 - theta);
+							qr = qr * theta + u0 * (1 - theta);
+							ql = ql * theta + u0 * (1 - theta);
 						}
 					}
 				}
@@ -383,7 +376,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 				if (d != geo::NDIR / 2) {
 					for (int j = 0; j < geo::H_NX_XM4; j++) {
 						for (int k = 0; k < geo::H_NX_YM4; k++) {
-	#pragma ivdep
+#pragma ivdep
 							for (int l = 0; l < geo::H_NX_ZM4; l++) {
 								const int i = geo::to_index(j + 2, k + 2, l + 2);
 								Q[f][d][i] *= Q[0][d][i];
