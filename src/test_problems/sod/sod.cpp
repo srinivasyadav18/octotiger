@@ -21,8 +21,8 @@ OCTOTIGER_EXPORT std::vector<real> advection_test_analytic(real x, real y, real 
 	std::vector<real> U(opts().n_fields, 0.0);
 	const real fgamma = grid::get_fgamma();
 	const auto r0 = 1.0/3.0;
-	constexpr auto x0 = 0.5;
-	constexpr auto y0 = 0.0;
+	const auto x0 = 0.5 * cos(-opts().omega*t);
+	const auto y0 = 0.5 * sin(-opts().omega*t);
 	constexpr auto z0 = 0.0;
 	const auto dx = x - x0;
 	const auto dy = y - y0;
