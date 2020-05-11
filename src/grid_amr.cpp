@@ -126,7 +126,12 @@ void grid::complete_hydro_amr_boundary(bool energy_only) {
 									zx += Uf[zx_i][iii0][ir][jr][kr] / 8.0;
 									zy += Uf[zy_i][iii0][ir][jr][kr] / 8.0;
 									zz += Uf[zz_i][iii0][ir][jr][kr] / 8.0;
-									//			rho += Uf[rho_i][iii0][ir][jr][kr] / 8.0;
+									const real xsgn = (ir % 2) ? +1 : -1;
+									const real ysgn = (jr % 2) ? +1 : -1;
+									const real zsgn = (kr % 2) ? +1 : -1;
+									zx -= (ysgn * Uf[zz_i][iii0][ir][jr][kr] - zsgn * Uf[zy_i][iii0][ir][jr][kr]) * 0.5 * dx / 8.0;
+									zy += (xsgn * Uf[zz_i][iii0][ir][jr][kr] - zsgn * Uf[zx_i][iii0][ir][jr][kr]) * 0.5 * dx / 8.0;
+									zz -= (xsgn * Uf[zy_i][iii0][ir][jr][kr] - ysgn * Uf[zx_i][iii0][ir][jr][kr]) * 0.5 * dx / 8.0;
 								}
 							}
 						}

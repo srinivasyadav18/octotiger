@@ -687,21 +687,7 @@ std::vector<real> grid::get_prolong(const std::array<integer, NDIM> &lb, const s
 	for (integer dim = 0; dim != NDIM; ++dim) {
 		size *= (ub[dim] - lb[dim]);
 	}
-	static thread_local auto tmpz = std::vector<std::vector<real>>(NDIM, std::vector<real>(H_N3));
 	data.reserve(size);
-// #if !defined(HPX_HAVE_DATAPAR)
-	for (integer i = lb[XDIM]; i != ub[XDIM]; ++i) {
-		for (integer j = lb[YDIM]; j != ub[YDIM]; ++j) {
-#pragma GCC ivdep
-			for (integer k = lb[ZDIM]; k != ub[ZDIM]; ++k) {
-				const integer iii = hindex(i, j, k);
-				tmpz[XDIM][iii] = U[zx_i][iii];
-				tmpz[YDIM][iii] = U[zy_i][iii];
-				tmpz[ZDIM][iii] = U[zz_i][iii];
-			}
-		}
-	}
-
 	for (integer f = 0; f < opts().n_fields; f++) {
 		const auto &u = U[f];
 		for (integer i = lb[XDIM]; i != ub[XDIM]; ++i) {
@@ -709,11 +695,8 @@ std::vector<real> grid::get_prolong(const std::array<integer, NDIM> &lb, const s
 			for (integer j = lb[YDIM]; j != ub[YDIM]; ++j) {
 				const real y = (j % 2) ? +1 : -1;
 				for (integer k = lb[ZDIM]; k != ub[ZDIM]; ++k) {
-					const real xsgn = (i % 2) ? +1 : -1;
-					const real ysgn = (j % 2) ? +1 : -1;
-					const real zsgn = (k % 2) ? +1 : -1;
-					const integer iii = hindex(i / 2, j / 2, k / 2);
 					const real z = (k % 2) ? +1 : -1;
+					const integer iii = hindex(i / 2, j / 2, k / 2);
 					const auto u0 = u[iii];
 					real value = u0;
 					value += (9. / 64.) * minmod(u[iii + x * H_DNX] - u0, u0 - u[iii - x * H_DNX]);
@@ -724,28 +707,7 @@ std::vector<real> grid::get_prolong(const std::array<integer, NDIM> &lb, const s
 					value += (3. / 64.) * minmod(u[iii + y * H_DNY + z * H_DNZ] - u0, u0 - u[iii - y * H_DNY - z * H_DNZ]);
 					value += (1. / 64.) * minmod(u[iii + x * H_DNX + y * H_DNY + z * H_DNZ] - u0, u0 - u[iii - x * H_DNX - y * H_DNY - z * H_DNZ]);
 					data.push_back(value);
-					if (f == sx_i) {
-						U[zy_i][iii] -= 0.25 * zsgn * value * dx / 8.0;
-						U[zz_i][iii] += 0.25 * ysgn * value * dx / 8.0;
-					} else if (f == sy_i) {
-						U[zx_i][iii] += 0.25 * zsgn * value * dx / 8.0;
-						U[zz_i][iii] -= 0.25 * xsgn * value * dx / 8.0;
-					} else if (f == sz_i) {
-						U[zx_i][iii] -= 0.25 * ysgn * value * dx / 8.0;
-						U[zy_i][iii] += 0.25 * xsgn * value * dx / 8.0;
-					}
 				}
-			}
-		}
-	}
-	for (integer i = lb[XDIM]; i != ub[XDIM]; ++i) {
-		for (integer j = lb[YDIM]; j != ub[YDIM]; ++j) {
-#pragma GCC ivdep
-			for (integer k = lb[ZDIM]; k != ub[ZDIM]; ++k) {
-				const integer iii = hindex(i, j, k);
-				U[zx_i][iii] = tmpz[XDIM][iii];
-				U[zy_i][iii] = tmpz[YDIM][iii];
-				U[zz_i][iii] = tmpz[ZDIM][iii];
 			}
 		}
 	}
@@ -1127,9 +1089,15 @@ void grid::set_prolong(const std::vector<real> &data, std::vector<real> &&outflo
 					for (int j1 = 0; j1 < 2; j1++) {
 						for (int k1 = 0; k1 < 2; k1++) {
 							const int iii = hindex(i + i1, j + j1, k + k1);
+							const real xsgn = (i % 2) ? +1 : -1;
+							const real ysgn = (j % 2) ? +1 : -1;
+							const real zsgn = (k % 2) ? +1 : -1;
 							zx += U[zx_i][iii] / 8.0;
 							zy += U[zy_i][iii] / 8.0;
 							zz += U[zz_i][iii] / 8.0;
+							zx -= (ysgn * U[sz_i][iii] - zsgn * U[sy_i][iii]) * 0.5 * dx / 8.0;
+							zy += (xsgn * U[sz_i][iii] - zsgn * U[sx_i][iii]) * 0.5 * dx / 8.0;
+							zz -= (xsgn * U[sy_i][iii] - ysgn * U[sx_i][iii]) * 0.5 * dx / 8.0;
 						}
 					}
 				}

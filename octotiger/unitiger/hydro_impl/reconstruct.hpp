@@ -299,6 +299,33 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 					}
 				}
 			}
+			if (NDIM > 1 && omega != 0 && n == geo::NANGMOM - 1) {
+				for (int j = 0; j < geo::H_NX_XM4; j++) {
+					for (int k = 0; k < geo::H_NX_YM4; k++) {
+#pragma ivdep
+						for (int l = 0; l < geo::H_NX_ZM4; l++) {
+							const int i = geo::to_index(j + 2, k + 2, l + 2);
+							const auto am0 = AM[n][i];
+							for (int dim = 0; dim < NDIM - 1; dim++) {
+								static constexpr auto faces = geo::face_pts();
+								static constexpr auto w = geo::face_weight();
+								for (int fi = 0; fi < geo::NFACEDIR; fi++) {
+									const auto d = faces[dim][fi];
+									const auto dr = d;
+									const auto dl = geo::flip(d);
+									const auto rho_r = Q[0][dr][i];
+									const auto rho_l = Q[0][dl][i];
+									const auto R_r = X[dim][i] + xloc[d][dim] * dx * 0.5;
+									const auto R_l = X[dim][i] - xloc[d][dim] * dx * 0.5;
+									const auto R = rho_r * R_r;
+									const auto L = rho_l * R_l;
+									AM[n][i] += w[fi] * omega * dx * (R - L) / 12.0;
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 		for (int j = 0; j < geo::H_NX_XM4; j++) {
 			for (int k = 0; k < geo::H_NX_YM4; k++) {
