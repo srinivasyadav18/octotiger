@@ -274,17 +274,13 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 					}
 				}
 			}
-			for (int j = 0; j < geo::H_NX_XM4; j++) {
-				for (int k = 0; k < geo::H_NX_YM4; k++) {
-	#pragma ivdep
-					for (int l = 0; l < geo::H_NX_ZM4; l++) {
-						const int i = geo::to_index(j + 2, k + 2, l + 2);
-						U[f][i] = U_[f][i] / U_[0][i];
-					}
-				}
+		}
+		for (int q = 0; q < NDIM; q++) {
+			const auto f = sx_i + q;
+			for (int i = 0; i < geo::H_N3; i++) {
+				U[f][i] = U_[f][i] / U_[0][i];
 			}
 		}
-
 		for (int n = 0; n < geo::NANGMOM; n++) {
 			for (int j = 0; j < geo::H_NX_XM4; j++) {
 				for (int k = 0; k < geo::H_NX_YM4; k++) {
