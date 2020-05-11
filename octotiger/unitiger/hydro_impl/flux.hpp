@@ -50,13 +50,13 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				}
 				std::array < safe_real, NDIM > x;
 				std::array < safe_real, NDIM > vg;
-				for (int dim = 0; dim < NDIM; dim++) {
-					x[dim] = X[dim][i] + 0.5 * xloc[d][dim] * dx;
+				for( int dim = 0; dim < NDIM; dim++ ) {
+					x[dim] = 0.5 * xloc[d][dim] * dx;
 				}
-				if constexpr (NDIM > 1) {
+				if  (NDIM > 1) {
 					vg[0] = -omega * (X[1][i] + 0.5 * xloc[d][1] * dx);
 					vg[1] = +omega * (X[0][i] + 0.5 * xloc[d][0] * dx);
-					if constexpr (NDIM == 3) {
+					if (NDIM == 3) {
 						vg[2] = 0.0;
 					}
 				} else {

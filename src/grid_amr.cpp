@@ -119,28 +119,13 @@ void grid::complete_hydro_amr_boundary(bool energy_only) {
 				for (int k0 = 1; k0 < HS_NX - 1; k0++) {
 					const int iii0 = hSindex(i0, j0, k0);
 					if (is_coarse[iii0]) {
-						for (int ir = 0; ir < 2; ir++) {
-							for (int jr = 0; jr < 2; jr++) {
-								for (int kr = 0; kr < 2; kr++) {
-									const auto i1 = 2 * i0 - H_BW + ir;
-									const auto j1 = 2 * j0 - H_BW + jr;
-									const auto k1 = 2 * k0 - H_BW + kr;
-									const auto x = (i1) * dx + xmin[XDIM];
-									const auto y = (j1) * dx + xmin[YDIM];
-									const auto z = (k1) * dx + xmin[ZDIM];
-									Uf[lx_i][iii0][ir][jr][kr] -= y * Uf[sz_i][iii0][ir][jr][kr] - z * Uf[sy_i][iii0][ir][jr][kr];
-									Uf[ly_i][iii0][ir][jr][kr] += x * Uf[sz_i][iii0][ir][jr][kr] - z * Uf[sx_i][iii0][ir][jr][kr];
-									Uf[lz_i][iii0][ir][jr][kr] -= x * Uf[sy_i][iii0][ir][jr][kr] - y * Uf[sx_i][iii0][ir][jr][kr];
-								}
-							}
-						}
 						double zx = 0, zy = 0, zz = 0, rho = 0;
 						for (int ir = 0; ir < 2; ir++) {
 							for (int jr = 0; jr < 2; jr++) {
 								for (int kr = 0; kr < 2; kr++) {
-									zx += Uf[lx_i][iii0][ir][jr][kr] / 8.0;
-									zy += Uf[ly_i][iii0][ir][jr][kr] / 8.0;
-									zz += Uf[lz_i][iii0][ir][jr][kr] / 8.0;
+									zx += Uf[zx_i][iii0][ir][jr][kr] / 8.0;
+									zy += Uf[zy_i][iii0][ir][jr][kr] / 8.0;
+									zz += Uf[zz_i][iii0][ir][jr][kr] / 8.0;
 									//			rho += Uf[rho_i][iii0][ir][jr][kr] / 8.0;
 								}
 							}
@@ -150,24 +135,9 @@ void grid::complete_hydro_amr_boundary(bool energy_only) {
 								for (int kr = 0; kr < 2; kr++) {
 									//					const auto factor = Uf[rho_i][iii0][ir][jr][kr] / rho;
 									const auto factor = 1.0;
-									Uf[lx_i][iii0][ir][jr][kr] = zx * factor;
-									Uf[ly_i][iii0][ir][jr][kr] = zy * factor;
-									Uf[lz_i][iii0][ir][jr][kr] = zz * factor;
-								}
-							}
-						}
-						for (int ir = 0; ir < 2; ir++) {
-							for (int jr = 0; jr < 2; jr++) {
-								for (int kr = 0; kr < 2; kr++) {
-									const auto i1 = 2 * i0 - H_BW + ir;
-									const auto j1 = 2 * j0 - H_BW + jr;
-									const auto k1 = 2 * k0 - H_BW + kr;
-									const auto x = (i1) * dx + xmin[XDIM];
-									const auto y = (j1) * dx + xmin[YDIM];
-									const auto z = (k1) * dx + xmin[ZDIM];
-									Uf[lx_i][iii0][ir][jr][kr] += y * Uf[sz_i][iii0][ir][jr][kr] - z * Uf[sy_i][iii0][ir][jr][kr];
-									Uf[ly_i][iii0][ir][jr][kr] -= x * Uf[sz_i][iii0][ir][jr][kr] - z * Uf[sx_i][iii0][ir][jr][kr];
-									Uf[lz_i][iii0][ir][jr][kr] += x * Uf[sy_i][iii0][ir][jr][kr] - y * Uf[sx_i][iii0][ir][jr][kr];
+									Uf[zx_i][iii0][ir][jr][kr] = zx * factor;
+									Uf[zy_i][iii0][ir][jr][kr] = zy * factor;
+									Uf[zz_i][iii0][ir][jr][kr] = zz * factor;
 								}
 							}
 						}

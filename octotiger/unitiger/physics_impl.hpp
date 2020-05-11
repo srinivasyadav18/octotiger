@@ -76,12 +76,6 @@ void physics<NDIM>::physical_flux(const std::vector<safe_real> &U, std::vector<s
 	}
 	F[sx_i + dim] += p;
 	F[egas_i] += v0 * p;
-	for (int n = 0; n < geo.NANGMOM; n++) {
-#pragma ivdep
-		for (int m = 0; m < NDIM; m++) {
-			F[lx_i + n] += levi_civita[n][m][dim] * x[m] * p;
-		}
-	}
 }
 
 template<int NDIM>
@@ -140,40 +134,29 @@ template<int INX>
 void physics<NDIM>::source(hydro::state_type &dudt, const hydro::state_type &U, const hydro::flux_type &F, const hydro::x_type X, safe_real omega,
 		safe_real dx) {
 	static const cell_geometry<NDIM, INX> geo;
-	static constexpr auto levi_civita = geo.levi_civita();
-	for (const auto &i : geo.find_indices(geo.H_BW, geo.H_NX - geo.H_BW)) {
-		if constexpr (NDIM == 3) {
-			dudt[lx_i][i] += U[ly_i][i] * omega;
-			dudt[ly_i][i] -= U[lx_i][i] * omega;
-		}
-		if constexpr (NDIM >= 2) {
-			dudt[sx_i][i] += U[sy_i][i] * omega;
-			dudt[sy_i][i] -= U[sx_i][i] * omega;
-		}
-		safe_real r = 0.0;
-		for (int dim = 0; dim < NDIM; dim++) {
-			r += X[dim][i] * X[dim][i];
-		}
-		r = std::sqrt(r);
-		for (int dim = 0; dim < NDIM; dim++) {
-			const auto f = sx_i + dim;
-			const auto x = X[dim][i];
-			double a;
-			double r0 = 0.00;
-			const auto c0 = std::max(U[rho_i][i] - 1.0e-5, 0.0) / U[rho_i][i];
-			if (r > r0) {
-				const auto r3inv = 1.0 / (r * r * r) * c0;
-				a = x * r3inv * GM_;
-			} else {
-				const auto r30inv = 1.0 / (r0 * r0 * r0) * c0;
-				a = x * r30inv * GM_;
+	static constexpr auto lc = geo.levi_civita();
+	for (int dim = 0; dim < NDIM; dim++) {
+		for (int n = 0; n < geo.NANGMOM; n++) {
+			const auto m = dim;
+			for (int l = 0; l < NDIM; l++) {
+				for (const auto &i : geo.find_indices(geo.H_BW, geo.H_NX - geo.H_BW)) {
+					const auto fr = F[dim][sx_i + l][i + geo.H_DN[dim]];
+					const auto fl = F[dim][sx_i + l][i];
+					dudt[zx_i + n][i] -= lc[n][m][l] * 0.5 * (fr + fl);
+				}
 			}
-			dudt[f][i] -= a;
-			dudt[egas_i][i] -= U[f][i] * a;
 		}
+	}
+	for (const auto &i : geo.find_indices(geo.H_BW, geo.H_NX - geo.H_BW)) {
+		dudt[sx_i][i] += U[sy_i][i] * omega;
+		dudt[sy_i][i] -= U[sx_i][i] * omega;
+		dudt[zx_i][i] += U[zy_i][i] * omega;
+		dudt[zy_i][i] -= U[zx_i][i] * omega;
 	}
 
 }
+
+/*** Reconstruct uses this - GPUize****/
 
 /*** Reconstruct uses this - GPUize****/
 
@@ -212,24 +195,7 @@ const hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, co
 					const int i = geo.to_index(j, k, l);
 					const auto rho = V[rho_i][i];
 					const auto rhoinv = 1.0 / rho;
-					V[lx_i + n][i] *= rhoinv;
-				}
-			}
-		}
-		static constexpr auto levi_civita = geo.levi_civita();
-		for (int m = 0; m < NDIM; m++) {
-			for (int q = 0; q < NDIM; q++) {
-				const auto lc = levi_civita[n][m][q];
-				if (lc != 0) {
-					for (int j = 0; j < geo.H_NX_X; j++) {
-						for (int k = 0; k < geo.H_NX_Y; k++) {
-#pragma ivdep
-							for (int l = 0; l < geo.H_NX_Z; l++) {
-								const int i = geo.to_index(j, k, l);
-								V[lx_i + n][i] -= lc * X[m][i] * V[sx_i + q][i];
-							}
-						}
-					}
+					V[zx_i + n][i] *= rhoinv;
 				}
 			}
 		}
@@ -349,30 +315,13 @@ void physics<NDIM>::post_recon(std::vector<std::vector<std::vector<safe_real>>> 
 			}
 
 			for (int n = 0; n < geo.NANGMOM; n++) {
-				for (int q = 0; q < NDIM; q++) {
-					for (int m = 0; m < NDIM; m++) {
-						const auto lc = levi_civita[n][m][q];
-						if (lc != 0) {
-							for (int j = 0; j < geo.H_NX_XM4; j++) {
-								for (int k = 0; k < geo.H_NX_YM4; k++) {
-#pragma ivdep
-									for (int l = 0; l < geo.H_NX_ZM4; l++) {
-										const int i = geo.to_index(j + 2, k + 2, l + 2);
-										const auto rho = Q[rho_i][d][i];
-										Q[lx_i + n][d][i] += lc * (X[m][i] + 0.5 * xloc[d][m] * dx) * Q[sx_i + q][d][i];
-									}
-								}
-							}
-						}
-					}
-				}
 				for (int j = 0; j < geo.H_NX_XM4; j++) {
 					for (int k = 0; k < geo.H_NX_YM4; k++) {
 #pragma ivdep
 						for (int l = 0; l < geo.H_NX_ZM4; l++) {
 							const int i = geo.to_index(j + 2, k + 2, l + 2);
 							const auto rho = Q[rho_i][d][i];
-							Q[lx_i + n][d][i] *= rho;
+							Q[zx_i + n][d][i] *= rho;
 						}
 					}
 				}
@@ -666,22 +615,13 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 		U[sx_i][i] += (rho * vx);
 		U[egas_i][i] += (p / (fgamma_ - 1.0) + 0.5 * rho * vx * vx);
 		U[tau_i][i] += (std::pow(p / (fgamma_ - 1.0), 1.0 / fgamma_));
-		if constexpr (NDIM >= 2) {
+		if (NDIM >= 2) {
 			U[sy_i][i] += rho * vy;
 			U[egas_i][i] += 0.5 * rho * vy * vy;
 		}
-		if constexpr (NDIM >= 3) {
+		if (NDIM >= 3) {
 			U[sz_i][i] += rho * vz;
 			U[egas_i][i] += 0.5 * rho * vz * vz;
-		}
-		static constexpr auto levi_civita = geo.levi_civita();
-		for (int n = 0; n < geo.NANGMOM; n++) {
-			U[lx_i + n][i] = 0.0;
-			for (int m = 0; m < NDIM; m++) {
-				for (int l = 0; l < NDIM; l++) {
-					U[lx_i + n][i] += levi_civita[n][m][l] * X[m][i] * U[sx_i + l][i];
-				}
-			}
 		}
 	}
 
