@@ -2110,9 +2110,9 @@ void grid::compute_sources(real t, real rotational_time) {
 				}
 				src[sx_i][iii0] += omega * U[sy_i][iii];
 				src[sy_i][iii0] -= omega * U[sx_i][iii];
-				src[zx_i][iii0] += omega * U[zy_i][iii];
-				src[zy_i][iii0] -= omega * U[zx_i][iii];
-			}
+				src[zx_i][iii0] -= omega * X[ZDIM][iii] * U[sx_i][iii];
+				src[zy_i][iii0] -= omega * X[ZDIM][iii] * U[sy_i][iii];
+				src[zz_i][iii0] += omega * (X[XDIM][iii] * U[sx_i][iii] + X[YDIM][iii] * U[sy_i][iii]);			}
 		}
 	}
 }

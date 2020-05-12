@@ -100,6 +100,11 @@ std::vector<real> rotating_star(real x, real y, real z, real dx) {
 	static rotating_star_analytic rs;
 	const real fgamma = 5.0 / 3.0;
 	rs.state_at(u[rho_i], u[egas_i], u[sx_i], u[sy_i], x, y, z);
+//	if( x > 0.0 && z > 0.0 ) {
+//		u[sx_i] += 0.01*u[rho_i];
+//		u[sy_i] += 0.01*u[rho_i];
+//		u[sz_i] += 0.01*u[rho_i];
+//	}
 //	u[egas_i] = (1.681244e-01) * std::pow(u[rho_i],fgamma) / (fgamma-1.0);
 	u[rho_i] = std::max(u[rho_i], 1.0e-15);
 	u[egas_i] = std::max(u[egas_i], 1.0e-15);
