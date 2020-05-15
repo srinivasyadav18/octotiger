@@ -387,7 +387,7 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 					rc.grid_sum[egas_i] += 0.5 * U[pot_i][iii] * dV;
 					rc.grid_sum[zx_i] += (X[YDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sy_i][iii]) * dV;
 					rc.grid_sum[zy_i] -= (X[XDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sx_i][iii]) * dV;
-					rc.grid_sum[zz_i] += (X[XDIM][iii] * U[sy_i][iii] - X[YDIM][iii] * U[sx_i][iii]) * dV;
+					rc.grid_sum[zz_i] += ((X[XDIM][iii]) * U[sy_i][iii] - X[YDIM][iii] * U[sx_i][iii]) * dV;
 					rc.lsum[0] += (X[YDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sy_i][iii]) * dV;
 					rc.lsum[1] -= (X[XDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sx_i][iii]) * dV;
 					rc.lsum[2] += (X[XDIM][iii] * U[sy_i][iii] - X[YDIM][iii] * U[sx_i][iii]) * dV;
@@ -2112,7 +2112,10 @@ void grid::compute_sources(real t, real rotational_time) {
 				src[sy_i][iii0] -= omega * U[sx_i][iii];
 				src[zx_i][iii0] -= omega * X[ZDIM][iii] * U[sx_i][iii];
 				src[zy_i][iii0] -= omega * X[ZDIM][iii] * U[sy_i][iii];
-				src[zz_i][iii0] += omega * (X[XDIM][iii] * U[sx_i][iii] + X[YDIM][iii] * U[sy_i][iii]);			}
+				src[zz_i][iii0] += omega * (X[XDIM][iii] * U[sx_i][iii] + X[YDIM][iii] * U[sy_i][iii]);
+				src[zx_i][iii0] += omega * U[zy_i][iii];
+				src[zy_i][iii0] -= omega * U[zx_i][iii];
+			}
 		}
 	}
 }

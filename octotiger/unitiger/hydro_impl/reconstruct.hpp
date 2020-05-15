@@ -239,10 +239,33 @@ inline safe_real ospre(safe_real a, safe_real b) {
 		return 1.5 * (a2 * b + b2 * a) / (a2 + b2 + a * b);
 	}
 }
+
+
+
+template<int NDIM, int INX>
+void reconstruct_minmod(std::vector<std::vector<safe_real>> &q, const std::vector<safe_real> &u) {
+	PROFILE();
+	static const cell_geometry<NDIM, INX> geo;
+	static constexpr auto dir = geo.direction();
+	for (int d = 0; d < geo.NDIR; d++) {
+		const auto di = dir[d];
+		for (int j = 0; j < geo.H_NX_XM2; j++) {
+			for (int k = 0; k < geo.H_NX_YM2; k++) {
+				for (int l = 0; l < geo.H_NX_ZM2; l++) {
+					const int i = geo.to_index(j + 1, k + 1, l + 1);
+					q[d][i] = u[i] + 0.5 * minmod(u[i + di] - u[i], u[i] - u[i - di]);
+				}
+			}
+		}
+	}
+}
+
+
 template<int NDIM, int INX, class PHYS>
 const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(const hydro::state_type &U_, const hydro::x_type &X, safe_real omega) {
 	PROFILE();
 	static thread_local std::vector<std::vector<safe_real>> AM(geo::NANGMOM, std::vector < safe_real > (geo::H_N3));
+	static thread_local std::vector<safe_real> AM0(geo::H_N3);
 	static thread_local std::vector<std::vector<std::vector<safe_real>> > Q(nf_,
 			std::vector < std::vector < safe_real >> (geo::NDIR, std::vector < safe_real > (geo::H_N3)));
 
@@ -271,7 +294,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 			reconstruct_ppm(Q[f], U[f], true, false, cdiscs);
 		}
 		for (int f = zx_i; f < zx_i + geo::NANGMOM; f++) {
-			reconstruct_ppm(Q[f], U[f], false, false, cdiscs);
+			reconstruct_minmod<NDIM, INX> (Q[f], U[f]);
 		}
 
 		for (int n = 0; n < geo::NANGMOM; n++) {
@@ -295,36 +318,15 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 #pragma ivdep
 										for (int l = 0; l < geo::H_NX_ZM4; l++) {
 											const int i = geo::to_index(j + 2, k + 2, l + 2);
-											AM[n][i] -= vw[d] * lc * 0.5 * xloc[d][m] * Q[sx_i + q][d][i] * Q[0][d][i] * dx;
+											auto s = Q[sx_i + q][d][i];
+											if (q == 0) {
+												s += -omega * (X[1][i] + xloc[d][1] * dx * 0.5);
+											} else if (q == 1) {
+												s += +omega * (X[0][i] + xloc[d][0] * dx * 0.5);
+											}
+											AM[n][i] -= vw[d] * lc * 0.5 * xloc[d][m] * s * Q[0][d][i] * dx;
 										}
 									}
-								}
-							}
-						}
-					}
-				}
-			}
-			if (NDIM > 1 && omega != 0 && n == geo::NANGMOM - 1) {
-				for (int j = 0; j < geo::H_NX_XM4; j++) {
-					for (int k = 0; k < geo::H_NX_YM4; k++) {
-#pragma ivdep
-						for (int l = 0; l < geo::H_NX_ZM4; l++) {
-							const int i = geo::to_index(j + 2, k + 2, l + 2);
-							const auto am0 = AM[n][i];
-							for (int dim = 0; dim < NDIM - 1; dim++) {
-								static constexpr auto faces = geo::face_pts();
-								static constexpr auto w = geo::face_weight();
-								for (int fi = 0; fi < geo::NFACEDIR; fi++) {
-									const auto d = faces[dim][fi];
-									const auto dr = d;
-									const auto dl = geo::flip(d);
-									const auto rho_r = Q[0][dr][i];
-									const auto rho_l = Q[0][dl][i];
-									const auto R_r = X[dim][i] + xloc[d][dim] * dx * 0.5;
-									const auto R_l = X[dim][i] - xloc[d][dim] * dx * 0.5;
-									const auto R = rho_r * R_r;
-									const auto L = rho_l * R_l;
-									AM[n][i] += w[fi] * omega * dx * (R - L) / 12.0;
 								}
 							}
 						}
@@ -370,8 +372,8 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 								const auto &ur2 = U[f][i + 2 * di];
 								const auto &ul2 = U[f][i - 2 * di];
 								if (ur > u0 && u0 > ul) {
-									const auto ur0 = std::min(ur - (1.0 / 3.0) * minmod(ur2 - ur, ur - u0), ur);
-									const auto ul0 = std::max(ul + (1.0 / 3.0) * minmod(u0 - ul, ul - ul2), ul);
+									const auto ur0 = std::min(ur - (0.0 / 3.0) * minmod(ur2 - ur, ur - u0), ur);
+									const auto ul0 = std::max(ul + (0.0 / 3.0) * minmod(u0 - ul, ul - ul2), ul);
 									if (qr - qr0[q][d] != 0) {
 										theta[q][d] = std::min(theta[q][d], (std::max(u0, std::min(ur0, qr)) - qr0[q][d]) / (qr - qr0[q][d]));
 									}
@@ -379,8 +381,8 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 										theta[q][d] = std::min(theta[q][d], (std::min(u0, std::max(ul0, ql)) - ql0[q][d]) / (ql - ql0[q][d]));
 									}
 								} else if (ur < u0 && u0 < ul) {
-									const auto ur0 = std::max(ur - (1.0 / 3.0) * minmod(ur2 - ur, ur - u0), ur);
-									const auto ul0 = std::min(ul + (1.0 / 3.0) * minmod(u0 - ul, ul - ul2), ul);
+									const auto ur0 = std::max(ur - (0.0 / 3.0) * minmod(ur2 - ur, ur - u0), ur);
+									const auto ul0 = std::min(ul + (0.0 / 3.0) * minmod(u0 - ul, ul - ul2), ul);
 									if (qr - qr0[q][d] != 0) {
 										theta[q][d] = std::min(theta[q][d], (std::min(u0, std::max(ur0, qr)) - qr0[q][d]) / (qr - qr0[q][d]));
 									}
@@ -415,8 +417,6 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 		}
 
 	}
-
-
 
 #ifdef TVD_TEST
 	{
