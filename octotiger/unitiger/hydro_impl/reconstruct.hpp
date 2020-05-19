@@ -203,8 +203,6 @@ inline safe_real ospre(safe_real a, safe_real b) {
 	}
 }
 
-
-
 template<int NDIM, int INX>
 void reconstruct_minmod(std::vector<std::vector<safe_real>> &q, const std::vector<safe_real> &u) {
 	PROFILE();
@@ -222,7 +220,6 @@ void reconstruct_minmod(std::vector<std::vector<safe_real>> &q, const std::vecto
 		}
 	}
 }
-
 
 template<int NDIM, int INX, class PHYS>
 const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(const hydro::state_type &U_, const hydro::x_type &X, safe_real omega) {
@@ -257,7 +254,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 			reconstruct_ppm(Q[f], U[f], true, false, cdiscs);
 		}
 		for (int f = zx_i; f < zx_i + geo::NANGMOM; f++) {
-			reconstruct_minmod<NDIM, INX> (Q[f], U[f]);
+			reconstruct_minmod<NDIM, INX>(Q[f], U[f]);
 		}
 
 		for (int n = 0; n < geo::NANGMOM; n++) {
@@ -304,15 +301,9 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 #pragma ivdep
 				for (int l = 0; l < geo::H_NX_ZM4; l++) {
 					const int i = geo::to_index(j + 2, k + 2, l + 2);
-					std::array<std::array<safe_real, geo::NDIR / 2>, NDIM> theta;
-					for (int dim = 0; dim < NDIM; dim++) {
-						for (int d = 0; d < geo::NDIR / 2; d++) {
-							theta[dim][d] = 1.0;
-						}
-					}
-					std::array<std::array<safe_real, geo::NDIR / 2>, NDIM> qr0, ql0;
 					for (int d = 0; d < geo::NDIR / 2; d++) {
 						for (int q = 0; q < NDIM; q++) {
+							safe_real theta = 1.0;
 							const auto f = sx_i + q;
 							const auto &rho_r = Q[0][d][i];
 							const auto &rho_l = Q[0][geo::flip(d)][i];
@@ -325,52 +316,44 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 									b += 12.0 * AM[n][i] * lc * xloc[d][m] / (dx * (rho_l + rho_r));
 								}
 							}
-							qr0[q][d] = qr;
-							ql0[q][d] = ql;
+							const auto qr0 = qr;
+							const auto ql0 = ql;
 							qr += 0.5 * b;
 							ql -= 0.5 * b;
+							const auto &u0 = U[f][i];
 							if (b != 0.0) {
 								const auto di = dir[d];
-								const auto &u0 = U[f][i];
 								const auto &ur = U[f][i + di];
 								const auto &ul = U[f][i - di];
 								const auto &ur2 = U[f][i + 2 * di];
 								const auto &ul2 = U[f][i - 2 * di];
 								if (ur > u0 && u0 > ul) {
-									const auto ur0 = std::min(ur - (0.0 / 3.0) * minmod(ur2 - ur, ur - u0), ur);
-									const auto ul0 = std::max(ul + (0.0 / 3.0) * minmod(u0 - ul, ul - ul2), ul);
-									if (qr - qr0[q][d] != 0) {
-										theta[q][d] = std::min(theta[q][d], (std::max(u0, std::min(ur0, qr)) - qr0[q][d]) / (qr - qr0[q][d]));
+									const auto ur0 = std::min(ur - (1.0 / 3.0) * minmod(ur2 - ur, ur - u0), ur);
+									const auto ul0 = std::max(ul + (1.0 / 3.0) * minmod(u0 - ul, ul - ul2), ul);
+									if (qr - qr0 != 0) {
+										theta = std::min(theta, (std::max(u0, std::min(ur0, qr)) - qr0) / (qr - qr0));
 									}
-									if (ql - ql0[q][d] != 0) {
-										theta[q][d] = std::min(theta[q][d], (std::min(u0, std::max(ul0, ql)) - ql0[q][d]) / (ql - ql0[q][d]));
+									if (ql - ql0 != 0) {
+										theta = std::min(theta, (std::min(u0, std::max(ul0, ql)) - ql0) / (ql - ql0));
 									}
 								} else if (ur < u0 && u0 < ul) {
-									const auto ur0 = std::max(ur - (0.0 / 3.0) * minmod(ur2 - ur, ur - u0), ur);
-									const auto ul0 = std::min(ul + (0.0 / 3.0) * minmod(u0 - ul, ul - ul2), ul);
-									if (qr - qr0[q][d] != 0) {
-										theta[q][d] = std::min(theta[q][d], (std::min(u0, std::max(ur0, qr)) - qr0[q][d]) / (qr - qr0[q][d]));
+									const auto ur0 = std::max(ur - (1.0 / 3.0) * minmod(ur2 - ur, ur - u0), ur);
+									const auto ul0 = std::min(ul + (1.0 / 3.0) * minmod(u0 - ul, ul - ul2), ul);
+									if (qr - qr0 != 0) {
+										theta = std::min(theta, (std::min(u0, std::max(ur0, qr)) - qr0) / (qr - qr0));
 									}
-									if (ql - ql0[q][d] != 0) {
-										theta[q][d] = std::min(theta[q][d], (std::max(u0, std::min(ul0, ql)) - ql0[q][d]) / (ql - ql0[q][d]));
+									if (ql - ql0 != 0) {
+										theta = std::min(theta, (std::max(u0, std::min(ul0, ql)) - ql0) / (ql - ql0));
 									}
 								} else {
-									theta[q][d] = 0.0;
+									theta = 0.0;
 								}
-								theta[q][d] = std::max(std::min(theta[q][d], 1.0), 0.0);
+								theta = std::max(std::min(theta, 1.0), 0.0);
 							} else {
-								theta[q][d] = 1;
+								theta = 1;
 							}
-						}
-					}
-					for (int d = 0; d < geo::NDIR / 2; d++) {
-						for (int q = 0; q < NDIM; q++) {
-							const auto f = sx_i + q;
-							auto &qr = Q[f][d][i];
-							auto &ql = Q[f][geo::flip(d)][i];
-							const auto &u0 = U[f][i];
-							qr = qr * theta[q][d] + qr0[q][d] * (1 - theta[q][d]);
-							ql = ql * theta[q][d] + ql0[q][d] * (1 - theta[q][d]);
+							qr = qr * theta + qr0 * (1 - theta);
+							ql = ql * theta + ql0 * (1 - theta);
 							make_monotone(ql, u0, qr);
 						}
 					}
