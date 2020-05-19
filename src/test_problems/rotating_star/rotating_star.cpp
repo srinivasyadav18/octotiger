@@ -79,7 +79,7 @@ public:
 		std::cout << "Done reading rotating_star.bin\n";
 		printf( "Omega = %e\n", omega_);
 	}
-	void state_at(double& rho, double& ene, double& sx, double& sy, double x, double z, double y) const {
+	void state_at(double& rho, double& ene, double& sx, double& sy, double x, double y, double z) const {
 		const double R = std::sqrt(x * x + y * y);
 		rho = interpolate(rho_, R, z);
 		ene = interpolate(ene_, R, z);
@@ -99,7 +99,7 @@ std::vector<real> rotating_star(real x, real y, real z, real dx) {
 
 	static rotating_star_analytic rs;
 	const real fgamma = 5.0 / 3.0;
-	rs.state_at(u[rho_i], u[egas_i], u[sx_i], u[sz_i], x, y, z);
+	rs.state_at(u[rho_i], u[egas_i], u[sx_i], u[sy_i], x, y, z);
 //	if( x > 0.0 && z > 0.0 ) {
 //		u[sx_i] += 0.01*u[rho_i];
 //		u[sy_i] += 0.01*u[rho_i];
@@ -109,7 +109,7 @@ std::vector<real> rotating_star(real x, real y, real z, real dx) {
 	u[rho_i] = std::max(u[rho_i], 1.0e-15);
 	u[egas_i] = std::max(u[egas_i], 1.0e-15);
 	u[tau_i] = std::pow(u[egas_i], 1.0 / fgamma);
-	u[egas_i] += 0.5 * (std::pow(u[sx_i], 2) + std::pow(u[sy_i], 2)) / u[rho_i];
+	u[egas_i] += 0.5 * (std::pow(u[sx_i], 2) + std::pow(u[sy_i], 2) + std::pow(u[sz_i], 2)) / u[rho_i];
 //	if( u[rho_i] < 0.5 ) {
 		u[spc_i + 1] = u[rho_i];
 		u[spc_i + 0] = 0;

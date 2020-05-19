@@ -22,7 +22,6 @@
 #include "octotiger/unitiger/hydro_impl/reconstruct.hpp"
 #include "octotiger/unitiger/hydro_impl/flux.hpp"
 
-
 #include <hpx/include/runtime.hpp>
 #include <hpx/collectives/broadcast.hpp>
 #include <hpx/synchronization/once.hpp>
@@ -2114,8 +2113,8 @@ void grid::compute_sources(real t, real rotational_time) {
 				src[zx_i][iii0] -= omega * X[ZDIM][iii] * U[sx_i][iii];
 				src[zy_i][iii0] -= omega * X[ZDIM][iii] * U[sy_i][iii];
 				src[zz_i][iii0] += omega * (X[XDIM][iii] * U[sx_i][iii] + X[YDIM][iii] * U[sy_i][iii]);
-				src[zx_i][iii0] += omega * U[zy_i][iii];
-				src[zy_i][iii0] -= omega * U[zx_i][iii];
+				src[zx_i][iii0] += omega * (U[zy_i][iii] - (X[XDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sx_i][iii]));
+				src[zy_i][iii0] -= omega * (U[zx_i][iii] + (X[YDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sy_i][iii]));
 			}
 		}
 	}
