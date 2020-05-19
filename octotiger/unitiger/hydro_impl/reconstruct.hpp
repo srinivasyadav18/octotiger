@@ -112,43 +112,6 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 			}
 		}
 	}
-	if (experiment == 1) {
-		for (int j = 0; j < geo.H_NX_XM2; j++) {
-			for (int k = 0; k < geo.H_NX_YM2; k++) {
-#pragma ivdep
-				for (int l = 0; l < geo.H_NX_ZM2; l++) {
-					const int i = geo.to_index(j + 1, k + 1, l + 1);
-					for (int gi = 0; gi < geo::group_count(); gi++) {
-						safe_real sum = 0.0;
-						for (int n = 0; n < geo::group_size(gi); n++) {
-							const auto pair = geo::group_pair(gi, n);
-							sum += q[pair.second][i + pair.first];
-						}
-						sum /= safe_real(geo::group_size(gi));
-						for (int n = 0; n < geo::group_size(gi); n++) {
-							const auto pair = geo::group_pair(gi, n);
-							q[pair.second][i + pair.first] = sum;
-						}
-					}
-				}
-			}
-		}
-		for (int d = 0; d < geo.NDIR; d++) {
-			const auto di = dir[d];
-			for (int j = 0; j < geo.H_NX_XM2; j++) {
-				for (int k = 0; k < geo.H_NX_YM2; k++) {
-#pragma ivdep
-					for (int l = 0; l < geo.H_NX_ZM2; l++) {
-						const int i = geo.to_index(j + 1, k + 1, l + 1);
-						const auto mx = std::max(u[i + di], u[i]);
-						const auto mn = std::min(u[i + di], u[i]);
-						q[d][i] = std::min(mx, q[d][i]);
-						q[d][i] = std::max(mn, q[d][i]);
-					}
-				}
-			}
-		}
-	}
 	if (disc_detect) {
 		constexpr auto eps = 0.01;
 		constexpr auto eps2 = 0.001;
@@ -319,11 +282,13 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 										for (int l = 0; l < geo::H_NX_ZM4; l++) {
 											const int i = geo::to_index(j + 2, k + 2, l + 2);
 											auto s = Q[sx_i + q][d][i];
-//											if (q == 0) {
-//												s += -omega * (X[1][i] + xloc[d][1] * dx * 0.5);
-//											} else if (q == 1) {
-//												s += +omega * (X[0][i] + xloc[d][0] * dx * 0.5);
-//											}
+											if (experiment == 0) {
+												if (q == 0) {
+													s += -omega * (X[1][i] + xloc[d][1] * dx * 0.5);
+												} else if (q == 1) {
+													s += +omega * (X[0][i] + xloc[d][0] * dx * 0.5);
+												}
+											}
 											AM[n][i] -= vw[d] * lc * 0.5 * xloc[d][m] * s * Q[0][d][i] * dx;
 										}
 									}

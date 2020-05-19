@@ -28,6 +28,7 @@ struct physics {
 	static constexpr int spc_i = 4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2));
 	static safe_real de_switch_1;
 	static safe_real de_switch_2;
+	static int experiment;
 
 	enum test_type {
 		SOD, BLAST, KH, CONTACT, KEPLER
@@ -96,6 +97,10 @@ struct physics {
 
 	static void set_dual_energy_switches(safe_real one, safe_real two);
 
+	static void set_experiment( int i ) {
+		experiment = i;
+	}
+
 	static void set_central_force(safe_real GM) {
 		GM_ = GM;
 	}
@@ -141,6 +146,9 @@ safe_real physics<NDIM>::A_ = 0.0;
 
 template<int NDIM>
 safe_real physics<NDIM>::B_ = 1.0;
+
+template<int NDIM>
+int physics<NDIM>::experiment = 0;
 
 template<int NDIM>
 safe_real physics<NDIM>::de_switch_1 = 1e-3;

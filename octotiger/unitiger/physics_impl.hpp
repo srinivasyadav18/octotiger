@@ -200,14 +200,14 @@ hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, const hy
 			}
 		}
 	}
-	if (NDIM >= 2) {
+	if (NDIM >= 2 && experiment == 0) {
 		for (int j = 0; j < geo.H_NX_X; j++) {
 			for (int k = 0; k < geo.H_NX_Y; k++) {
 #pragma ivdep
 				for (int l = 0; l < geo.H_NX_Z; l++) {
 					const int i = geo.to_index(j, k, l);
-//					V[sx_i][i] += omega * X[1][i];
-//					V[sy_i][i] -= omega * X[0][i];
+					V[sx_i][i] += omega * X[1][i];
+					V[sy_i][i] -= omega * X[0][i];
 				}
 			}
 		}
@@ -301,14 +301,14 @@ void physics<NDIM>::post_recon(std::vector<std::vector<std::vector<safe_real>>> 
 
 	for (int d = 0; d < geo.NDIR; d++) {
 		if (d != geo.NDIR / 2) {
-			if (NDIM >= 2) {
+			if (NDIM >= 2 && experiment == 0) {
 				for (int j = 0; j < geo.H_NX_XM4; j++) {
 					for (int k = 0; k < geo.H_NX_YM4; k++) {
 #pragma ivdep
 						for (int l = 0; l < geo.H_NX_ZM4; l++) {
 							const int i = geo.to_index(j + 2, k + 2, l + 2);
-//							Q[sx_i][d][i] -= omega * (X[1][i] + 0.5 * xloc[d][1] * dx);
-//							Q[sy_i][d][i] += omega * (X[0][i] + 0.5 * xloc[d][0] * dx);
+							Q[sx_i][d][i] -= omega * (X[1][i] + 0.5 * xloc[d][1] * dx);
+							Q[sy_i][d][i] += omega * (X[0][i] + 0.5 * xloc[d][0] * dx);
 						}
 					}
 				}
