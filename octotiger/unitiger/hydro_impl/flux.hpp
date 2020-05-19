@@ -50,10 +50,10 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				}
 				std::array < safe_real, NDIM > x;
 				std::array < safe_real, NDIM > vg;
-				for( int dim = 0; dim < NDIM; dim++ ) {
+				for (int dim = 0; dim < NDIM; dim++) {
 					x[dim] = 0.5 * xloc[d][dim] * dx;
 				}
-				if  (NDIM > 1) {
+				if (NDIM > 1) {
 					vg[0] = -omega * (X[1][i] + 0.5 * xloc[d][1] * dx);
 					vg[1] = +omega * (X[0][i] + 0.5 * xloc[d][0] * dx);
 					if (NDIM == 3) {
@@ -72,18 +72,14 @@ safe_real hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, cons
 				this_am = std::min(std::min(amr, aml), safe_real(0.0));
 #pragma ivdep
 				for (int f = 0; f < nf_; f++) {
-					if (this_ap - this_am != 0.0) {
-						this_flux[f] = (this_ap * FL[f] - this_am * FR[f] + this_ap * this_am * (UR[f] - UL[f])) / (this_ap - this_am);
-					} else {
-						this_flux[f] = (FL[f] + FR[f]) / 2.0;
-					}
+					this_flux[f] = (this_ap * FL[f] - this_am * FR[f] + this_ap * this_am * (UR[f] - UL[f])) / (this_ap - this_am);
 				}
 				am = std::min(am, this_am);
 				ap = std::max(ap, this_ap);
 #pragma ivdep
 				for (int f = 0; f < nf_; f++) {
-                    // field update from flux
-                    F[dim][f][i] += weights[fi] * this_flux[f];
+					// field update from flux
+					F[dim][f][i] += weights[fi] * this_flux[f];
 				}
 			}
 			const auto this_amax = std::max(ap, safe_real(-am));

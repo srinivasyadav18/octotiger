@@ -16,6 +16,7 @@
 #include "octotiger/roe.hpp"
 #include "octotiger/space_vector.hpp"
 #include "octotiger/unitiger/hydro_impl/reconstruct.hpp"
+#include "octotiger/unitiger/hydro_impl/flux.hpp"
 
 
 #include <hpx/include/future.hpp>
@@ -979,21 +980,6 @@ void rad_grid::complete_rad_amr_boundary() {
 			for (int k0 = 1; k0 < HS_NX - 1; k0++) {
 				const int iii0 = hSindex(i0, j0, k0);
 				if (is_coarse[iii0]) {
-					for (int ir = 0; ir < 2; ir++) {
-						for (int jr = 0; jr < 2; jr++) {
-							for (int kr = 0; kr < 2; kr++) {
-								const auto i1 = 2 * i0 - H_BW + ir;
-								const auto j1 = 2 * j0 - H_BW + jr;
-								const auto k1 = 2 * k0 - H_BW + kr;
-								const auto x = (i1) * dx + xmin[XDIM];
-								const auto y = (j1) * dx + xmin[YDIM];
-								const auto z = (k1) * dx + xmin[ZDIM];
-								Uf[wx_i][iii0][ir][jr][kr] -= y * Uf[sz_i][iii0][ir][jr][kr] - z * Uf[sy_i][iii0][ir][jr][kr];
-								Uf[wy_i][iii0][ir][jr][kr] += x * Uf[sz_i][iii0][ir][jr][kr] - z * Uf[sx_i][iii0][ir][jr][kr];
-								Uf[wz_i][iii0][ir][jr][kr] -= x * Uf[sy_i][iii0][ir][jr][kr] - y * Uf[sx_i][iii0][ir][jr][kr];
-							}
-						}
-					}
 					double zx = 0, zy = 0, zz = 0, rho = 0;
 					for (int ir = 0; ir < 2; ir++) {
 						for (int jr = 0; jr < 2; jr++) {
@@ -1016,21 +1002,6 @@ void rad_grid::complete_rad_amr_boundary() {
 							}
 						}
 					}
-					for (int ir = 0; ir < 2; ir++) {
-						for (int jr = 0; jr < 2; jr++) {
-							for (int kr = 0; kr < 2; kr++) {
-								const auto i1 = 2 * i0 - H_BW + ir;
-								const auto j1 = 2 * j0 - H_BW + jr;
-								const auto k1 = 2 * k0 - H_BW + kr;
-								const auto x = (i1) * dx + xmin[XDIM];
-								const auto y = (j1) * dx + xmin[YDIM];
-								const auto z = (k1) * dx + xmin[ZDIM];
-								Uf[wx_i][iii0][ir][jr][kr] += y * Uf[sz_i][iii0][ir][jr][kr] - z * Uf[sy_i][iii0][ir][jr][kr];
-								Uf[wy_i][iii0][ir][jr][kr] -= x * Uf[sz_i][iii0][ir][jr][kr] - z * Uf[sx_i][iii0][ir][jr][kr];
-								Uf[wz_i][iii0][ir][jr][kr] += x * Uf[sy_i][iii0][ir][jr][kr] - y * Uf[sx_i][iii0][ir][jr][kr];
-							}
-						}
-					}
 				}
 			}
 		}
@@ -1046,7 +1017,7 @@ void rad_grid::complete_rad_amr_boundary() {
 					const int iiir = hindex(i, j, k);
 					if (is_coarse[iii0]) {
 						int ir, jr, kr;
-						if constexpr (H_BW % 2 == 0) {
+						if (H_BW % 2 == 0) {
 							ir = i % 2;
 							jr = j % 2;
 							kr = k % 2;

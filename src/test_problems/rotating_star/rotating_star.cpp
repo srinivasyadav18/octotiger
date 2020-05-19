@@ -52,7 +52,7 @@ public:
                 } else {
                         return 0.0;
                 }
-        }	
+        }
 	rotating_star_analytic() {
 		std::ifstream fp("rotating_star.bin", std::ios::in | std::ios::binary);
 		if (fp.fail()) {
@@ -79,7 +79,7 @@ public:
 		std::cout << "Done reading rotating_star.bin\n";
 		printf( "Omega = %e\n", omega_);
 	}
-	void state_at(double& rho, double& ene, double& sx, double& sy, double x, double y, double z) const {
+	void state_at(double& rho, double& ene, double& sx, double& sy, double x, double z, double y) const {
 		const double R = std::sqrt(x * x + y * y);
 		rho = interpolate(rho_, R, z);
 		ene = interpolate(ene_, R, z);
@@ -99,7 +99,7 @@ std::vector<real> rotating_star(real x, real y, real z, real dx) {
 
 	static rotating_star_analytic rs;
 	const real fgamma = 5.0 / 3.0;
-	rs.state_at(u[rho_i], u[egas_i], u[sx_i], u[sy_i], x, y, z);
+	rs.state_at(u[rho_i], u[egas_i], u[sx_i], u[sz_i], x, y, z);
 //	if( x > 0.0 && z > 0.0 ) {
 //		u[sx_i] += 0.01*u[rho_i];
 //		u[sy_i] += 0.01*u[rho_i];

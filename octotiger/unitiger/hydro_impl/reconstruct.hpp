@@ -319,11 +319,11 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 										for (int l = 0; l < geo::H_NX_ZM4; l++) {
 											const int i = geo::to_index(j + 2, k + 2, l + 2);
 											auto s = Q[sx_i + q][d][i];
-											if (q == 0) {
-												s += -omega * (X[1][i] + xloc[d][1] * dx * 0.5);
-											} else if (q == 1) {
-												s += +omega * (X[0][i] + xloc[d][0] * dx * 0.5);
-											}
+//											if (q == 0) {
+//												s += -omega * (X[1][i] + xloc[d][1] * dx * 0.5);
+//											} else if (q == 1) {
+//												s += +omega * (X[0][i] + xloc[d][0] * dx * 0.5);
+//											}
 											AM[n][i] -= vw[d] * lc * 0.5 * xloc[d][m] * s * Q[0][d][i] * dx;
 										}
 									}
