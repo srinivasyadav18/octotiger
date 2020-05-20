@@ -515,31 +515,32 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 								const auto di = dir[d];
 								const auto &ur = V[q][i + di];
 								const auto &ul = V[q][i - di];
-								const auto &ur2 = V[q][i + 2 * di];
-								const auto &ul2 = V[q][i - 2 * di];
-								const auto dr = 0.5 * minmod_theta(ur2 - ur, ur - u0, 2.0);
+	//							const auto &ur2 = V[q][i + 2 * di];
+	//							const auto &ul2 = V[q][i - 2 * di];
+	//							const auto dr = 0.5 * minmod_theta(ur2 - ur, ur - u0, 2.0);
 								const auto d0 = 0.5 * minmod_theta(ur - u0, u0 - ul, 2.0);
-								const auto dl = 0.5 * minmod_theta(u0 - ul, ul - ul2, 2.0);
-								if (ur > u0 && u0 > ul) {
-									const auto ur0 = std::max(qr0, std::max(u0 + d0, 0.5 * (u0 + d0 + ur - dr)));
-									const auto ul0 = std::min(ql0, std::min(u0 - d0, 0.5 * (u0 - d0 + ul + dl)));
+	//							const auto dl = 0.5 * minmod_theta(u0 - ul, ul - ul2, 2.0);
+								if (ur > u0) {
+									const auto ur0 = std::max(qr0, u0 + d0);
 									if (qr - qr0 != 0) {
 										theta = std::min(theta, (std::max(u0, std::min(ur0, qr)) - qr0) / (qr - qr0));
 									}
-									if (ql - ql0 != 0) {
-										theta = std::min(theta, (std::min(u0, std::max(ul0, ql)) - ql0) / (ql - ql0));
-									}
-								} else if (ur < u0 && u0 < ul) {
-									const auto ur0 = std::min(qr0, std::min(u0 + d0, 0.5 * (u0 + d0 + ur - dr)));
-									const auto ul0 = std::max(ql0, std::max(u0 - d0, 0.5 * (u0 - d0 + ul + dl)));
+								} else {
+									const auto ur0 = std::min(qr0, u0 + d0);
 									if (qr - qr0 != 0) {
 										theta = std::min(theta, (std::min(u0, std::max(ur0, qr)) - qr0) / (qr - qr0));
 									}
+								}
+								if (u0 > ul) {
+									const auto ul0 = std::min(ql0, u0 - d0);
+									if (ql - ql0 != 0) {
+										theta = std::min(theta, (std::min(u0, std::max(ul0, ql)) - ql0) / (ql - ql0));
+									}
+								} else {
+									const auto ul0 = std::max(ql0, u0 - d0);
 									if (ql - ql0 != 0) {
 										theta = std::min(theta, (std::max(u0, std::min(ul0, ql)) - ql0) / (ql - ql0));
 									}
-								} else {
-									theta = 0.0;
 								}
 								theta = std::max(std::min(theta, 1.0), 0.0);
 							} else {
