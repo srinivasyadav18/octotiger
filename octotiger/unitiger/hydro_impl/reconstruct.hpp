@@ -225,6 +225,7 @@ template<int NDIM, int INX, class PHYS>
 const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(const hydro::state_type &U_, const hydro::x_type &X, safe_real omega) {
 	PROFILE();
 	static thread_local std::vector<std::vector<safe_real>> AM(geo::NANGMOM, std::vector < safe_real > (geo::H_N3));
+	static thread_local std::vector<std::vector<safe_real>> V(NDIM, std::vector < safe_real > (geo::H_N3));
 	static thread_local std::vector<safe_real> AM0(geo::H_N3);
 	static thread_local std::vector<std::vector<std::vector<safe_real>> > Q(nf_,
 			std::vector < std::vector < safe_real >> (geo::NDIR, std::vector < safe_real > (geo::H_N3)));
@@ -237,7 +238,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 	const auto dx = X[0][geo::H_DNX] - X[0][0];
 	const auto &U = PHYS::template pre_recon<INX>(U_, X, omega, angmom_index_ != -1);
 	const auto &cdiscs = PHYS::template find_contact_discs<INX>(U_);
-	if (angmom_index_ == -1 || NDIM == 1) {
+	if (angmom_index_ == -1 || NDIM == 1 || experiment == 1) {
 		for (int f = 0; f < nf_; f++) {
 			reconstruct_ppm(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
 		}
@@ -425,6 +426,150 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 
 #endif
 	PHYS::template post_recon<INX>(Q, X, omega, angmom_index_ != -1);
+
+	if (experiment == 1 && angmom_index_ != -1) {
+		for (int dim = 0; dim < NDIM; dim++) {
+			for (int j = 0; j < geo::H_NX_XM4; j++) {
+				for (int k = 0; k < geo::H_NX_YM4; k++) {
+#pragma ivdep
+					for (int l = 0; l < geo::H_NX_ZM4; l++) {
+						const int i = geo::to_index(j + 2, k + 2, l + 2);
+						V[dim][i] = U_[sx_i + dim][i] / U_[0][i];
+					}
+				}
+			}
+			for (int d = 0; d < geo::NDIR; d++) {
+				if (d != geo::NDIR / 2) {
+					for (int j = 0; j < geo::H_NX_XM4; j++) {
+						for (int k = 0; k < geo::H_NX_YM4; k++) {
+#pragma ivdep
+							for (int l = 0; l < geo::H_NX_ZM4; l++) {
+								const int i = geo::to_index(j + 2, k + 2, l + 2);
+								Q[sx_i + dim][d][i] /= Q[0][d][i];
+							}
+						}
+					}
+				}
+			}
+		}
+
+		for (int n = 0; n < geo::NANGMOM; n++) {
+			for (int j = 0; j < geo::H_NX_XM4; j++) {
+				for (int k = 0; k < geo::H_NX_YM4; k++) {
+#pragma ivdep
+					for (int l = 0; l < geo::H_NX_ZM4; l++) {
+						const int i = geo::to_index(j + 2, k + 2, l + 2);
+						AM[n][i] = U[zx_i + n][i] * U[0][i];
+					}
+				}
+			}
+			for (int m = 0; m < NDIM; m++) {
+				for (int q = 0; q < NDIM; q++) {
+					const auto lc = levi_civita[n][m][q];
+					if (lc != 0) {
+						for (int d = 0; d < geo::NDIR; d++) {
+							if (d != geo::NDIR / 2) {
+								for (int j = 0; j < geo::H_NX_XM4; j++) {
+									for (int k = 0; k < geo::H_NX_YM4; k++) {
+#pragma ivdep
+										for (int l = 0; l < geo::H_NX_ZM4; l++) {
+											const int i = geo::to_index(j + 2, k + 2, l + 2);
+											const auto &s = Q[sx_i + q][d][i];
+											AM[n][i] -= vw[d] * lc * 0.5 * xloc[d][m] * s * Q[0][d][i] * dx;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		for (int j = 0; j < geo::H_NX_XM4; j++) {
+			for (int k = 0; k < geo::H_NX_YM4; k++) {
+#pragma ivdep
+				for (int l = 0; l < geo::H_NX_ZM4; l++) {
+					const int i = geo::to_index(j + 2, k + 2, l + 2);
+					for (int d = 0; d < geo::NDIR / 2; d++) {
+						for (int q = 0; q < NDIM; q++) {
+							safe_real theta = 1.0;
+							const auto f = sx_i + q;
+							const auto &rho_r = Q[0][d][i];
+							const auto &rho_l = Q[0][geo::flip(d)][i];
+							auto &qr = Q[f][d][i];
+							auto &ql = Q[f][geo::flip(d)][i];
+							auto b = 0.0;
+							for (int n = 0; n < geo::NANGMOM; n++) {
+								for (int m = 0; m < NDIM; m++) {
+									const auto lc = levi_civita[n][m][q];
+									b += 12.0 * AM[n][i] * lc * xloc[d][m] / (dx * (rho_l + rho_r));
+								}
+							}
+							const auto qr0 = qr;
+							const auto ql0 = ql;
+							qr += 0.5 * b;
+							ql -= 0.5 * b;
+							const auto &u0 = V[q][i];
+							make_monotone(ql, u0, qr);
+							if (b != 0.0) {
+								const auto di = dir[d];
+								const auto &ur = V[q][i + di];
+								const auto &ul = V[q][i - di];
+								const auto &ur2 = V[q][i + 2 * di];
+								const auto &ul2 = V[q][i - 2 * di];
+								const auto dr = 0.5 * minmod_theta(ur2 - ur, ur - u0, 2.0);
+								const auto d0 = 0.5 * minmod_theta(ur - u0, u0 - ul, 2.0);
+								const auto dl = 0.5 * minmod_theta(u0 - ul, ul - ul2, 2.0);
+								if (ur > u0 && u0 > ul) {
+									const auto ur0 = std::max(qr0, std::max(u0 + d0, std::min(ur - dr, ur)));
+									const auto ul0 = std::min(ql0, std::min(u0 - d0, std::max(ul + dl, ul)));
+									if (qr - qr0 != 0) {
+										theta = std::min(theta, (std::max(u0, std::min(ur0, qr)) - qr0) / (qr - qr0));
+									}
+									if (ql - ql0 != 0) {
+										theta = std::min(theta, (std::min(u0, std::max(ul0, ql)) - ql0) / (ql - ql0));
+									}
+								} else if (ur < u0 && u0 < ul) {
+									const auto ur0 = std::min(qr0, std::min(u0 + d0, std::max(ur - dr, ur)));
+									const auto ul0 = std::max(ql0, std::max(u0 - d0, std::min(ul + dl, ul)));
+									if (qr - qr0 != 0) {
+										theta = std::min(theta, (std::min(u0, std::max(ur0, qr)) - qr0) / (qr - qr0));
+									}
+									if (ql - ql0 != 0) {
+										theta = std::min(theta, (std::max(u0, std::min(ul0, ql)) - ql0) / (ql - ql0));
+									}
+								} else {
+									theta = 0.0;
+								}
+								theta = std::max(std::min(theta, 1.0), 0.0);
+							} else {
+								theta = 1;
+							}
+							qr = qr * theta + qr0 * (1 - theta);
+							ql = ql * theta + ql0 * (1 - theta);
+						}
+					}
+				}
+			}
+		}
+
+		for (int dim = 0; dim < NDIM; dim++) {
+			for (int d = 0; d < geo::NDIR; d++) {
+				if (d != geo::NDIR / 2) {
+					for (int j = 0; j < geo::H_NX_XM4; j++) {
+						for (int k = 0; k < geo::H_NX_YM4; k++) {
+#pragma ivdep
+							for (int l = 0; l < geo::H_NX_ZM4; l++) {
+								const int i = geo::to_index(j + 2, k + 2, l + 2);
+								Q[sx_i + dim][d][i] *= Q[0][d][i];
+							}
+						}
+					}
+				}
+			}
+		}
+
+	}
 
 	return Q;
 }

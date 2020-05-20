@@ -200,7 +200,7 @@ hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, const hy
 			}
 		}
 	}
-	if (NDIM >= 2 && !angmom) {
+	if (NDIM >= 2 && (!angmom || experiment == 1)) {
 		for (int j = 0; j < geo.H_NX_X; j++) {
 			for (int k = 0; k < geo.H_NX_Y; k++) {
 #pragma ivdep
@@ -301,7 +301,7 @@ void physics<NDIM>::post_recon(std::vector<std::vector<std::vector<safe_real>>> 
 
 	for (int d = 0; d < geo.NDIR; d++) {
 		if (d != geo.NDIR / 2) {
-			if (NDIM >= 2 && !angmom) {
+			if (NDIM >= 2 && (!angmom || experiment == 1)) {
 				for (int j = 0; j < geo.H_NX_XM4; j++) {
 					for (int k = 0; k < geo.H_NX_YM4; k++) {
 #pragma ivdep
@@ -574,10 +574,10 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 //				rho = 1.0;
 //				/**************/
 			vx = v * X[0][i] / r;
-			if  (NDIM >= 2) {
+			if (NDIM >= 2) {
 				vy = v * X[1][i] / r;
 			}
-			if  (NDIM == 3) {
+			if (NDIM == 3) {
 				vz = v * X[2][i] / r;
 			}
 			U[rho_i][i] += rho;
