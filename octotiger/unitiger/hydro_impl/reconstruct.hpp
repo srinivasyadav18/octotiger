@@ -521,8 +521,8 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 								const auto d0 = 0.5 * minmod_theta(ur - u0, u0 - ul, 2.0);
 								const auto dl = 0.5 * minmod_theta(u0 - ul, ul - ul2, 2.0);
 								if (ur > u0 && u0 > ul) {
-									const auto ur0 = std::max(qr0, std::max(u0 + d0, std::min(ur - dr, ur)));
-									const auto ul0 = std::min(ql0, std::min(u0 - d0, std::max(ul + dl, ul)));
+									const auto ur0 = std::max(qr0, std::max(u0 + d0, 0.5 * (u0 + d0 + ur - dr)));
+									const auto ul0 = std::min(ql0, std::min(u0 - d0, 0.5 * (u0 - d0 + ul + dl)));
 									if (qr - qr0 != 0) {
 										theta = std::min(theta, (std::max(u0, std::min(ur0, qr)) - qr0) / (qr - qr0));
 									}
@@ -530,8 +530,8 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 										theta = std::min(theta, (std::min(u0, std::max(ul0, ql)) - ql0) / (ql - ql0));
 									}
 								} else if (ur < u0 && u0 < ul) {
-									const auto ur0 = std::min(qr0, std::min(u0 + d0, std::max(ur - dr, ur)));
-									const auto ul0 = std::max(ql0, std::max(u0 - d0, std::min(ul + dl, ul)));
+									const auto ur0 = std::min(qr0, std::min(u0 + d0, 0.5 * (u0 + d0 + ur - dr)));
+									const auto ul0 = std::max(ql0, std::max(u0 - d0, 0.5 * (u0 - d0 + ul + dl)));
 									if (qr - qr0 != 0) {
 										theta = std::min(theta, (std::min(u0, std::max(ur0, qr)) - qr0) / (qr - qr0));
 									}
