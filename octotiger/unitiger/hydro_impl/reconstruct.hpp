@@ -511,7 +511,22 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 							ql -= 0.5 * b;
 							const auto &u0 = V[q][i];
 							if (b != 0.0) {
+								// Do monotone limiting in rotating frame
+								safe_real vr, vl;
+								if( q == 0 ) {
+									vr = +omega * xloc[d][1] * 0.5 * dx;
+									vl = -omega * xloc[d][1] * 0.5 * dx;
+								} else if( q == 1 ) {
+									vr = -omega * xloc[d][0] * 0.5 * dx;
+									vl = +omega * xloc[d][0] * 0.5 * dx;
+								} else {
+									vr = vl = 0.0;
+								}
+								ql += vl;
+								qr += vr;
 								make_monotone(ql, u0, qr);
+								ql -= vl;
+								qr -= vr;
 								const auto di = dir[d];
 								const auto &ur = V[q][i + di];
 								const auto &ul = V[q][i - di];
