@@ -510,8 +510,8 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 							qr += 0.5 * b;
 							ql -= 0.5 * b;
 							const auto &u0 = V[q][i];
-							make_monotone(ql, u0, qr);
 							if (b != 0.0) {
+								make_monotone(ql, u0, qr);
 								const auto di = dir[d];
 								const auto &ur = V[q][i + di];
 								const auto &ul = V[q][i - di];
