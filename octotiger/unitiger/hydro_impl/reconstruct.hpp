@@ -240,7 +240,8 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 	const auto &cdiscs = PHYS::template find_contact_discs<INX>(U_);
 	if (angmom_index_ == -1 || NDIM == 1 || experiment == 1) {
 		for (int f = 0; f < nf_; f++) {
-			reconstruct_ppm(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
+			auto smooth = smooth_field_[f] || (experiment == 1 && f >= angmom_index_ && f < angmom_index_ + NDIM);
+			reconstruct_ppm(Q[f], U[f], smooth, disc_detect_[f], cdiscs);
 		}
 
 	} else {
@@ -511,22 +512,6 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 							ql -= 0.5 * b;
 							const auto &u0 = V[q][i];
 							if (b != 0.0) {
-								// Do monotone limiting in rotating frame
-								safe_real vr, vl;
-								if( q == 0 ) {
-									vr = +omega * xloc[d][1] * 0.5 * dx;
-									vl = -omega * xloc[d][1] * 0.5 * dx;
-								} else if( q == 1 ) {
-									vr = -omega * xloc[d][0] * 0.5 * dx;
-									vl = +omega * xloc[d][0] * 0.5 * dx;
-								} else {
-									vr = vl = 0.0;
-								}
-								ql += vl;
-								qr += vr;
-								make_monotone(ql, u0, qr);
-								ql -= vl;
-								qr -= vr;
 								const auto di = dir[d];
 								const auto &ur = V[q][i + di];
 								const auto &ul = V[q][i - di];
@@ -562,6 +547,22 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 							}
 							qr = qr * theta + qr0 * (1 - theta);
 							ql = ql * theta + ql0 * (1 - theta);
+							// Do monotone limiting in rotating frame
+							safe_real vr, vl;
+							if (q == 0) {
+								vr = +omega * xloc[d][1] * 0.5 * dx;
+								vl = -omega * xloc[d][1] * 0.5 * dx;
+							} else if (q == 1) {
+								vr = -omega * xloc[d][0] * 0.5 * dx;
+								vl = +omega * xloc[d][0] * 0.5 * dx;
+							} else {
+								vr = vl = 0.0;
+							}
+							ql += vl;
+							qr += vr;
+							make_monotone(ql, u0, qr);
+							ql -= vl;
+							qr -= vr;
 						}
 					}
 				}
