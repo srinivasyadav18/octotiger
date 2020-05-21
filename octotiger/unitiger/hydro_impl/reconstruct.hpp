@@ -81,14 +81,14 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct_cuda
 }
 //#endif
 
-template<int NDIM, int INX, class PHYSICS>
-void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector<safe_real>> &q, const std::vector<safe_real> &u, bool smooth, bool disc_detect,
+template<int NDIM, int INX>
+void reconstruct_ppm(std::vector<std::vector<safe_real>> &q, const std::vector<safe_real> &u, bool smooth, bool disc_detect,
 		const std::vector<std::vector<double>> &disc) {
 	PROFILE();
 
 	static const cell_geometry<NDIM, INX> geo;
 	static constexpr auto dir = geo.direction();
-	static thread_local auto D1 = std::vector < safe_real > (geo.H_N3, 0.0);
+	static thread_local auto D1 = std::vector<safe_real>(geo.H_N3, 0.0);
 	for (int d = 0; d < geo.NDIR / 2; d++) {
 		const auto di = dir[d];
 		for (int j = 0; j < geo.H_NX_XM2; j++) {
@@ -238,204 +238,26 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 	const auto dx = X[0][geo::H_DNX] - X[0][0];
 	const auto &U = PHYS::template pre_recon<INX>(U_, X, omega, angmom_index_ != -1);
 	const auto &cdiscs = PHYS::template find_contact_discs<INX>(U_);
-	if (angmom_index_ == -1 || NDIM == 1 || experiment == 1) {
-		for (int f = 0; f < nf_; f++) {
-			auto smooth = smooth_field_[f] || (experiment == 1 && f >= angmom_index_ && f < angmom_index_ + NDIM);
-			reconstruct_ppm(Q[f], U[f], smooth, disc_detect_[f], cdiscs);
-		}
 
+	if (angmom_index_ == -1 || NDIM == 1) {
+		for (int f = 0; f < nf_; f++) {
+			reconstruct_ppm<NDIM, INX>(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
+		}
+		PHYS::template post_recon<INX>(Q, X, omega, angmom_index_ != -1);
 	} else {
-		for (int f = 0; f < angmom_index_; f++) {
-			reconstruct_ppm(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
-		}
-
-		int sx_i = angmom_index_;
-		int zx_i = sx_i + NDIM;
-
-		for (int f = sx_i; f < sx_i + NDIM; f++) {
-			reconstruct_ppm(Q[f], U[f], true, false, cdiscs);
-		}
-		for (int f = zx_i; f < zx_i + geo::NANGMOM; f++) {
-			reconstruct_minmod<NDIM, INX>(Q[f], U[f]);
-		}
-
-		for (int n = 0; n < geo::NANGMOM; n++) {
-			for (int j = 0; j < geo::H_NX_XM4; j++) {
-				for (int k = 0; k < geo::H_NX_YM4; k++) {
-#pragma ivdep
-					for (int l = 0; l < geo::H_NX_ZM4; l++) {
-						const int i = geo::to_index(j + 2, k + 2, l + 2);
-						AM[n][i] = U[zx_i + n][i] * U[0][i];
-					}
-				}
-			}
-			for (int m = 0; m < NDIM; m++) {
-				for (int q = 0; q < NDIM; q++) {
-					const auto lc = levi_civita[n][m][q];
-					if (lc != 0) {
-						for (int d = 0; d < geo::NDIR; d++) {
-							if (d != geo::NDIR / 2) {
-								for (int j = 0; j < geo::H_NX_XM4; j++) {
-									for (int k = 0; k < geo::H_NX_YM4; k++) {
-#pragma ivdep
-										for (int l = 0; l < geo::H_NX_ZM4; l++) {
-											const int i = geo::to_index(j + 2, k + 2, l + 2);
-											const auto &s = Q[sx_i + q][d][i];
-											AM[n][i] -= vw[d] * lc * 0.5 * xloc[d][m] * s * Q[0][d][i] * dx;
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-		for (int j = 0; j < geo::H_NX_XM4; j++) {
-			for (int k = 0; k < geo::H_NX_YM4; k++) {
-#pragma ivdep
-				for (int l = 0; l < geo::H_NX_ZM4; l++) {
-					const int i = geo::to_index(j + 2, k + 2, l + 2);
-					for (int d = 0; d < geo::NDIR / 2; d++) {
-						for (int q = 0; q < NDIM; q++) {
-							safe_real theta = 1.0;
-							const auto f = sx_i + q;
-							const auto &rho_r = Q[0][d][i];
-							const auto &rho_l = Q[0][geo::flip(d)][i];
-							auto &qr = Q[f][d][i];
-							auto &ql = Q[f][geo::flip(d)][i];
-							auto b = 0.0;
-							for (int n = 0; n < geo::NANGMOM; n++) {
-								for (int m = 0; m < NDIM; m++) {
-									const auto lc = levi_civita[n][m][q];
-									b += 12.0 * AM[n][i] * lc * xloc[d][m] / (dx * (rho_l + rho_r));
-								}
-							}
-							const auto qr0 = qr;
-							const auto ql0 = ql;
-							qr += 0.5 * b;
-							ql -= 0.5 * b;
-							const auto &u0 = U[f][i];
-							if (b != 0.0) {
-								const auto di = dir[d];
-								const auto &ur = U[f][i + di];
-								const auto &ul = U[f][i - di];
-								const auto &ur2 = U[f][i + 2 * di];
-								const auto &ul2 = U[f][i - 2 * di];
-								const auto dr = 0.5 * minmod_theta(ur2 - ur, ur - u0, 2.0);
-								const auto d0 = 0.5 * minmod_theta(ur - u0, u0 - ul, 2.0);
-								const auto dl = 0.5 * minmod_theta(u0 - ul, ul - ul2, 2.0);
-								if (ur > u0) {
-									const auto ur0 = std::max(qr0, u0 + d0);
-									if (qr - qr0 != 0) {
-										theta = std::min(theta, (std::max(u0, std::min(ur0, qr)) - qr0) / (qr - qr0));
-									}
-								} else {
-									const auto ur0 = std::min(qr0, u0 + d0);
-									if (qr - qr0 != 0) {
-										theta = std::min(theta, (std::min(u0, std::max(ur0, qr)) - qr0) / (qr - qr0));
-									}
-								}
-								if (u0 > ul) {
-									const auto ul0 = std::min(ql0, u0 - d0);
-									if (ql - ql0 != 0) {
-										theta = std::min(theta, (std::min(u0, std::max(ul0, ql)) - ql0) / (ql - ql0));
-									}
-								} else {
-									const auto ul0 = std::max(ql0, u0 - d0);
-									if (ql - ql0 != 0) {
-										theta = std::min(theta, (std::max(u0, std::min(ul0, ql)) - ql0) / (ql - ql0));
-									}
-								}
-								theta = std::max(std::min(theta, 1.0), 0.0);
-							} else {
-								theta = 1;
-							}
-							qr = qr * theta + qr0 * (1 - theta);
-							ql = ql * theta + ql0 * (1 - theta);
-							make_monotone(ql, u0, qr);
-						}
-					}
-				}
-			}
-		}
-		for (int f = angmom_index_ + geo::NANGMOM + NDIM; f < nf_; f++) {
-			reconstruct_ppm(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
-		}
-
-	}
-
-#ifdef TVD_TEST
-	{
-		PROFILE();
-		/**** ENSURE TVD TEST***/
+		const auto sx_i = angmom_index_;
+		const auto zx_i = sx_i + NDIM;
 		for (int f = 0; f < nf_; f++) {
-			if (!smooth_field_[f]) {
-				for (int d = 0; d < geo::NDIR / 2; d++) {
-					for (int j = 0; j < geo::H_NX_XM4; j++) {
-						for (int k = 0; k < geo::H_NX_YM4; k++) {
-#pragma ivdep
-							for (int l = 0; l < geo::H_NX_ZM4; l++) {
-								const int i = geo::to_index(j + 2, k + 2, l + 2);
-								const auto up = U[f][i + dir[d]];
-								const auto u0 = U[f][i];
-								const auto um = U[f][i - dir[d]];
-								const auto qp = Q[f][d][i];
-								const auto qm = Q[f][geo::flip(d)][i];
-								auto norm = std::max(std::abs(u0), std::max(std::abs(up), std::abs(um)));
-								norm *= norm;
-								if ((qp - qm) * (up - um) < -1.0e-12 * norm) {
-									printf("TVD fail 1 %e\n", (qp - qm) * (up - um) / norm);
-									abort();
-								}
-//								if (!PPM_test(qp, u0, qm)) {
-//									printf("TVD fail 4\n");
-//									abort();
-//								}
-							}
-						}
-					}
-				}
-				for (int d = 0; d < geo::NDIR; d++) {
-					if (d != geo::NDIR / 2) {
-						for (int j = 0; j < geo::H_NX_XM6; j++) {
-							for (int k = 0; k < geo::H_NX_YM6; k++) {
-#pragma ivdep
-								for (int l = 0; l < geo::H_NX_ZM6; l++) {
-									const int i = geo::to_index(j + 3, k + 3, l + 3);
-									const auto ur = U[f][i + dir[d]];
-									const auto ul = U[f][i];
-									const auto ql = Q[f][geo::flip(d)][i + dir[d]];
-									const auto qr = Q[f][d][i];
-									auto norm = std::max(std::abs(ur), std::abs(ul));
-									norm *= norm;
-									if ((qr - ul) * (ur - qr) < -1.0e-12 * norm) {
-										printf("TVD fail 3 %e\n", (qr - ul) * (ur - qr) / norm);
-										abort();
-									}
-									if ((ql - ul) * (ur - ql) < -1.0e-12 * norm) {
-										printf("TVD fail 5 %e\n", (ql - ul) * (ur - ql) / norm);
-										abort();
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+			auto smooth = smooth_field_[f] || (f >= sx_i && f < sx_i + NDIM);
+			reconstruct_ppm<NDIM, INX>(Q[f], U[f], smooth, disc_detect_[f], cdiscs);
 		}
-	}
-
-#endif
-	PHYS::template post_recon<INX>(Q, X, omega, angmom_index_ != -1);
-
-	if (experiment == 1 && angmom_index_ != -1) {
+		PHYS::template post_recon<INX>(Q, X, omega, angmom_index_ != -1);
 		for (int dim = 0; dim < NDIM; dim++) {
-			for (int j = 0; j < geo::H_NX_XM4; j++) {
-				for (int k = 0; k < geo::H_NX_YM4; k++) {
+			for (int j = 0; j < geo::H_NX_XM2; j++) {
+				for (int k = 0; k < geo::H_NX_YM2; k++) {
 #pragma ivdep
-					for (int l = 0; l < geo::H_NX_ZM4; l++) {
-						const int i = geo::to_index(j + 2, k + 2, l + 2);
+					for (int l = 0; l < geo::H_NX_ZM2; l++) {
+						const int i = geo::to_index(j + 1, k + 1, l + 1);
 						V[dim][i] = U_[sx_i + dim][i] / U_[0][i];
 					}
 				}
@@ -500,71 +322,48 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 							const auto &rho_l = Q[0][geo::flip(d)][i];
 							auto &qr = Q[f][d][i];
 							auto &ql = Q[f][geo::flip(d)][i];
-							auto b = 0.0;
+							auto db = 0.0;
 							for (int n = 0; n < geo::NANGMOM; n++) {
 								for (int m = 0; m < NDIM; m++) {
 									const auto lc = levi_civita[n][m][q];
-									b += 12.0 * AM[n][i] * lc * xloc[d][m] / (dx * (rho_l + rho_r));
+									db += 12.0 * AM[n][i] * lc * xloc[d][m] / (dx * (rho_l + rho_r));
 								}
 							}
-							const auto qr0 = qr;
-							const auto ql0 = ql;
-							qr += 0.5 * b;
-							ql -= 0.5 * b;
-							const auto &u0 = V[q][i];
-							if (b != 0.0) {
-								const auto di = dir[d];
-								const auto &ur = V[q][i + di];
-								const auto &ul = V[q][i - di];
-	//							const auto &ur2 = V[q][i + 2 * di];
-	//							const auto &ul2 = V[q][i - 2 * di];
-	//							const auto dr = 0.5 * minmod_theta(ur2 - ur, ur - u0, 2.0);
-								const auto d0 = 0.5 * minmod_theta(ur - u0, u0 - ul, 2.0);
-	//							const auto dl = 0.5 * minmod_theta(u0 - ul, ul - ul2, 2.0);
-								if (ur > u0) {
-									const auto ur0 = std::max(qr0, u0 + d0);
-									if (qr - qr0 != 0) {
-										theta = std::min(theta, (std::max(u0, std::min(ur0, qr)) - qr0) / (qr - qr0));
-									}
-								} else {
-									const auto ur0 = std::min(qr0, u0 + d0);
-									if (qr - qr0 != 0) {
-										theta = std::min(theta, (std::min(u0, std::max(ur0, qr)) - qr0) / (qr - qr0));
-									}
-								}
-								if (u0 > ul) {
-									const auto ul0 = std::min(ql0, u0 - d0);
-									if (ql - ql0 != 0) {
-										theta = std::min(theta, (std::min(u0, std::max(ul0, ql)) - ql0) / (ql - ql0));
-									}
-								} else {
-									const auto ul0 = std::max(ql0, u0 - d0);
-									if (ql - ql0 != 0) {
-										theta = std::min(theta, (std::max(u0, std::min(ul0, ql)) - ql0) / (ql - ql0));
-									}
-								}
-								theta = std::max(std::min(theta, 1.0), 0.0);
-							} else {
-								theta = 1;
-							}
-							qr = qr * theta + qr0 * (1 - theta);
-							ql = ql * theta + ql0 * (1 - theta);
-							// Do monotone limiting in rotating frame
 							safe_real vr, vl;
 							if (q == 0) {
-								vr = +omega * xloc[d][1] * 0.5 * dx;
-								vl = -omega * xloc[d][1] * 0.5 * dx;
+								vr = -omega * xloc[d][1] * 0.5 * dx;
+								vl = +omega * xloc[d][1] * 0.5 * dx;
 							} else if (q == 1) {
-								vr = -omega * xloc[d][0] * 0.5 * dx;
-								vl = +omega * xloc[d][0] * 0.5 * dx;
+								vr = +omega * xloc[d][0] * 0.5 * dx;
+								vl = -omega * xloc[d][0] * 0.5 * dx;
 							} else {
 								vr = vl = 0.0;
 							}
-							ql += vl;
-							qr += vr;
-							make_monotone(ql, u0, qr);
+							const auto di = dir[d];
+							const auto ur = V[q][i + di];
+							const auto u0 = V[q][i];
+							const auto ul = V[q][i - di];
+
+							// slope from PPM
+							const auto b0 = qr - ql;
+							// limited slope in rotating frame;
+							const auto b1 = minmod_theta((ur - 2.0 * vr) - u0, u0 - (ul - 2.0 * vl), 2.0) + (vr - vl);
+							const auto bmax = std::max(std::max(b0, b1), 0.0);
+							const auto bmin = std::min(std::min(b0, b1), 0.0);
+							qr += 0.5 * db;
+							ql -= 0.5 * db;
+							auto dif = qr - ql;
+							const auto avg = 0.5 * (qr + ql);
+							dif = std::min(bmax, std::max(bmin, dif));
+							qr = avg + 0.5 * dif;
+							ql = avg - 0.5 * dif;
+
+							// Do monotone limiting in rotating frame
 							ql -= vl;
 							qr -= vr;
+							make_monotone(ql, u0, qr);
+							ql += vl;
+							qr += vr;
 						}
 					}
 				}
