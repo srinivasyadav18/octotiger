@@ -107,7 +107,7 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 	static const cell_geometry<NDIM, INX> geo;
 	static constexpr auto dir = geo.direction();
 	static thread_local auto D1 = std::vector < safe_real > (geo.H_N3, 0.0);
-	const auto theta = experiment == 1 ? 1.3 : 2.0;
+	const auto theta = experiment == 1 ? 1.99 : 2.0;
 	for (int d = 0; d < geo.NDIR / 2; d++) {
 		const auto di = dir[d];
 		for (int j = 0; j < geo.H_NX_XM2; j++) {
@@ -119,7 +119,7 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 				}
 			}
 		}
-		if (experiment != 1) {
+		if (experiment != 1 || smooth) {
 			for (int j = 0; j < geo.H_NX_XM2; j++) {
 				for (int k = 0; k < geo.H_NX_YM2; k++) {
 #pragma ivdep
@@ -138,7 +138,7 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 					for (int l = 0; l < geo.H_NX_ZM4; l++) {
 						const int i = geo.to_index(j + 2, k + 2, l + 2);
 						auto D2 = minmod_theta(D1[i + di] - D1[i], D1[i] - D1[i - di], theta);
-						D2 = std::copysign(D2, std::min(std::abs(D2), 2.0 * std::abs(D1[i])));
+						D2 = std::copysign(std::min(std::abs(D2), 2.0 * std::abs(D1[i])), D2);
 						q[d][i] = u[i] + 0.5 * D1[i] + (1.0 / 12.0) * D2;
 						q[geo::flip(d)][i] = u[i] - 0.5 * D1[i] + (1.0 / 12.0) * D2;
 					}
@@ -147,41 +147,39 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 		}
 
 	}
-	if (experiment != 1) {
-		if (disc_detect) {
-			constexpr auto eps = 0.01;
-			constexpr auto eps2 = 0.001;
-			constexpr auto eta1 = 20.0;
-			constexpr auto eta2 = 0.05;
-			for (int d = 0; d < geo.NDIR / 2; d++) {
-				const auto di = dir[d];
-				for (int j = 0; j < geo.H_NX_XM4; j++) {
-					for (int k = 0; k < geo.H_NX_YM4; k++) {
+	if (disc_detect) {
+		constexpr auto eps = 0.01;
+		constexpr auto eps2 = 0.001;
+		constexpr auto eta1 = 20.0;
+		constexpr auto eta2 = 0.05;
+		for (int d = 0; d < geo.NDIR / 2; d++) {
+			const auto di = dir[d];
+			for (int j = 0; j < geo.H_NX_XM4; j++) {
+				for (int k = 0; k < geo.H_NX_YM4; k++) {
 #pragma ivdep
-						for (int l = 0; l < geo.H_NX_ZM4; l++) {
-							const int i = geo.to_index(j + 2, k + 2, l + 2);
-							const auto &up = u[i + di];
-							const auto &u0 = u[i];
-							const auto &um = u[i - di];
-							const auto dif = up - um;
-							if (std::abs(dif) > disc[d][i] * std::min(std::abs(up), std::abs(um))) {
-								if (std::min(std::abs(up), std::abs(um)) / std::max(std::abs(up), std::abs(um)) > eps2) {
-									const auto d2p = (1.0 / 6.0) * (u[i + 2 * di] + u0 - 2.0 * u[i + di]);
-									const auto d2m = (1.0 / 6.0) * (u0 + u[i - 2 * di] - 2.0 * u[i - di]);
-									if (d2p * d2m < 0.0) {
-										double eta = 0.0;
-										if (std::abs(dif) > eps * std::min(std::abs(up), std::abs(um))) {
-											eta = -(d2p - d2m) / dif;
-										}
-										eta = std::max(0.0, std::min(eta1 * (eta - eta2), 1.0));
-										if (eta > 0.0) {
-											auto ul = um + 0.5 * minmod_theta(u[i] - um, um - u[i - 2 * di], 2.0);
-											auto ur = up - 0.5 * minmod_theta(u[i + 2 * di] - up, up - u[i], 2.0);
-											auto &qp = q[d][i];
-											auto &qm = q[geo.flip(d)][i];
-											qp += eta * (ur - qp);
-											qm += eta * (ul - qm);
-										}
+					for (int l = 0; l < geo.H_NX_ZM4; l++) {
+						const int i = geo.to_index(j + 2, k + 2, l + 2);
+						const auto &up = u[i + di];
+						const auto &u0 = u[i];
+						const auto &um = u[i - di];
+						const auto dif = up - um;
+						if (std::abs(dif) > disc[d][i] * std::min(std::abs(up), std::abs(um))) {
+							if (std::min(std::abs(up), std::abs(um)) / std::max(std::abs(up), std::abs(um)) > eps2) {
+								const auto d2p = (1.0 / 6.0) * (u[i + 2 * di] + u0 - 2.0 * u[i + di]);
+								const auto d2m = (1.0 / 6.0) * (u0 + u[i - 2 * di] - 2.0 * u[i - di]);
+								if (d2p * d2m < 0.0) {
+									double eta = 0.0;
+									if (std::abs(dif) > eps * std::min(std::abs(up), std::abs(um))) {
+										eta = -(d2p - d2m) / dif;
+									}
+									eta = std::max(0.0, std::min(eta1 * (eta - eta2), 1.0));
+									if (eta > 0.0) {
+										auto ul = um + 0.5 * minmod_theta(u[i] - um, um - u[i - 2 * di], 2.0);
+										auto ur = up - 0.5 * minmod_theta(u[i + 2 * di] - up, up - u[i], 2.0);
+										auto &qp = q[d][i];
+										auto &qm = q[geo.flip(d)][i];
+										qp += eta * (ur - qp);
+										qm += eta * (ul - qm);
 									}
 								}
 							}
@@ -190,17 +188,17 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 				}
 			}
 		}
-		if (!smooth) {
-			for (int d = 0; d < geo.NDIR / 2; d++) {
-				for (int j = 0; j < geo.H_NX_XM4; j++) {
-					for (int k = 0; k < geo.H_NX_YM4; k++) {
+	}
+	if (!smooth && (experiment != 1 || disc_detect)) {
+		for (int d = 0; d < geo.NDIR / 2; d++) {
+			for (int j = 0; j < geo.H_NX_XM4; j++) {
+				for (int k = 0; k < geo.H_NX_YM4; k++) {
 #pragma ivdep
-						for (int l = 0; l < geo.H_NX_ZM4; l++) {
-							const int i = geo.to_index(j + 2, k + 2, l + 2);
-							auto &qp = q[geo.flip(d)][i];
-							auto &qm = q[d][i];
-							make_monotone(qm, u[i], qp);
-						}
+					for (int l = 0; l < geo.H_NX_ZM4; l++) {
+						const int i = geo.to_index(j + 2, k + 2, l + 2);
+						auto &qp = q[geo.flip(d)][i];
+						auto &qm = q[d][i];
+						make_monotone(qm, u[i], qp);
 					}
 				}
 			}
@@ -246,15 +244,11 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 	static constexpr auto dir = geo::direction();
 
 	const auto dx = X[0][geo::H_DNX] - X[0][0];
-	const auto &U = PHYS::template pre_recon<INX>(U_, X, omega, angmom_index_ != -1);
+	const auto &U = PHYS::template pre_recon<INX>(U_, X, experiment != 1 ? omega : 0.0, angmom_index_ != -1);
 	const auto &cdiscs = PHYS::template find_contact_discs<INX>(U_);
 	if (angmom_index_ == -1 || NDIM == 1) {
 		for (int f = 0; f < nf_; f++) {
-			if (f < lx_i || f > lx_i + geo::NANGMOM || NDIM == 1) {
-				reconstruct_ppm(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
-			} else {
-				reconstruct_minmod<NDIM, INX>(Q[f], U[f]);
-			}
+			reconstruct_ppm(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
 		}
 
 	} else {
@@ -269,7 +263,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 			reconstruct_ppm(Q[f], U[f], true, false, cdiscs);
 		}
 		for (int f = zx_i; f < zx_i + geo::NANGMOM; f++) {
-			reconstruct_minmod<NDIM, INX>(Q[f], U[f]);
+			reconstruct_ppm(Q[f], U[f], true, false, cdiscs);
 		}
 
 		for (int n = 0; n < geo::NANGMOM; n++) {
@@ -427,7 +421,7 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 	}
 
 #endif
-	PHYS::template post_recon<INX>(Q, X, omega, angmom_index_ != -1);
+	PHYS::template post_recon<INX>(Q, X, experiment != 1 ? omega : 0.0, angmom_index_ != -1);
 
 	return Q;
 }

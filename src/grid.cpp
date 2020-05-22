@@ -72,7 +72,7 @@ void grid::static_init() {
 	energy_bw.resize(opts().n_fields, 0);
 	energy_bw[egas_i] = 1;
 	for (int dim = 0; dim < NDIM; dim++) {
-		field_bw[lx_i + dim] = 2;
+		field_bw[lx_i + dim] = 3;
 	}
 
 	str_to_index_hydro[std::string("egas")] = egas_i;
