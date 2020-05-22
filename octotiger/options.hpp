@@ -65,6 +65,7 @@ public:
 	integer silo_offset_z;
 	integer future_wait_time;
 
+	real experiment_theta;
 	real dt_max;
 	real eblast0;
 	real rotating_star_x;
@@ -123,6 +124,7 @@ public:
 
 	template<class Arc>
 	void serialize(Arc &arc, unsigned) {
+		arc & experiment_theta;
 		arc &eblast0;
 		arc & rho_floor;
 		arc & tau_floor;

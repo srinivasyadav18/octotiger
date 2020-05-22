@@ -72,6 +72,7 @@ bool options::process_options(int argc, char *argv[]) {
 	("sod_rhor", po::value<real>(&(opts().sod_rhor))->default_value(0.125), "density in the right part of the grid")     //
 	("sod_pl", po::value<real>(&(opts().sod_pl))->default_value(1.0), "pressure in the left part of the grid")     //
 	("sod_pr", po::value<real>(&(opts().sod_pr))->default_value(0.1), "pressure in the right part of the grid")     //
+	("experiment_theta", po::value<real>(&(opts().experiment_theta))->default_value(1.99), "theta for experiment")     //
 	("sod_theta", po::value<real>(&(opts().sod_theta))->default_value(0.0), "angle made by diaphragm normal w/x-axis (deg)")     //
 	("sod_phi", po::value<real>(&(opts().sod_phi))->default_value(90.0), "angle made by diaphragm normal w/z-axis (deg)")     //
 	("sod_gamma", po::value<real>(&(opts().sod_gamma))->default_value(1.4), "ratio of specific heats for gas")     //

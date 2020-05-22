@@ -107,7 +107,7 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 	static const cell_geometry<NDIM, INX> geo;
 	static constexpr auto dir = geo.direction();
 	static thread_local auto D1 = std::vector < safe_real > (geo.H_N3, 0.0);
-	const auto theta = experiment == 1 ? 1.99 : 2.0;
+	const auto theta = experiment == 1 ? experiment_theta : 2.0;
 	for (int d = 0; d < geo.NDIR / 2; d++) {
 		const auto di = dir[d];
 		for (int j = 0; j < geo.H_NX_XM2; j++) {

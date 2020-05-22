@@ -99,10 +99,13 @@ struct hydro_computer: public cell_geometry<NDIM, INX> {
 		bc_ = std::move(bc);
 	}
 
-
+	void set_experiment_theta(safe_real t) {
+		experiment_theta = t;
+	}
 
 private:
 	int experiment;
+	safe_real experiment_theta;
 	int nf_;
 	int angmom_index_;
 	std::vector<bool> smooth_field_;

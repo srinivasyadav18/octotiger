@@ -1762,6 +1762,7 @@ real grid::compute_fluxes() {
 //	hydro.set_low_order();
 	/******************************/
 	hydro.use_experiment(opts().experiment);
+	hydro.set_experiment_theta(opts().experiment_theta);
 	if (opts().correct_am_hydro) {
 		hydro.use_angmom_correction(sx_i);
 	}
