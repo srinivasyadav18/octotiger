@@ -158,8 +158,10 @@ void hydro_computer<NDIM, INX, PHYSICS>::reconstruct_ppm(std::vector<std::vector
 #pragma ivdep
 					for (int l = 0; l < geo.H_NX_ZM2; l++) {
 						const int i = geo.to_index(j + 1, k + 1, l + 1);
-						const auto mx = std::max(u[i + di], u[i]);
-						const auto mn = std::min(u[i + di], u[i]);
+						const auto du = (1.0 / 3.0) * std::abs(u[i + di] - u[i]);
+						const auto u0 = (u[i + di] + u[i]) * 0.5;
+						const auto mx = std::max(u0 + du, u[i]);
+						const auto mn = std::min(u0 - du, u[i]);
 						q[d][i] = std::min(mx, q[d][i]);
 						q[d][i] = std::max(mn, q[d][i]);
 					}
@@ -268,15 +270,15 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 #ifdef OCTOTIGER_ANGMOM
 	const auto &U = PHYS::template pre_recon<INX>(U_, X, omega, angmom_index_ != -1);
 #else
-	const auto &U = PHYS::template pre_recon<INX>(U_, X, omega,false);
+	const auto &U = PHYS::template pre_recon<INX>(U_, X, omega, false);
 #endif
 	const auto &cdiscs = PHYS::template find_contact_discs<INX>(U_);
 #ifdef OCTOTIGER_ANGMOM
 	if (angmom_index_ == -1 || NDIM == 1) {
 #endif
-		for (int f = 0; f < nf_; f++) {
-			reconstruct_ppm(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
-		}
+	for (int f = 0; f < nf_; f++) {
+		reconstruct_ppm(Q[f], U[f], smooth_field_[f], disc_detect_[f], cdiscs);
+	}
 
 #ifdef OCTOTIGER_ANGMOM
 	} else {
