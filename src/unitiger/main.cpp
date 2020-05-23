@@ -35,9 +35,11 @@ template<int NDIM, int INX, class PHYS>
 void run_test(typename PHYS::test_type problem, bool with_correction, bool writingForTest) {
 	static constexpr safe_real CFL = (0.4 / NDIM);
 	hydro_computer<NDIM, INX, PHYS> computer;
+#ifdef OCTOTIGER_ANGMOM
 	if (with_correction) {
 		computer.use_angmom_correction(PHYS::get_angmom_index());
 	}
+#endif
 	const auto nf = PHYS::field_count();
 	computer.use_disc_detect(PHYS::rho_i);
 	for (int s = 0; s < 5; s++) {
@@ -77,7 +79,7 @@ void run_test(typename PHYS::test_type problem, bool with_correction, bool writi
 		dt = std::min(double(dt), tmax - t + 1.0e-20);
 		computer.advance(U0, U, F, X, dx, dt, 1.0, omega);
 		computer.boundaries(U, X);
-		if constexpr (RK == 3) {
+		if (RK == 3) {
 			q = computer.reconstruct(U, X, omega);
 			computer.flux(U, q, F, X, omega);
 			computer.advance(U0, U, F, X, dx, dt, 0.25, omega);
@@ -86,7 +88,7 @@ void run_test(typename PHYS::test_type problem, bool with_correction, bool writi
 			computer.flux(U, q, F, X, omega);
 			computer.advance(U0, U, F, X, dx, dt, 2.0 / 3.0, omega);
 			computer.boundaries(U, X);
-		} else if constexpr (RK == 2) {
+		} else if (RK == 2) {
 			q = computer.reconstruct(U, X, omega);
 			computer.flux(U, q, F, X, omega);
 			computer.advance(U0, U, F, X, dx, dt, 0.5, omega);

@@ -10,6 +10,7 @@ void hydro_computer<NDIM, INX, PHYS>::boundaries(hydro::state_type &U, const hyd
 
 	static const cell_geometry<NDIM, INX> geo;
 	static constexpr auto lc = geo.levi_civita();
+#ifdef OCTOTIGER_ANGMOM
 	if (angmom_index_ != -1) {
 		const auto sx_i = angmom_index_;
 		const auto lx_i = NDIM + angmom_index_;
@@ -25,9 +26,10 @@ void hydro_computer<NDIM, INX, PHYS>::boundaries(hydro::state_type &U, const hyd
 			}
 		}
 	}
+#endif
 
 	for (int f = 0; f < nf_; f++) {
-		if constexpr (NDIM == 1) {
+		if (NDIM == 1) {
 			for (int i = 0; i < geo::H_BW; i++) {
 				if (bc_[0] == OUTFLOW) {
 					U[f][i] = U[f][geo::H_BW];
@@ -43,7 +45,7 @@ void hydro_computer<NDIM, INX, PHYS>::boundaries(hydro::state_type &U, const hyd
 
 			}
 
-		} else if constexpr (NDIM == 2) {
+		} else if (NDIM == 2) {
 
 			const auto index = [](int i, int j) {
 				return j + geo::H_NX * i;

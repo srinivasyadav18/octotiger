@@ -1777,9 +1777,11 @@ real grid::compute_fluxes() {
 //	hydro.set_low_order();
 	/******************************/
 	hydro.use_experiment(opts().experiment);
+#ifdef OCTOTIGER_ANGMOM
 	if (opts().correct_am_hydro) {
 		hydro.use_angmom_correction(sx_i);
 	}
+#endif
 	if (opts().cdisc_detect) {
 		hydro.use_disc_detect(rho_i);
 		for (int i = spc_i; i < spc_i + opts().n_species; i++) {
