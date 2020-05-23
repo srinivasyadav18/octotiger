@@ -30,9 +30,11 @@ public:
 	static constexpr integer fx_i = 1;
 	static constexpr integer fy_i = 2;
 	static constexpr integer fz_i = 3;
+#ifdef OCTOTIGER_ANGMOM
 	static constexpr integer wx_i = 4;
 	static constexpr integer wy_i = 5;
 	static constexpr integer wz_i = 6;
+#endif
 private:
 	static constexpr integer DX = RAD_NX * RAD_NX;
 	static constexpr integer DY = RAD_NX;

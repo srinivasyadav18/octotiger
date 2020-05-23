@@ -13,17 +13,24 @@
 template<int NDIM>
 struct radiation_physics {
 
+#ifdef OCTOTIGER_ANGMOM
 	static constexpr char const *field_names3[] = { "er", "fx", "fy", "fz", "wx", "wy", "wz" };
 	static constexpr char const *field_names2[] = { "er", "fx", "fy", "wz" };
+#else
+	static constexpr char const *field_names3[] = { "er", "fx", "fy", "fz"};
+	static constexpr char const *field_names2[] = { "er", "fx", "fy"};
+#endif
 	static constexpr char const *field_names1[] = { "er", "fx" };
 	static constexpr int er_i = 0;
 	static constexpr int fx_i = 1;
 	static constexpr int fy_i = 2;
 	static constexpr int fz_i = 3;
+#ifdef OCTOTIGER_ANGMOM
 	static constexpr int wx_i = 1 + NDIM;
 	static constexpr int wy_i = 1 + NDIM;
 	static constexpr int wz_i = 1 + NDIM;
 	static bool angmom_;
+#endif
 
 	enum test_type {
 		CONTACT

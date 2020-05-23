@@ -974,6 +974,7 @@ void rad_grid::complete_rad_amr_boundary() {
 		}
 	}
 
+#ifdef OCTOTIGER_ANGMOM
 	for (int i0 = 1; i0 < HS_NX - 1; i0++) {
 		for (int j0 = 1; j0 < HS_NX - 1; j0++) {
 			for (int k0 = 1; k0 < HS_NX - 1; k0++) {
@@ -1035,6 +1036,7 @@ void rad_grid::complete_rad_amr_boundary() {
 			}
 		}
 	}
+#endif
 	for (int f = 0; f < NRF; f++) {
 		for (int i = 0; i < H_NX; i++) {
 			for (int j = 0; j < H_NX; j++) {

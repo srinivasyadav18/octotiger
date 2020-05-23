@@ -71,13 +71,14 @@ void radiation_physics<NDIM>::physical_flux(const std::vector<safe_real> &U, std
 	for (int d = 0; d < NDIM; d++) {
 		F[fx_i + d] = er * T[d] - vg[dim] * fr[d];
 	}
+#ifdef OCTOTIGER_ANGMOM
 	for (int n = 0; n < geo.NANGMOM; n++) {
 #pragma ivdep
 		for (int m = 0; m < NDIM; m++) {
 			F[wx_i + n] += levi_civita[n][m][dim] * x[m] * F[fx_i + m];
 		}
 	}
-
+#endif
 }
 
 template<int NDIM>
@@ -160,6 +161,7 @@ const hydro::state_type& radiation_physics<NDIM>::pre_recon(const hydro::state_t
 					V[fx_i + dim][i] *= erinv;
 				}
 				static constexpr auto lc = geo.levi_civita();
+#ifdef OCTOTIGER_ANGMOM
 				for (int n = 0; n < geo.NANGMOM; n++) {
 					V[wx_i + n][i] *= erinv;
 					for (int m = 0; m < NDIM; m++) {
@@ -168,6 +170,7 @@ const hydro::state_type& radiation_physics<NDIM>::pre_recon(const hydro::state_t
 						}
 					}
 				}
+#endif
 			}
 		}
 	}
@@ -190,6 +193,7 @@ void radiation_physics<NDIM>::post_recon(std::vector<std::vector<std::vector<saf
 						const int i = geo.to_index(j + 2, k + 2, l + 2);
 						const auto er = Q[er_i][d][i];
 						static constexpr auto lc = geo.levi_civita();
+#ifdef OCTOTIGER_ANGMOM
 						for (int n = 0; n < geo.NANGMOM; n++) {
 							for (int m = 0; m < NDIM; m++) {
 								for (int l = 0; l < NDIM; l++) {
@@ -198,6 +202,7 @@ void radiation_physics<NDIM>::post_recon(std::vector<std::vector<std::vector<saf
 							}
 							Q[wx_i + n][d][i] *= er;
 						}
+#endif
 						for (int dim = 0; dim < NDIM; dim++) {
 							Q[fx_i + dim][d][i] *= er;
 						}

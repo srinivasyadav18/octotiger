@@ -37,7 +37,11 @@ constexpr int REFINE_BW = 2;
 
 
 //#define EXPERIMENT
+#ifdef OCTOTIGER_ANGMOM
 constexpr int NRF = 7;
+#else
+constexpr int NRF = 4;
+#endif
 
 #define abort_error() printf( "Error in %s on line %i\n", __FILE__, __LINE__); abort()
 
