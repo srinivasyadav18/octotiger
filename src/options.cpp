@@ -63,6 +63,7 @@ bool options::process_options(int argc, char *argv[]) {
 	("dt_max", po::value<real>(&(opts().dt_max))->default_value(0.333333), "max allowed pct change for positive fields in a timestep")           //
 	("cfl", po::value<real>(&(opts().cfl))->default_value(0.4), "cfl factor")           //
 	("omega", po::value<real>(&(opts().omega))->default_value(0.0), "(initial) angular frequency")                          //
+	("analytic_lhs_only", po::value<bool>(&(opts().analytic_lhs_only))->default_value(false), "")                   //
 	("v1309", po::value<bool>(&(opts().v1309))->default_value(false), "V1309 subproblem of DWD")                   //
 	("idle_rates", po::value<bool>(&(opts().idle_rates))->default_value(true), "show idle rates and locality info in SILO")                 //
 	("eblast0", po::value<real>(&(opts().eblast0))->default_value(1.0), "energy for blast wave")     //
@@ -218,6 +219,7 @@ bool options::process_options(int argc, char *argv[]) {
 			silo_num_groups = num_loc;
 		}
 		SHOW(accretor_refine);
+		SHOW(analytic_lhs_only);
 		SHOW(amrbnd_order);
 		SHOW(bench);
 		SHOW(cdisc_detect);

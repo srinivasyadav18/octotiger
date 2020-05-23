@@ -1634,26 +1634,29 @@ analytic_t grid::compute_analytic(real t) {
 						break;
 					}
 				}
-				for (integer field = 0; field != opts().n_fields; ++field) {
-					real dif = std::abs(A[field] - U[field][iii]);
-					a.l1[field] += dif * dv;
-					a.l2[field] += dif * dif * dv;
-					a.linf[field] = std::max(dif, a.linf[field]);
-					U[field][iii] = A[field];
-				}
-				if (opts().radiation) {
-					for (integer field = opts().n_fields; field != opts().n_fields + NRF; ++field) {
-						auto tmp = rad_grid_ptr->get_field(field - opts().n_fields, i - H_BW + R_BW, j - H_BW + R_BW, k - H_BW + R_BW);
-						real dif = std::abs(A[field] - tmp);
+
+				if (!opts().analytic_lhs_only || X[XDIM][iii] < 0.0) {
+					for (integer field = 0; field != opts().n_fields; ++field) {
+						real dif = std::abs(A[field] - U[field][iii]);
 						a.l1[field] += dif * dv;
 						a.l2[field] += dif * dif * dv;
-						rad_grid_ptr->set_field(A[field], field - opts().n_fields, i - H_BW + R_BW, j - H_BW + R_BW, k - H_BW + R_BW);
+						a.linf[field] = std::max(dif, a.linf[field]);
+						U[field][iii] = A[field];
 					}
-				}
-				if (opts().problem == SOLID_SPHERE) {
-					const auto a = solid_sphere_analytic_phi(X[0][iii], X[1][iii], X[2][iii], 0.25);
-					for (int f = 0; f < 4; f++) {
-						G[gindex(i - H_BW, j - H_BW, k - H_BW)][f] = a[f];
+					if (opts().radiation) {
+						for (integer field = opts().n_fields; field != opts().n_fields + NRF; ++field) {
+							auto tmp = rad_grid_ptr->get_field(field - opts().n_fields, i - H_BW + R_BW, j - H_BW + R_BW, k - H_BW + R_BW);
+							real dif = std::abs(A[field] - tmp);
+							a.l1[field] += dif * dv;
+							a.l2[field] += dif * dif * dv;
+							rad_grid_ptr->set_field(A[field], field - opts().n_fields, i - H_BW + R_BW, j - H_BW + R_BW, k - H_BW + R_BW);
+						}
+					}
+					if (opts().problem == SOLID_SPHERE) {
+						const auto a = solid_sphere_analytic_phi(X[0][iii], X[1][iii], X[2][iii], 0.25);
+						for (int f = 0; f < 4; f++) {
+							G[gindex(i - H_BW, j - H_BW, k - H_BW)][f] = a[f];
+						}
 					}
 				}
 			}

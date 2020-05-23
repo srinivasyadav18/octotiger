@@ -48,6 +48,7 @@ public:
 	bool correct_am_hydro;
 	bool rotating_star_amr;
 	bool idle_rates;
+	bool analytic_lhs_only;
 
 	integer scf_output_frequency;
 	integer silo_num_groups;
@@ -189,6 +190,7 @@ public:
 		arc & extra_regrid;
 		arc & accretor_refine;
 		arc & idle_rates;
+		arc & analytic_lhs_only;
 		int tmp = problem;
 		arc & tmp;
 		problem = static_cast<problem_type>(tmp);
