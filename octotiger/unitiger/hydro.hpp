@@ -75,7 +75,9 @@ struct hydro_computer: public cell_geometry<NDIM, INX> {
 
 	int compareF(const hydro::flux_type &Fl, int num, std::string test_type);
 
+#ifdef OCTOTIGER_ANGMOM
 	void use_angmom_correction(int index);
+#endif
 
 	void use_smooth_recon(int field);
 
@@ -104,7 +106,9 @@ struct hydro_computer: public cell_geometry<NDIM, INX> {
 private:
 	int experiment;
 	int nf_;
+#ifdef OCTOTIGER_ANGMOM
 	int angmom_index_;
+#endif
 	std::vector<bool> smooth_field_;
 	std::vector<bool> disc_detect_;
 	std::vector<bc_type> bc_;

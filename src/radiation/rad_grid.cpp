@@ -362,9 +362,11 @@ void rad_grid::compute_flux(real omega) {
 	PROFILE()
 	;
 	radiation_physics<NDIM>::set_clight(physcon().c / opts().clight_retard);
+#ifdef OCTOTIGER_ANGMOM
 	if (opts().correct_am_hydro) {
 		hydro.use_angmom_correction(fx_i);
 	}
+#endif
 	const auto &q = hydro.reconstruct(U, X, omega);
 	hydro.flux(U, q, flux, X, omega);
 }
@@ -1044,7 +1046,7 @@ void rad_grid::complete_rad_amr_boundary() {
 					const int iiir = hindex(i, j, k);
 					if (is_coarse[iii0]) {
 						int ir, jr, kr;
-						if constexpr (H_BW % 2 == 0) {
+						if (H_BW % 2 == 0) {
 							ir = i % 2;
 							jr = j % 2;
 							kr = k % 2;

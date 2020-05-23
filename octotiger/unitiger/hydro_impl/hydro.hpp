@@ -15,7 +15,9 @@ template<int NDIM, int INX, class PHYS>
 hydro_computer<NDIM, INX, PHYS>::hydro_computer() {
 	nf_ = PHYS::field_count();
 
+#ifdef OCTOTIGER_ANGMOM
 	angmom_index_ = -1;
+#endif
 	experiment = 0;
 	for( int f = 0; f < nf_; f++) {
 		smooth_field_.push_back(false);
@@ -34,12 +36,12 @@ void hydro_computer<NDIM, INX, PHYS>::use_disc_detect(int field) {
 	disc_detect_[field] = true;
 }
 
-
-
+#ifdef OCTOTIGER_ANGMOM
 template<int NDIM, int INX, class PHYS>
 void hydro_computer<NDIM, INX, PHYS>::use_angmom_correction(int index) {
 	angmom_index_ = index;
 }
+#endif
 
 template<int NDIM, int INX, class PHYS>
 void hydro_computer<NDIM, INX, PHYS>::post_process(hydro::state_type &U, const hydro::state_type& X, safe_real dx) {

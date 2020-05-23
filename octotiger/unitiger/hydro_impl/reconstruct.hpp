@@ -265,7 +265,11 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 	static constexpr auto dir = geo::direction();
 
 	const auto dx = X[0][geo::H_DNX] - X[0][0];
+#ifdef OCTOTIGER_ANGMOM
 	const auto &U = PHYS::template pre_recon<INX>(U_, X, omega, angmom_index_ != -1);
+#else
+	const auto &U = PHYS::template pre_recon<INX>(U_, X, omega,false);
+#endif
 	const auto &cdiscs = PHYS::template find_contact_discs<INX>(U_);
 #ifdef OCTOTIGER_ANGMOM
 	if (angmom_index_ == -1 || NDIM == 1) {
@@ -445,8 +449,11 @@ const hydro::recon_type<NDIM>& hydro_computer<NDIM, INX, PHYS>::reconstruct(cons
 	}
 
 #endif
+#ifdef OCTOTIGER_ANGMOM
 	PHYS::template post_recon<INX>(Q, X, omega, angmom_index_ != -1);
-
+#else
+	PHYS::template post_recon<INX>(Q, X, omega, false);
+#endif
 	return Q;
 }
 
