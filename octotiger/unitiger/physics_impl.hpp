@@ -76,12 +76,14 @@ void physics<NDIM>::physical_flux(const std::vector<safe_real> &U, std::vector<s
 	}
 	F[sx_i + dim] += p;
 	F[egas_i] += v0 * p;
+#ifdef OCTOTIGER_ANGMOM
 	for (int n = 0; n < geo.NANGMOM; n++) {
 #pragma ivdep
 		for (int m = 0; m < NDIM; m++) {
 			F[lx_i + n] += levi_civita[n][m][dim] * x[m] * p;
 		}
 	}
+#endif
 }
 
 template<int NDIM>
@@ -142,6 +144,7 @@ void physics<NDIM>::source(hydro::state_type &dudt, const hydro::state_type &U, 
 	static const cell_geometry<NDIM, INX> geo;
 	static constexpr auto levi_civita = geo.levi_civita();
 	for (const auto &i : geo.find_indices(geo.H_BW, geo.H_NX - geo.H_BW)) {
+#ifdef OCTOTIGER_ANGMOM
 		if constexpr (NDIM == 3) {
 			dudt[lx_i][i] += U[ly_i][i] * omega;
 			dudt[ly_i][i] -= U[lx_i][i] * omega;
@@ -150,6 +153,7 @@ void physics<NDIM>::source(hydro::state_type &dudt, const hydro::state_type &U, 
 			dudt[sx_i][i] += U[sy_i][i] * omega;
 			dudt[sy_i][i] -= U[sx_i][i] * omega;
 		}
+#endif
 		safe_real r = 0.0;
 		for (int dim = 0; dim < NDIM; dim++) {
 			r += X[dim][i] * X[dim][i];
@@ -204,6 +208,7 @@ const hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, co
 			}
 		}
 	}
+#ifdef OCTOTIGER_ANGMOM
 	for (int n = 0; n < geo.NANGMOM; n++) {
 		for (int j = 0; j < geo.H_NX_X; j++) {
 			for (int k = 0; k < geo.H_NX_Y; k++) {
@@ -234,6 +239,7 @@ const hydro::state_type& physics<NDIM>::pre_recon(const hydro::state_type &U, co
 			}
 		}
 	}
+#endif
 	if (NDIM >= 2) {
 		for (int j = 0; j < geo.H_NX_X; j++) {
 			for (int k = 0; k < geo.H_NX_Y; k++) {
@@ -347,7 +353,7 @@ void physics<NDIM>::post_recon(std::vector<std::vector<std::vector<safe_real>>> 
 					}
 				}
 			}
-
+#ifdef OCTOTIGER_ANGMOM
 			for (int n = 0; n < geo.NANGMOM; n++) {
 				for (int q = 0; q < NDIM; q++) {
 					for (int m = 0; m < NDIM; m++) {
@@ -377,6 +383,7 @@ void physics<NDIM>::post_recon(std::vector<std::vector<std::vector<safe_real>>> 
 					}
 				}
 			}
+#endif
 			for (int dim = 0; dim < NDIM; dim++) {
 				for (int j = 0; j < geo.H_NX_XM4; j++) {
 					for (int k = 0; k < geo.H_NX_YM4; k++) {
@@ -675,6 +682,7 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 			U[egas_i][i] += 0.5 * rho * vz * vz;
 		}
 		static constexpr auto levi_civita = geo.levi_civita();
+#ifdef OCTOTIGER_ANGMOM
 		for (int n = 0; n < geo.NANGMOM; n++) {
 			U[lx_i + n][i] = 0.0;
 			for (int m = 0; m < NDIM; m++) {
@@ -683,6 +691,7 @@ std::vector<typename hydro_computer<NDIM, INX, physics<NDIM>>::bc_type> physics<
 				}
 			}
 		}
+#endif
 	}
 
 	return bc;

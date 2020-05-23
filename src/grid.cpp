@@ -71,10 +71,11 @@ void grid::static_init() {
 	field_bw.resize(opts().n_fields, 3);
 	energy_bw.resize(opts().n_fields, 0);
 	energy_bw[egas_i] = 1;
+#ifdef OCTOTIGER_ANGMOM
 	for (int dim = 0; dim < NDIM; dim++) {
 		field_bw[lx_i + dim] = 2;
 	}
-
+#endif
 	str_to_index_hydro[std::string("egas")] = egas_i;
 	str_to_index_hydro[std::string("tau")] = tau_i;
 	for (integer s = 0; s < opts().n_species; s++) {
@@ -84,9 +85,11 @@ void grid::static_init() {
 	str_to_index_hydro[std::string("sy")] = sy_i;
 	str_to_index_hydro[std::string("sz")] = sz_i;
 	str_to_index_hydro[std::string("pot")] = pot_i;
+#ifdef OCTOTIGER_ANGMOM
 	str_to_index_hydro[std::string("lx")] = lx_i;
 	str_to_index_hydro[std::string("ly")] = ly_i;
 	str_to_index_hydro[std::string("lz")] = lz_i;
+#endif
 	str_to_index_gravity[std::string("gx")] = gx_i;
 	str_to_index_gravity[std::string("gy")] = gy_i;
 	str_to_index_gravity[std::string("gz")] = gz_i;
@@ -180,8 +183,10 @@ real grid::convert_hydro_units(int i) {
 			val *= g / (s * cm * cm);
 		} else if (i == egas_i || i == pot_i) {
 			val *= g / (s * s * cm);
+#ifdef OCTOTIGER_ANGMOM
 		} else if ((i >= lx_i && i <= lz_i)) {
 			val *= g / (s * cm);
+#endif
 		} else if (i == tau_i) {
 			val *= POWER(g / (s * s * cm), 1.0 / fgamma);
 		} else {
@@ -226,7 +231,11 @@ std::string grid::hydro_units_name(const std::string &nm) {
 		return "g / cm^3";
 	} else if (f >= sx_i && f <= sz_i) {
 		return "g / (cm s)^2 ";
-	} else if (f == egas_i || (f >= lx_i && f <= lz_i)) {
+	} else if (f == egas_i
+#ifdef OCTOTIGER_ANGMOM
+|| (f >= lx_i && f <= lz_i)
+#endif
+			) {
 		return "g / (cm s^2)";
 	} else if (f == tau_i) {
 		return "(g / cm)^(3/5) / s^(6/5)";
@@ -387,9 +396,15 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 						rc.grid_sum[f] += U[f][iii] * dV;
 					}
 					rc.grid_sum[egas_i] += 0.5 * U[pot_i][iii] * dV;
+#ifdef OCTOTIGER_ANGMOM
 					rc.lsum[0] += U[lx_i][iii] * dV - (X[YDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sy_i][iii]) * dV;
 					rc.lsum[1] -= U[ly_i][iii] * dV - (X[XDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sx_i][iii]) * dV;
 					rc.lsum[2] += U[lz_i][iii] * dV - (X[XDIM][iii] * U[sy_i][iii] - X[YDIM][iii] * U[sx_i][iii]) * dV;
+#else
+					rc.lsum[0] += -(X[YDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sy_i][iii]) * dV;
+					rc.lsum[1] -= -(X[XDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sx_i][iii]) * dV;
+					rc.lsum[2] += -(X[XDIM][iii] * U[sy_i][iii] - X[YDIM][iii] * U[sx_i][iii]) * dV;
+#endif
 				}
 			}
 		}
@@ -623,9 +638,15 @@ diagnostics_t grid::diagnostics(const diagnostics_t &diags) {
 						rc.grid_sum[f] += U[f][iii] * dV;
 					}
 					rc.grid_sum[egas_i] += 0.5 * U[pot_i][iii] * dV;
+#ifdef OCTOTIGER_ANGMOM
 					rc.lsum[0] += U[lx_i][iii] * dV - (X[YDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sy_i][iii]) * dV;
 					rc.lsum[1] -= U[ly_i][iii] * dV - (X[XDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sx_i][iii]) * dV;
 					rc.lsum[2] += U[lz_i][iii] * dV - (X[XDIM][iii] * U[sy_i][iii] - X[YDIM][iii] * U[sx_i][iii]) * dV;
+#else
+					rc.lsum[0] += -(X[YDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sy_i][iii]) * dV;
+					rc.lsum[1] -= -(X[XDIM][iii] * U[sz_i][iii] - X[ZDIM][iii] * U[sx_i][iii]) * dV;
+					rc.lsum[2] += -(X[XDIM][iii] * U[sy_i][iii] - X[YDIM][iii] * U[sx_i][iii]) * dV;
+#endif
 				}
 
 				for (integer s = 0; s != nspec; ++s) {
@@ -993,6 +1014,7 @@ void grid::set_prolong(const std::vector<real> &data, std::vector<real> &&outflo
 			}
 		}
 	}
+#ifdef OCTOTIGER_ANGMOM
 	for (int i = H_BW; i < H_NX - H_BW; i += 2) {
 		for (int j = H_BW; j < H_NX - H_BW; j += 2) {
 			for (int k = H_BW; k < H_NX - H_BW; k += 2) {
@@ -1041,7 +1063,7 @@ void grid::set_prolong(const std::vector<real> &data, std::vector<real> &&outflo
 			}
 		}
 	}
-
+#endif
 }
 
 std::pair<std::vector<real>, std::vector<real> > grid::field_range() const {
@@ -1091,9 +1113,11 @@ void grid::change_units(real m, real l, real t, real k) {
 		U[sx_i][i] *= (m * l * tinv) * l3inv;
 		U[sy_i][i] *= (m * l * tinv) * l3inv;
 		U[sz_i][i] *= (m * l * tinv) * l3inv;
+#ifdef OCTOTIGER_ANGMOM
 		U[lx_i][i] *= (m * l2 * tinv) * l3inv;
 		U[ly_i][i] *= (m * l2 * tinv) * l3inv;
 		U[lz_i][i] *= (m * l2 * tinv) * l3inv;
+#endif
 		X[XDIM][i] *= l;
 		X[YDIM][i] *= l;
 		X[ZDIM][i] *= l;
@@ -1702,7 +1726,9 @@ grid::grid(const init_func_type &init_func, real _dx, std::array<real, NDIM> _xm
 			}
 		}
 	}
+#ifdef OCTOTIGER_ANGMOM
 	init_z_field();
+#endif
 	if (opts().radiation) {
 		if (init_func != nullptr) {
 			rad_init();
@@ -1717,6 +1743,7 @@ grid::grid(const init_func_type &init_func, real _dx, std::array<real, NDIM> _xm
 	}
 }
 
+#ifdef OCTOTIGER_ANGMOM
 void grid::init_z_field() {
 	for (int j = H_BW; j < H_NX - H_BW; j++) {
 		for (int k = H_BW; k < H_NX - H_BW; k++) {
@@ -1741,6 +1768,8 @@ void grid::init_z_field() {
 		}
 	}
 }
+#endif
+
 void grid::rad_init() {
 	rad_grid_ptr->set_dx(dx);
 	rad_grid_ptr->compute_mmw(U);
@@ -1965,6 +1994,7 @@ void grid::set_physical_boundaries(const geo::face &face, real t) {
 							}
 //						} else if (field == rho_i) {
 //							ref = std::max(rho_floor,value);
+#ifdef OCTOTIGER_ANGMOM
 						} else if (field == lx_i) {
 							ref = +value;
 							U[lx_i][iii] += +y * U[sz_i][iii] - z * U[sy_i][iii];
@@ -1977,6 +2007,7 @@ void grid::set_physical_boundaries(const geo::face &face, real t) {
 							ref = +value;
 							U[lz_i][iii] += +x * U[sy_i][iii] - y * U[sx_i][iii];
 							U[lz_i][iii] -= +x0 * U[sy_i][iii0] - y0 * U[sx_i][iii0];
+#endif
 						} else {
 							ref = +value;
 						}
@@ -2067,13 +2098,17 @@ void grid::compute_sources(real t, real rotational_time) {
 						src[egas_i][iii0] += dei;
 					}
 				}
+#ifdef OCTOTIGER_ANGMOM
 				src[lx_i][iii0] += X[YDIM][iii] * src[sz_i][iii0] - X[ZDIM][iii] * src[sy_i][iii0];
 				src[ly_i][iii0] -= X[XDIM][iii] * src[sz_i][iii0] - X[ZDIM][iii] * src[sx_i][iii0];
 				src[lz_i][iii0] += X[XDIM][iii] * src[sy_i][iii0] - X[YDIM][iii] * src[sx_i][iii0];
+#endif
 				src[sx_i][iii0] += omega * U[sy_i][iii];
 				src[sy_i][iii0] -= omega * U[sx_i][iii];
+#ifdef OCTOTIGER_ANGMOM
 				src[lx_i][iii0] += omega * U[ly_i][iii];
 				src[ly_i][iii0] -= omega * U[lx_i][iii];
+#endif
 			}
 		}
 	}
