@@ -166,7 +166,11 @@ bool options::process_options(int argc, char *argv[]) {
 	if (opts().problem == DWD || opts().problem == ROTATING_STAR) {
 		opts().n_species = std::max(int(5), int(opts().n_species));
 	}
+#ifdef OCTOTIGER_ANGMOM
 	n_fields = n_species + 10;
+#else
+	n_fields = n_species + 7;
+#endif
 	if (!opts().restart_filename.empty()) {
 		FILE *fp = fopen(opts().restart_filename.c_str(), "rb");
 		if (fp == NULL) {

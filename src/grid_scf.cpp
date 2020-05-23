@@ -437,13 +437,17 @@ real grid::scf_update(real com, real omega, real c1, real c2, real c1_x, real c2
 				U[sy_i][iiih] = sy;
 				U[tau_i][iiih] = POWER(etherm, 1.0 / fgamma);
 				U[egas_i][iiih] = eint + (sx * sx + sy * sy) / 2.0 * INVERSE( rho );
+#ifdef OCTOTIGER_ANGMOM
 				U[lx_i][iiih] = -z * sy;
 				U[ly_i][iiih] = +z * sx;
 				U[lz_i][iiih] = x * sy - y * sx;
+#endif
 			}
 		}
 	}
+#ifdef OCTOTIGER_ANGMOM
 	init_z_field();
+#endif
 	if (opts().radiation) {
 		rad_grid_ptr->initialize_erad(U[rho_i], U[tau_i]);
 	}

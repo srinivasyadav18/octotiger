@@ -19,10 +19,14 @@ static constexpr int pot_i = 3;
 static constexpr int sx_i = 4;
 static constexpr int sy_i = 5;
 static constexpr int sz_i = 6;
+#ifdef OCTOTIGER_ANGMOM
 static constexpr int lx_i = 7;
 static constexpr int ly_i = 8;
 static constexpr int lz_i = 9;
 static constexpr int spc_i = 10;
+#else
+static constexpr int spc_i = 7;
+#endif
 
 static constexpr int INX = OCTOTIGER_GRIDDIM;
 static constexpr int H_BW = OCTOTIGER_BW;

@@ -112,7 +112,7 @@ void grid::complete_hydro_amr_boundary(bool energy_only) {
 			}
 		}
 	}
-
+#ifdef OCTOTIGER_ANGMOM
 	if (!energy_only) {
 		for (int i0 = 1; i0 < HS_NX - 1; i0++) {
 			for (int j0 = 1; j0 < HS_NX - 1; j0++) {
@@ -176,6 +176,7 @@ void grid::complete_hydro_amr_boundary(bool energy_only) {
 			}
 		}
 	}
+#endif
 	for (int f = 0; f < opts().n_fields; f++) {
 		if (!energy_only || f == egas_i) {
 			for (int i = 0; i < H_NX; i++) {

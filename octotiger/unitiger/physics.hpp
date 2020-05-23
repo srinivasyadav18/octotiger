@@ -12,9 +12,15 @@
 
 template<int NDIM>
 struct physics {
+#ifdef OCTOTIGER_ANGMOM
 	static constexpr char const *field_names3[] = { "rho", "egas", "tau", "pot", "sx", "sy", "sz", "zx", "zy", "zz", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
 	static constexpr char const *field_names2[] = { "rho", "egas", "tau", "pot", "sx", "sy", "zz", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
 	static constexpr char const *field_names1[] = { "rho", "egas", "tau", "pot", "sx", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
+#else
+	static constexpr char const *field_names3[] = { "rho", "egas", "tau", "pot", "sx", "sy", "sz", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
+	static constexpr char const *field_names2[] = { "rho", "egas", "tau", "pot", "sx", "sy", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
+	static constexpr char const *field_names1[] = { "rho", "egas", "tau", "pot", "sx", "spc_1", "spc_2", "spc_3", "spc_4", "spc_5" };
+#endif
 	static constexpr int rho_i = 0;
 	static constexpr int egas_i = 1;
 	static constexpr int tau_i = 2;
@@ -22,10 +28,14 @@ struct physics {
 	static constexpr int sx_i = 4;
 	static constexpr int sy_i = 5;
 	static constexpr int sz_i = 6;
+#ifdef OCTOTIGER_ANGMOM
 	static constexpr int lx_i = 4 + NDIM;
 	static constexpr int ly_i = 5 + NDIM;
 	static constexpr int lz_i = 6 + NDIM;
 	static constexpr int spc_i = 4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2));
+#else
+	static constexpr int spc_i = 4 + NDIM;
+#endif
 	static safe_real de_switch_1;
 	static safe_real de_switch_2;
 
@@ -56,7 +66,7 @@ struct physics {
 
 	static void set_fgamma(safe_real fg);
 
-	static void to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v, safe_real& c, int dim);
+	static void to_prim(std::vector<safe_real> u, safe_real &p, safe_real &v, safe_real &c, int dim);
 
 	static void enforce_outflows(hydro::state_type &U, const hydro::x_type &X, int face) {
 
@@ -67,7 +77,7 @@ struct physics {
 			std::array<safe_real, NDIM> &vg);
 
 	template<int INX>
-	static void post_process(hydro::state_type &U, const hydro::x_type& X, safe_real dx);
+	static void post_process(hydro::state_type &U, const hydro::x_type &X, safe_real dx);
 
 	static void set_degenerate_eos(safe_real, safe_real);
 
@@ -121,11 +131,11 @@ private:
 
 //definitions of the declarations (and initializations) of the static constexpr variables
 template<int NDIM>
-constexpr char const * physics<NDIM>::field_names1[];
+constexpr char const *physics<NDIM>::field_names1[];
 template<int NDIM>
-constexpr char const * physics<NDIM>::field_names2[];
+constexpr char const *physics<NDIM>::field_names2[];
 template<int NDIM>
-constexpr char const * physics<NDIM>::field_names3[];
+constexpr char const *physics<NDIM>::field_names3[];
 
 template<int NDIM>
 safe_real physics<NDIM>::rho_sink_radius_ = 0.0;
@@ -148,8 +158,13 @@ safe_real physics<NDIM>::de_switch_1 = 1e-3;
 template<int NDIM>
 safe_real physics<NDIM>::de_switch_2 = 1e-1;
 
+#ifdef OCTOTIGER_ANGMOM
 template<int NDIM>
 int physics<NDIM>::nf_ = (4 + NDIM + (NDIM == 1 ? 0 : std::pow(3, NDIM - 2))) + physics<NDIM>::n_species_;
+#else
+template<int NDIM>
+int physics<NDIM>::nf_ = 4 + NDIM + physics<NDIM>::n_species_;
+#endif
 
 template<int NDIM>
 int physics<NDIM>::n_species_ = 5;
