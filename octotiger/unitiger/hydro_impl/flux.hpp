@@ -45,7 +45,11 @@ timestep_t hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, con
 		for (const auto &i : indices) {
 			safe_real ap = 0.0, am = 0.0;
 			safe_real this_ap, this_am;
+#ifdef CENTERED_FLUX_ONLY
+			for (int fi = 0; fi < 1; fi++) {
+#else
 			for (int fi = 0; fi < geo.NFACEDIR; fi++) {
+#endif
 				const auto d = faces[dim][fi];
 				for (int f = 0; f < nf_; f++) {
 					UR[f] = Q[f][d][i];
@@ -84,17 +88,10 @@ timestep_t hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, con
 				am = std::min(am, this_am);
 				ap = std::max(ap, this_ap);
 #pragma ivdep
-#ifdef CENTERED_FLUX_ONLY
-				for (int f = 0; f < 1; f++) {
-					// field update from flux
-					F[dim][f][i] += weights[fi] * this_flux[f];
-				}
-#else
 				for (int f = 0; f < nf_; f++) {
 					// field update from flux
 					F[dim][f][i] += weights[fi] * this_flux[f];
 				}
-#endif
 			}
 			const auto this_amax = std::max(ap, safe_real(-am));
 			if (this_amax > ts.a) {
