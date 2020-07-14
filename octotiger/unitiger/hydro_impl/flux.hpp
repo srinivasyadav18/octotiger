@@ -9,6 +9,8 @@
 #include "octotiger/unitiger/physics.hpp"
 #include "octotiger/unitiger/physics_impl.hpp"
 
+#define CENTERED_FLUX_ONLY
+
 template<int NDIM, int INX, class PHYS>
 timestep_t hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, const hydro::recon_type<NDIM> &Q, hydro::flux_type &F, hydro::x_type &X,
 		safe_real omega) {
@@ -82,10 +84,17 @@ timestep_t hydro_computer<NDIM, INX, PHYS>::flux(const hydro::state_type &U, con
 				am = std::min(am, this_am);
 				ap = std::max(ap, this_ap);
 #pragma ivdep
+#ifdef CENTERED_FLUX_ONLY
+				for (int f = 0; f < 1; f++) {
+					// field update from flux
+					F[dim][f][i] += weights[fi] * this_flux[f];
+				}
+#else
 				for (int f = 0; f < nf_; f++) {
 					// field update from flux
 					F[dim][f][i] += weights[fi] * this_flux[f];
 				}
+#endif
 			}
 			const auto this_amax = std::max(ap, safe_real(-am));
 			if (this_amax > ts.a) {
