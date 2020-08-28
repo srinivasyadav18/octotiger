@@ -154,7 +154,7 @@ void rad_grid::rad_imp(std::vector<real> &egas, std::vector<real> &tau, std::vec
 	PROFILE()
 	;
 	const integer d = H_BW - RAD_BW;
-	const real clight = physcon().c / opts().clight_retard;
+	const real clight = physcon().c / opts().clight_reduce;
 	const real clightinv = INVERSE(clight);
 	const real fgamma = grid::get_fgamma();
 	octotiger::radiation::radiation_kernel<er_i, fx_i, fy_i, fz_i>(d, rho, sx, sy, sz, egas, tau, fgamma, U, mmw, X_spc, Z_spc, dt, clightinv);
@@ -251,7 +251,7 @@ void node_server::compute_radiation(real dt, real omega) {
 	auto rgrid = rad_grid_ptr;
 	rad_grid_ptr->compute_mmw(grid_ptr->U);
 	const real min_dx = TWO * grid::get_scaling_factor() / real(INX << opts().max_level);
-	const real clight = physcon().c / opts().clight_retard;
+	const real clight = physcon().c / opts().clight_reduce;
 	const real max_dt = min_dx / clight * 0.2;
 	const real ns = std::ceil(dt * INVERSE(max_dt));
 	if (ns > std::numeric_limits<int>::max()) {
@@ -361,7 +361,7 @@ void rad_grid::sanity_check() {
 void rad_grid::compute_flux(real omega) {
 	PROFILE()
 	;
-	radiation_physics<NDIM>::set_clight(physcon().c / opts().clight_retard);
+	radiation_physics<NDIM>::set_clight(physcon().c / opts().clight_reduce);
 	if (opts().correct_am_hydro) {
 		hydro.use_angmom_correction(fx_i);
 	}

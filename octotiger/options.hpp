@@ -30,54 +30,149 @@ COMMAND_LINE_ENUM(eos_type, IDEAL, WD);
 
 class options {
 public:
+
+	//! Turns inflow boundary condition on. Default = off
+	//! This is a direct copy from the outermost interior cell to all the exterior cells, allowing inflow.
 	bool inflow_bc;
+
+	//! Turns on relfecting boundary conditions. Default = off. Does not work with gravity
 	bool reflect_bc;
+
+	//! Do not use.
 	int experiment;
+
+	//! Turns on contact discontinuity detection. Default = on
 	bool cdisc_detect;
+
+	//! Forces refinement of all nodes to max_level, effecting a unigrid. default = off
 	bool unigrid;
+
+	//! Turns off the binary diagnostics. default = off
 	bool disable_diagnostics;
+
+	// ! Enables benchmark test. Deprecated. Default = off
 	bool bench;
+
+	//! Disabled SILO output. Default = off
 	bool disable_output;
+
+	//! Adds an extra level of refinement to a donor or accretor core
 	bool core_refine;
+
+	//! Enables gravity. Default = on
 	bool gravity;
+
+	//! Enables hydrodynamics. Default = on
 	bool hydro;
+
+	//! Enables radiation hydrodynamics. Default = off.
 	bool radiation;
-	real clight_retard;
+
+	//! Sets the reduced speed of light factor. Default = 1.0. Valid ranges > 0 && <= 1.0
+	real clight_reduce;
+
+	//! Enables v1309 SCF. Default = off
 	bool v1309;
+
+	//! Enables the implicit part of the radiation step. Default = on
 	bool rad_implicit;
+
+	//! Enables the immediate re-writing of a checkpoint file on startup. Default = off
 	bool rewrite_silo;
+
+	//! Deprecated. DO NOT USE
 	bool correct_am_grav;
+
+	//! Enables the gravitational angular momentum correction. Default = on
 	bool correct_am_hydro;
+
+	//! For the rotating star problem this creates an AMR boundary through the middle of the star. Default = off
 	bool rotating_star_amr;
+
+	//! Enables the output of idle rates in the SILO files Default = on
 	bool idle_rates;
 
+	//! Frequency to output SILO when running SCF. Default = 25
 	integer scf_output_frequency;
+
+	//! Number of parallel files for SILO output. Must not be greater than the number of processors. Default = number of HPX localities
 	integer silo_num_groups;
+
+	//! Deprecated
 	integer amrbnd_order;
+
+	//! Number of additional regrid iterations to perform on startup. Can be used to increase the resolution of a checkpoint by
+	//! refinement. Default = 0.
 	integer extra_regrid;
+
+	//! Number of extra levels of refinement for the accretor. Default = 0
 	integer accretor_refine;
+
+	//! Number of extra levels of refinement for the donor. Default = 0.
 	integer donor_refine;
+
+	//! Minimum number of refinement levels. Default = 1
 	integer min_level;
+
+	//! Maximum number of refinement levels. Default = 1
 	integer max_level;
+
+	//! For the binary (dwd) problem, target this number of total subgrids by adjusting density floor. Set to -1 to dissable. Default = -1
 	integer ngrids;
+
+	//! Stop the evolution after stop_step number of steps. Set to -1 to disable. Default = -1.
 	integer stop_step;
+
+	//! Number of x subgrid cells to offset SILO output by. Can be used to expose AMR cells. Default = 0;
 	integer silo_offset_x;
+
+	//! Number of y subgrid cells to offset SILO output by. Can be used to expose AMR cells. Default = 0;
+
 	integer silo_offset_y;
+
+	//! Number of z subgrid cells to offset SILO output by. Can be used to expose AMR cells. Default = 0;
 	integer silo_offset_z;
+
+	//! Deprecated
 	integer future_wait_time;
 
+	//! Maximum allowed percentage change for rho and tau per timestep. Default = 0.33333333333
 	real dt_max;
+
+	//! Energy for blast wave problem. Default = 1.0
 	real eblast0;
+
+	//! x location to place center of star for rotating star problem. Default = 0.0
 	real rotating_star_x;
+
+	//! Dual energy update switch. Default = 0.1. Set to 1.0 for polytropic EOS.
 	real dual_energy_sw2;
+
+	//! Dual energy presure switch. Default = 0.001. Set to 1.0 for polytropic EOS.
 	real dual_energy_sw1;
+
+	//! Deprecated
 	real hard_dt;
+
+	//! Driving rate in relative amount of angular momentum to remove every orbit for the binary (dwd) problem. Default = 0.0
 	real driving_rate;
+
+	//! Time to drive angular momentum in binary (dwd) problem. Default = 0.0;
 	real driving_time;
+
+	//! Deprecated
 	real entropy_driving_rate;
+
+	//! Deprecated
 	real entropy_driving_time;
+
+	//! Fixed rotoational rate of the grid. Default = 0.0;
 	real omega;
+
+	//! Output frequency. For the binary (dwd) problem this is in units of initial orbital periods. For all others it is in absolute time. Default = 0.01
 	real output_dt;
+
+
 	real refinement_floor;
 	real stop_time;
 	real theta;
@@ -115,8 +210,8 @@ public:
 	real star_rho_center;
 
 	real moving_star_xvelocity;
-        real moving_star_yvelocity;
-        real moving_star_zvelocity;
+	real moving_star_yvelocity;
+	real moving_star_zvelocity;
 
 	size_t cuda_streams_per_locality;
 	size_t cuda_streams_per_gpu;
@@ -212,7 +307,7 @@ public:
 		arc & refinement_floor;
 		arc & ngrids;
 		arc & v1309;
-		arc & clight_retard;
+		arc & clight_reduce;
 		arc & stop_time;
 		arc & min_level;
 		arc & max_level;
