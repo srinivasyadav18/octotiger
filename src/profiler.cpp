@@ -105,3 +105,20 @@ void profiler_output(FILE* _fp) {
 #endif
 }
 
+
+#include <octotiger/options.hpp>
+
+void timings::report(std::string const &name) {
+	const auto tinv = 1.0 / times_[time_total];
+	const auto tcr = times_[time_computation] + times_[time_regrid];
+	std::cout << name << ":\n";
+	std::cout << "   Total: " << times_[time_total] << '\n';
+	std::cout << "   Computation: " << times_[time_computation] << " (" << 100 * times_[time_computation] * tinv << "\%)\n";
+	std::cout << "   Regrid: " << times_[time_regrid] << " (" << 100 * times_[time_regrid] * tinv << "\%)\n";
+	std::cout << "   Computation + Regrid: " << tcr << " (" << 100 * tcr * tinv << "\%)\n";
+	FILE *fp = fopen((opts().data_dir + "timing.dat").c_str(), "at");
+	fprintf(fp, "%li %e %e %e\n", opts().all_localities.size(), times_[time_total], times_[time_computation], times_[time_regrid]);
+	fclose(fp);
+
+}
+
