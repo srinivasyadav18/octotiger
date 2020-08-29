@@ -172,22 +172,42 @@ public:
 	//! Output frequency. For the binary (dwd) problem this is in units of initial orbital periods. For all others it is in absolute time. Default = 0.01
 	real output_dt;
 
-
+	//! refinement density floor in code units. Used tor density based refinment criteria. Default = 1.0e-3
 	real refinement_floor;
+
+	//! Stop the simulation when it reaches this time in code units. Set to -1 to diable. Default =
 	real stop_time;
+
+	//! Opening criteria for FMM solver. For 8x8x8 subgrids valid values are between 0.34 and 0.5. Default=0.5
 	real theta;
+
+	//! The computational domain runs from [-xscale:xscale] in each dimension, in code units. Default = 1.0
 	real xscale;
+
+	//! TODO: Dominic document these after cleaning them up
 	real code_to_g;
 	real code_to_s;
 	real code_to_cm;
+
+	//! CFL factor. Default = 0.4
 	real cfl;
+
+	//! density floor in code units. Set to < 0.0 to disable. Default = -1
 	real rho_floor;
+
+	//! tau floor in code units. Set to < 0.0 to disable. Default = -1.
 	real tau_floor;
 
+	// right density for Sod problem Default = 1.0
 	real sod_rhol;
+	// left density for Sod problem Default = 0.125
 	real sod_rhor;
+	// left pressure for Sod problem Default = 1.0
 	real sod_pl;
+	// right pressure for Sod = Default = 0.1
 	real sod_pr;
+
+	// TODO: Sagiv please document these:
 	real sod_theta;
 	real sod_phi;
 	real sod_gamma;
@@ -213,29 +233,62 @@ public:
 	real moving_star_yvelocity;
 	real moving_star_zvelocity;
 
+	// TODO: Gregor please document these
 	size_t cuda_streams_per_locality;
 	size_t cuda_streams_per_gpu;
 	size_t cuda_scheduling_threads;
 
+	//! Input IC file for rotating star problem. Default = empty
 	std::string input_file;
+
+	//! Config file with commandline parameters. Default = empty
 	std::string config_file;
+
+	//! Directory for SILO and text output
 	std::string data_dir;
+
+	//! When this string is nonempty, Octo-Tiger will start-up but then immediately write to output_filename before the first time-step and exit. Default is empty
 	std::string output_filename;
+
+	//! Restart checkpoint SILO filename. Default is empty. When empty Octo-Tiger will initialized based on the problem selected
 	std::string restart_filename;
+
+	//! Number of species. Must be at least 1. Must be at least 5 for the binary (dwd) problem. Default = 5
 	integer n_species;
+
+	//! Number of fiels. Do not change this, set by Octo-Tiger.
 	integer n_fields;
 
+	//! Equation of state type. "ideal" for ideal gas, "wd" for cold wdeos + ideal gas. Default=ideal
 	eos_type eos;
 
+	//! Problem selection.
+
+	//! Supported choices for problem are
+	//! DWD - construct a binary using the SCF and run it
+	//! SOD - Sod shock tube
+	//! BLAST -Sedov-Taylor blast wave
+	//! SOLID_SPHERE - Gravity of a solid sphere
+	//! MOVING_STAR - A moving polytrope
+	//! ROTATING_STAR - A rotating polytrope
+	//! MARSHAK - Radiation Marshak test
 	problem_type problem;
 
+	// TODO: Gregor
 	interaction_kernel_type m2m_kernel_type;
 	interaction_kernel_type p2m_kernel_type;
 	interaction_kernel_type p2p_kernel_type;
 
+	// Specify atomic mass of each species. Used for temperature and opacity calculations. Default for each = solar
 	std::vector<real> atomic_mass;
+
+	// Specify atomic number of each species. Used for temperature and opacity calculations. Default for each = solar
 	std::vector<real> atomic_number;
+
+	// Specify hydrogen fraction for each species. Used for opacity calculations. Default for each = solar
 	std::vector<real> X;
+
+	// Specify metallicity fraction for each species. Used for opacity calculations. Default for each = solar
 	std::vector<real> Z;
 
 	template<class Arc>
