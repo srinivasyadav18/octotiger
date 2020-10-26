@@ -1798,6 +1798,7 @@ timestep_t grid::compute_fluxes() {
     bool avail = stream_pool::interface_available<hpx::cuda::experimental::cuda_executor,
                  pool_strategy>(opts().cuda_buffer_capacity);
 
+  #ifdef OCTOTIGER_HAVE_FLUX_CPU
     if (!avail) {
 
       static thread_local auto f = std::vector<std::vector<std::vector<safe_real>>>(NDIM,
@@ -1829,6 +1830,9 @@ timestep_t grid::compute_fluxes() {
       }
       return max_lambda;
     } else {
+    #else 
+    if (true) {
+    #endif
       static const cell_geometry<NDIM, INX> geo;
       size_t device_id = 0;
       stream_interface<hpx::cuda::experimental::cuda_executor, pool_strategy> executor;

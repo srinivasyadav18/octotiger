@@ -1,4 +1,32 @@
+#include "octotiger/unitiger/hydro_impl/flux_kernel_interface.hpp"
 
+#include <aligned_buffer_util.hpp>
+#include <boost/container/vector.hpp>    // to get non-specialized vector<bool>
+#include <buffer_manager.hpp>
+boost::container::vector<bool> create_masks() {
+    boost::container::vector<bool> masks(NDIM * 10 * 10 * 10);
+    constexpr size_t dim_offset = 1000;
+    const cell_geometry<3, 8> geo;
+    for (int dim = 0; dim < NDIM; dim++) {
+        std::array<int, NDIM> ubs = {9, 9, 9};
+        for (int dimension = 0; dimension < NDIM; dimension++) {
+            ubs[dimension] = geo.xloc()[geo.face_pts()[dim][0]][dimension] == -1 ? (9 + 1) : (9);
+        }
+        for (size_t ix = 0; ix < 10; ix++) {
+            for (size_t iy = 0; iy < 10; iy++) {
+                for (size_t iz = 0; iz < 10; iz++) {
+                    const size_t index = ix * 10 * 10 + iy * 10 + iz + dim_offset * dim;
+                    if (ix > 0 && iy > 0 && iz > 0 && ix < ubs[0] && iy < ubs[1] && iz < ubs[2])
+                        masks[index] = true;
+                    else
+                        masks[index] = false;
+                }
+            }
+        }
+    }
+    return masks;
+}
+#ifdef OCTOTIGER_HAVE_FLUX_CPU
 #pragma GCC push_options
 #pragma GCC optimize("unroll-loops")
 
@@ -6,11 +34,6 @@
 #include <Vc/common/mask.h>
 #include <Vc/vector.h>
 
-#include "octotiger/unitiger/hydro_impl/flux_kernel_interface.hpp"
-
-#include <aligned_buffer_util.hpp>
-#include <boost/container/vector.hpp>    // to get non-specialized vector<bool>
-#include <buffer_manager.hpp>
 
 using vc_type = Vc::Vector<double, Vc::VectorAbi::Avx>;
 using mask_type = vc_type::mask_type;
@@ -61,29 +84,6 @@ inline vc_type load_value<vc_type>(const double* __restrict__ data, const size_t
     return vc_type(data + index);
 }
 
-boost::container::vector<bool> create_masks() {
-    boost::container::vector<bool> masks(NDIM * 10 * 10 * 10);
-    constexpr size_t dim_offset = 1000;
-    const cell_geometry<3, 8> geo;
-    for (int dim = 0; dim < NDIM; dim++) {
-        std::array<int, NDIM> ubs = {9, 9, 9};
-        for (int dimension = 0; dimension < NDIM; dimension++) {
-            ubs[dimension] = geo.xloc()[geo.face_pts()[dim][0]][dimension] == -1 ? (9 + 1) : (9);
-        }
-        for (size_t ix = 0; ix < 10; ix++) {
-            for (size_t iy = 0; iy < 10; iy++) {
-                for (size_t iz = 0; iz < 10; iz++) {
-                    const size_t index = ix * 10 * 10 + iy * 10 + iz + dim_offset * dim;
-                    if (ix > 0 && iy > 0 && iz > 0 && ix < ubs[0] && iy < ubs[1] && iz < ubs[2])
-                        masks[index] = true;
-                    else
-                        masks[index] = false;
-                }
-            }
-        }
-    }
-    return masks;
-}
 
 timestep_t flux_cpu_kernel(const hydro::recon_type<NDIM>& Q, hydro::flux_type& F, hydro::x_type& X,
     safe_real omega, const size_t nf_) {
@@ -376,3 +376,4 @@ timestep_t flux_unified_cpu_kernel(const hydro::recon_type<NDIM>& Q, hydro::flux
     return ts;
 }
 #pragma GCC pop_options
+#endif
