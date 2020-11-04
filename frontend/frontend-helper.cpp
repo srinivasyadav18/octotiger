@@ -106,6 +106,7 @@ HPX_PLAIN_ACTION(sum_counters_worker, sum_counters_worker_action);
 
 void initialize(options _opts, std::vector<hpx::id_type> const &localities) {
 
+	printf( "Initializing frontend-helper.cpp\n");
 	scf_options::read_option_file();
 
 	options::all_localities = localities;
@@ -122,21 +123,23 @@ void initialize(options _opts, std::vector<hpx::id_type> const &localities) {
 	normalize_constants();
 #ifdef SILO_UNITS
 //	grid::set_unit_conversions();
+	printf( "In initialize\n");
 #endif
 	std::size_t const os_threads = hpx::get_os_thread_count();
 	hpx::naming::id_type const here = hpx::find_here();
 	std::set<std::size_t> attendance;
 	for (std::size_t os_thread = 0; os_thread < os_threads; ++os_thread)
 		attendance.insert(os_thread);
+	printf( "Checking attendance");
 	while (!attendance.empty()) {
 		std::vector<hpx::lcos::future<std::size_t>> futures;
 		futures.reserve(attendance.size());
-
 		for (std::size_t worker : attendance) {
 			using action_type = init_thread_local_worker_action;
 			futures.push_back(hpx::async<action_type>(here, worker));
 		}
 		hpx::lcos::local::spinlock mtx;
+		printf( "%i left in attendance, waiting\n", attendance.size());
 		hpx::lcos::wait_each(hpx::util::unwrapping([&](std::size_t t) {
 			if (std::size_t(-1) != t) {
 				std::lock_guard<hpx::lcos::local::spinlock> lk(mtx);
@@ -144,7 +147,9 @@ void initialize(options _opts, std::vector<hpx::id_type> const &localities) {
 			}
 		}),
 		futures);
+		printf( "Done waiting\n");
 	}
+	printf( "Done checking attendance\n");
 }
 
 std::array<size_t, 6> analyze_local_launch_counters() {
