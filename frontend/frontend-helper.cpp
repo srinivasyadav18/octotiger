@@ -57,20 +57,6 @@
 #include <cfloat>
 #endif
 
-std::size_t init_thread_local_worker(std::size_t desired) {
-	std::size_t current = hpx::get_worker_thread_num();
-	if (current == desired) {
-		init_stencil(current);
-		//std::cout << "OS-thread " << current << " on locality " << hpx::get_locality_id()
-		//          << ": Initialized thread_local memory!\n";
-		return desired;
-	}
-	// NOTE: This might be an issue. Throw an exception and/or make the output
-	// a tuple with the second being the error code
-	return std::size_t(-1);
-}
-HPX_PLAIN_ACTION(init_thread_local_worker, init_thread_local_worker_action);
-
 std::array<size_t, 7> sum_counters_worker(std::size_t desired) {
 	std::array<size_t, 7> ret;
 	ret[0] = std::size_t(-1);
@@ -125,7 +111,8 @@ void initialize(options _opts, std::vector<hpx::id_type> const &localities) {
 //	grid::set_unit_conversions();
 	printf( "In initialize\n");
 #endif
-	std::size_t const os_threads = hpx::get_os_thread_count();
+	init_stencil();
+	/*std::size_t const os_threads = hpx::get_os_thread_count();
 	hpx::naming::id_type const here = hpx::find_here();
 	std::set<std::size_t> attendance;
 	for (std::size_t os_thread = 0; os_thread < os_threads; ++os_thread)
@@ -149,7 +136,7 @@ void initialize(options _opts, std::vector<hpx::id_type> const &localities) {
 		futures);
 		printf( "Done waiting\n");
 	}
-	printf( "Done checking attendance\n");
+	printf( "Done checking attendance\n");*/
 }
 
 std::array<size_t, 6> analyze_local_launch_counters() {
@@ -314,7 +301,7 @@ void start_octotiger(int argc, char *argv[]) {
 				output_all(root, "X", 0, true);
 			}
 			root->report_timing();
-			accumulate_distributed_counters();
+			//accumulate_distributed_counters();
 		}
 	} catch (...) {
 		throw;

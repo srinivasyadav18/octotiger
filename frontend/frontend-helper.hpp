@@ -11,5 +11,5 @@ void register_hpx_functions();
 void init_executors();
 void init_problem();
 
-// Get called once per worker
-void init_stencil(std::size_t worker_id);
+// Get called once per locality
+void init_stencil();

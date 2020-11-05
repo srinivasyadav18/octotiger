@@ -28,21 +28,21 @@ namespace fmm {
         }
 
         std::vector<multiindex<>>& p2p_interaction_interface::stencil() {
-            static thread_local std::vector<multiindex<>> stencil_ = calculate_stencil().first;
+            static std::vector<multiindex<>> stencil_ = calculate_stencil().first;
             return stencil_;
         }
 
         std::vector<bool>& p2p_interaction_interface::stencil_masks() {
-            static thread_local std::vector<bool> stencil_masks_ =
+            static std::vector<bool> stencil_masks_ =
                 calculate_stencil_masks(p2p_interaction_interface::stencil()).first;
             return stencil_masks_;
         }
         std::vector<std::array<real, 4>>& p2p_interaction_interface::four() {
-            static thread_local std::vector<std::array<real, 4>> four_ = calculate_stencil().second;
+            static std::vector<std::array<real, 4>> four_ = calculate_stencil().second;
             return four_;
         }
         std::vector<std::array<real, 4>>& p2p_interaction_interface::stencil_four_constants() {
-            static thread_local std::vector<std::array<real, 4>> stencil_four_constants_ =
+            static std::vector<std::array<real, 4>> stencil_four_constants_ =
                 calculate_stencil_masks(p2p_interaction_interface::stencil()).second;
             return stencil_four_constants_;
         }

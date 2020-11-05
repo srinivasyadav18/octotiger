@@ -58,7 +58,7 @@
 #endif
 
 
-void init_stencil(std::size_t worker_id) {
+void init_stencil() {
     namespace mono_inter = octotiger::fmm::monopole_interactions;
     using mono_inter_p2p = octotiger::fmm::monopole_interactions::p2p_interaction_interface;
     // Initialize stencil and four constants for p2p fmm interactions
@@ -81,15 +81,13 @@ void init_stencil(std::size_t worker_id) {
     multi_inter_p2p::inner_stencil_masks() =
         multi_inter::calculate_stencil_masks(multi_inter_p2p::stencil()).second;
     // print run informations
-    if (worker_id == 0) {
-        std::cout << "\nSubgrid side-length is " << INX << std::endl;
-        std::cout << "Minimal allowed theta is " << octotiger::fmm::THETA_FLOOR << std::endl;
-        std::cout << "Stencil maximal allowed half side-length is " << octotiger::fmm::STENCIL_WIDTH
-                  << " (Total length " << 2 * octotiger::fmm::STENCIL_WIDTH + 1 << ")" << std::endl;
-        std::cout << "Total number of stencil elements (stencil size): "
-                  << mono_inter::calculate_stencil().first.size() << std::endl
-                  << std::endl;
-    }
+    std::cout << "\nSubgrid side-length is " << INX << std::endl;
+    std::cout << "Minimal allowed theta is " << octotiger::fmm::THETA_FLOOR << std::endl;
+    std::cout << "Stencil maximal allowed half side-length is " << octotiger::fmm::STENCIL_WIDTH
+              << " (Total length " << 2 * octotiger::fmm::STENCIL_WIDTH + 1 << ")" << std::endl;
+    std::cout << "Total number of stencil elements (stencil size): "
+              << mono_inter::calculate_stencil().first.size() << std::endl
+              << std::endl;
     static_assert(octotiger::fmm::STENCIL_WIDTH <= INX, R"(
             ERROR: Stencil is too wide for the subgrid size. 
             Please increase either OCTOTIGER_THETA_MINIMUM or OCTOTIGER_WITH_GRIDDIM (see cmake file))");

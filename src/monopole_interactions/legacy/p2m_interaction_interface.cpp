@@ -21,7 +21,7 @@ namespace octotiger {
 namespace fmm {
     namespace monopole_interactions {
         std::vector<multiindex<>>& p2m_interaction_interface::stencil() {
-            static thread_local std::vector<multiindex<>> stencil_ = calculate_stencil().first;
+            static std::vector<multiindex<>> stencil_ = calculate_stencil().first;
             return stencil_;
         }
 

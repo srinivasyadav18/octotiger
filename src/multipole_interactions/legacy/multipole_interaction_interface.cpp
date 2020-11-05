@@ -42,16 +42,16 @@ namespace fmm {
         }
 
         two_phase_stencil& multipole_interaction_interface::stencil() {
-            static thread_local two_phase_stencil stencil_ = calculate_stencil();
+            static two_phase_stencil stencil_ = calculate_stencil();
             return stencil_;
         }
         std::vector<bool>& multipole_interaction_interface::stencil_masks() {
-            static thread_local std::vector<bool> stencil_masks_ =
+            static std::vector<bool> stencil_masks_ =
                 calculate_stencil_masks(multipole_interaction_interface::stencil()).first;
             return stencil_masks_;
         }
         std::vector<bool>& multipole_interaction_interface::inner_stencil_masks() {
-            static thread_local std::vector<bool> inner_stencil_masks_ =
+            static std::vector<bool> inner_stencil_masks_ =
                 calculate_stencil_masks(multipole_interaction_interface::stencil()).second;
             return inner_stencil_masks_;
         }
