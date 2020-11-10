@@ -242,10 +242,10 @@ public:
 	hpx::future<void> timestep_driver_descend();
 
 	void set_local_timestep(integer i, timestep_t dt);/**/
-	HPX_DEFINE_COMPONENT_DIRECT_ACTION(node_server, set_local_timestep, set_local_timestep_action);
+	HPX_DEFINE_COMPONENT_ACTION(node_server, set_local_timestep, set_local_timestep_action);
 
 	void timestep_driver_ascend(timestep_t);/**/
-	HPX_DEFINE_COMPONENT_DIRECT_ACTION(node_server, timestep_driver_ascend, timestep_driver_ascend_action);
+	HPX_DEFINE_COMPONENT_ACTION(node_server, timestep_driver_ascend, timestep_driver_ascend_action);
 
 	hpx::future<hpx::id_type> copy_to_locality(const hpx::id_type&);/**/
 	HPX_DEFINE_COMPONENT_ACTION(node_server, copy_to_locality, copy_to_locality_action);
