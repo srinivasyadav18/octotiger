@@ -247,33 +247,34 @@ HPX_REGISTER_BROADCAST_ACTION (initialize_action);
 
 void start_octotiger(int argc, char *argv[]) {
 	try {
+	        std::cerr << "Processing options..." << std::endl;
 		if (opts().process_options(argc, argv)) {
-			printf("Finding localities\n");
+			std::cerr << "Finding localities\n" << std::endl;
 			auto all_locs = hpx::find_all_localities();
-			printf("Broadcasting localities\n");
+			std::cerr << "Broadcasting localities\n" << std::endl;
 			hpx::lcos::broadcast < initialize_action > (all_locs, opts(), all_locs).get();
-			printf( "Creating root node\n");
+			std::cerr <<  "Creating root node\n" << std::endl;
 			hpx::id_type root_id = hpx::new_ < node_server > (hpx::find_here()).get();
-			printf( "Creating client\n");
+			std::cerr <<  "Creating client\n" << std::endl;
 			node_client root_client(root_id);
-			printf( "Getting pointer to root\n");
+			std::cerr <<  "Getting pointer to root\n" << std::endl;
 			node_server *root = root_client.get_ptr().get();
 
 			node_count_type ngrids;
 			//		printf("1\n");
-			printf( "Checking for restart\n");
+			std::cerr <<  "Checking for restart\n" << std::endl;
 			if (!opts().restart_filename.empty()) {
-				printf( "Restart found\n");
+				std::cerr <<  "Restart found\n" << std::endl;
 				std::cout << "Loading from " << opts().restart_filename << " ...\n";
 				load_data_from_silo(opts().restart_filename, root, root_client.get_unmanaged_gid());
-				printf("Re-grid\n");
+				std::cerr << "Re-grid\n" << std::endl;
 				ngrids = root->regrid(root_client.get_unmanaged_gid(), ZERO, -1, true, false);
-				printf("Done. \n");
+				std::cerr << "Done. \n" << std::endl;
 
 				set_AB(physcon().A, physcon().B);
 
 			} else {
-				printf( "Restart not found\n");
+				std::cerr <<  "Restart not found\n");
 				for (integer l = 0; l < opts().max_level; ++l) {
 					ngrids = root->regrid(root_client.get_gid(), grid::get_omega(), -1, false, false);
 					printf("---------------Created Level %i---------------\n\n", int(l + 1));
