@@ -47,11 +47,11 @@ void multipole_kernel_interface(std::vector<real>& monopoles, std::vector<multip
     std::vector<std::shared_ptr<std::vector<space_vector>>>& com_ptr,
     std::vector<neighbor_gravity_type>& neighbors, gsolve_type type, real dx,
     std::array<bool, geo::direction::count()>& is_direction_empty, std::array<real, NDIM> xbase,
-    std::shared_ptr<grid> grid) {
-    //accelerator_kernel_type device_type = DEVICE_CUDA;
-    //host_kernel_type host_type = HOST_VC;
-    accelerator_kernel_type device_type = DEVICE_KOKKOS;
-    host_kernel_type host_type = HOST_KOKKOS;
+    std::shared_ptr<grid> grid, const bool use_root_stencil) {
+    accelerator_kernel_type device_type = DEVICE_CUDA;
+    host_kernel_type host_type = HOST_VC;
+    //accelerator_kernel_type device_type = DEVICE_KOKKOS;
+    //host_kernel_type host_type = HOST_KOKKOS;
 
     // Try accelerator implementation
     if (device_type != OFF) {
@@ -62,7 +62,7 @@ void multipole_kernel_interface(std::vector<real>& monopoles, std::vector<multip
             if (avail) {
                 executor_interface_t executor;
                 multipole_kernel<device_executor>(executor, monopoles, M_ptr, com_ptr,
-                neighbors, type, dx, opts().theta, is_direction_empty, xbase, grid);
+                neighbors, type, dx, opts().theta, is_direction_empty, xbase, grid, use_root_stencil);
                 return;
             }
 #else
@@ -76,7 +76,7 @@ void multipole_kernel_interface(std::vector<real>& monopoles, std::vector<multip
                 multipole_interactor{};
             multipole_interactor.set_grid_ptr(grid);
             multipole_interactor.compute_multipole_interactions(monopoles, M_ptr, com_ptr,
-                neighbors, type, dx, is_direction_empty, xbase);
+                neighbors, type, dx, is_direction_empty, xbase, use_root_stencil);
             return;
         }
     }    // Nothing is available or device execution is disabled - fallback to host execution
@@ -85,7 +85,7 @@ void multipole_kernel_interface(std::vector<real>& monopoles, std::vector<multip
 #ifdef OCTOTIGER_HAVE_KOKKOS
         host_executor executor{};
         multipole_kernel<host_executor>(executor, monopoles, M_ptr, com_ptr,
-        neighbors, type, dx, opts().theta, is_direction_empty, xbase, grid);
+        neighbors, type, dx, opts().theta, is_direction_empty, xbase, grid, use_root_stencil);
         return;
 #else
         std::cerr << "Trying to call Multipole Kokkos kernel in a non-kokkos build! Aborting..." << std::endl;
@@ -96,7 +96,7 @@ void multipole_kernel_interface(std::vector<real>& monopoles, std::vector<multip
             multipole_interactor{};
         multipole_interactor.set_grid_ptr(grid);
         multipole_interactor.compute_multipole_interactions(monopoles, M_ptr, com_ptr,
-                neighbors, type, dx, is_direction_empty, xbase);
+                neighbors, type, dx, is_direction_empty, xbase, use_root_stencil);
         return;
     }
 

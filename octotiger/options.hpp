@@ -122,6 +122,7 @@ public:
 	size_t cuda_streams_per_gpu;
 	size_t cuda_buffer_capacity;
 	bool cuda_polling_executor;
+	bool root_node_on_device;
 	bool legacy_hydro;
 
 	std::string input_file;
@@ -136,6 +137,7 @@ public:
 
 	problem_type problem;
 
+	amr_boundary_type amr_boundary_kernel_type;
 	interaction_kernel_type m2m_kernel_type;
 	interaction_kernel_type p2m_kernel_type;
 	interaction_kernel_type p2p_kernel_type;
@@ -248,6 +250,7 @@ public:
 		arc & cuda_streams_per_gpu;
 		arc & cuda_buffer_capacity;
 		arc & cuda_polling_executor;
+	  arc & root_node_on_device;
 		arc & legacy_hydro;
 		arc & atomic_mass;
 		arc & atomic_number;

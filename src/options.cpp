@@ -140,6 +140,7 @@ bool options::process_options(int argc, char *argv[]) {
 	("stop_step", po::value<integer>(&(opts().stop_step))->default_value(std::numeric_limits<integer>::max() - 1), "number of timesteps to run")          //
 	("min_level", po::value<integer>(&(opts().min_level))->default_value(1), "minimum number of refinement levels")         //
 	("max_level", po::value<integer>(&(opts().max_level))->default_value(1), "maximum number of refinement levels")         //
+	("amr_boundary_kernel_type", po::value<amr_boundary_type>(&(opts().amr_boundary_kernel_type))->default_value(AMR_OPTIMIZED), "amr completion kernel type") //
 	("multipole_kernel_type", po::value<interaction_kernel_type>(&(opts().m2m_kernel_type))->default_value(SOA_CPU), "boundary multipole-multipole kernel type") //
 	("p2p_kernel_type", po::value<interaction_kernel_type>(&(opts().p2p_kernel_type))->default_value(SOA_CPU), "boundary particle-particle kernel type")   //
 	("p2m_kernel_type", po::value<interaction_kernel_type>(&(opts().p2m_kernel_type))->default_value(SOA_CPU), "boundary particle-multipole kernel type") //
@@ -147,6 +148,7 @@ bool options::process_options(int argc, char *argv[]) {
 	("cuda_streams_per_gpu", po::value<size_t>(&(opts().cuda_streams_per_gpu))->default_value(size_t(0)), "cuda streams per GPU (per locality)") //
 	("cuda_buffer_capacity", po::value<size_t>(&(opts().cuda_buffer_capacity))->default_value(size_t(5)), "How many launches should be buffered before using the CPU") //
 	("cuda_polling_executor", po::value<bool>(&(opts().cuda_polling_executor))->default_value(true), "Use polling (true) or callback (false) executor") //
+	("root_node_on_device", po::value<bool>(&(opts().root_node_on_device))->default_value(true), "Offload root node gravity kernels to the GPU? May degrade performance given weak GPUs") //
 	("legacy_hydro", po::value<bool>(&(opts().legacy_hydro))->default_value(false), "Use new hydro (false) or legacy hydro (true)") //
 	("input_file", po::value<std::string>(&(opts().input_file))->default_value(""), "input file for test problems") //
 	("config_file", po::value<std::string>(&(opts().config_file))->default_value(""), "configuration file") //
@@ -315,12 +317,21 @@ bool options::process_options(int argc, char *argv[]) {
 	normalize_constants();
 	if (opts().problem == DWD) {
 		if (opts().restart_filename == "" && opts().disable_diagnostics) {
-			printf("Diagnostics must be enabled for DWD\n");
+      std::cerr << "Diagnostics must be enabled for DWD" << std::endl;
 			sleep(10);
 			abort();
 		}
 	}
-
+#ifdef OCTOTIGER_HAVE_KOKKOS
+#ifdef OCTOTIGER_HAVE_CUDA
+  /*if (!opts().cuda_polling_executor) {
+      std::cerr << "\n\nError:" << std::endl;
+      std::cerr << "Using KOKKOS with CUDA backend enabled requires --cuda_polling_executor=1 !" << std::endl;
+      std::cerr << "Aborting..." << std::endl;
+      abort();
+  }*/
+#endif
+#endif
 	return true;
 }
 

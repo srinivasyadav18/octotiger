@@ -55,6 +55,12 @@ namespace fmm {
                 component_access * padded_entries_per_component;
             return VectorType(data.data() + flat_index + component_array_offset);
         }
+        template <size_t component_access>
+        inline component_type at(const size_t flat_index) const {
+            constexpr size_t component_array_offset =
+                component_access * padded_entries_per_component;
+            return data[flat_index + component_array_offset];
+        }
 
         template <typename AoS_temp_type>
         void set_AoS_value(AoS_temp_type&& value, size_t flatindex) {
@@ -125,6 +131,29 @@ namespace fmm {
                 for (size_t component = 0; component < num_components; component++) {
                     out << component << ": "
                         << data[component * padded_entries_per_component + entry] << " "
+                        << std::endl;
+                }
+                out << std::endl;
+            }
+        }
+        bool all_zero(std::ostream& out, size_t number_entries = padded_entries_per_component) {
+            for (size_t entry = 0; entry < number_entries; entry++) {
+                for (size_t component = 0; component < num_components; component++) {
+                    if (std::abs(data[component * padded_entries_per_component + entry]) > 1e-18) {
+                    out << component << " / " << entry << " : " 
+                        << data[component * padded_entries_per_component + entry] << " "
+                        << std::endl;
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        void compare(std::ostream& out, std::vector<AoS_type>& org_copy, std::vector<AoS_type>& org, size_t number_entries = padded_entries_per_component) {
+            for (size_t entry = 0; entry < 16; entry++) {
+                for (size_t component = 0; component < num_components; component++) {
+                    out << component << ": " << 
+                        data[component * padded_entries_per_component + entry] << " " << data[component * padded_entries_per_component + entry] + org_copy[entry][component] << " " << org[entry][component] 
                         << std::endl;
                 }
                 out << std::endl;
