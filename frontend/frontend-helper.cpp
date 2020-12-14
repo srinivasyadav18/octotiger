@@ -274,7 +274,7 @@ void start_octotiger(int argc, char *argv[]) {
 				set_AB(physcon().A, physcon().B);
 
 			} else {
-				std::cerr <<  "Restart not found\n");
+				std::cerr <<  "Restart not found" << std::endl;
 				for (integer l = 0; l < opts().max_level; ++l) {
 					ngrids = root->regrid(root_client.get_gid(), grid::get_omega(), -1, false, false);
 					printf("---------------Created Level %i---------------\n\n", int(l + 1));

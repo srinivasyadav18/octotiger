@@ -69,21 +69,21 @@ int hpx_main(int argc, char* argv[]) {
 
     // hpx::kokkos::ScopeGuard g(argc, argv);
 
-	printf("###########################################################\n");
+	std::cerr "###########################################################" << std::endl;
 #if defined(__AVX512F__)
-	printf("Compiled for AVX512 SIMD architectures.\n");
+	std::cerr << "Compiled for AVX512 SIMD architectures." << std::endl;
 #elif defined(__AVX2__)
-	printf("Compiled for AVX2 SIMD architectures.\n");
+	std::cerr << "Compiled for AVX2 SIMD architectures." << std::endl;
 #elif defined(__AVX__)
-	printf("Compiled for AVX SIMD architectures.\n");
+	std::cerr << "Compiled for AVX SIMD architectures." << std::endl;
 #elif defined(__SSE2__ )
-	printf("Compiled for SSE2 SIMD architectures.\n");
+	std::cerr << "Compiled for SSE2 SIMD architectures." << std::endl;
 #else
-	printf("Not compiled for a known SIMD architecture.\n");
+	std::cerr << "Not compiled for a known SIMD architecture.\n" << std::endl;
 #endif
-	printf("###########################################################\n");
+	std::cerr << "###########################################################" << std::endl;
 
-	printf("Running\n");
+	std::cerr << "Running" << std::endl;
 
     start_octotiger(argc, argv);
 
@@ -91,6 +91,7 @@ int hpx_main(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
+	std::cerr << "starting main" << std::endl;
 	std::vector<std::string> cfg = { "hpx.commandline.allow_unknown=1", // HPX should not complain about unknown command line options
 			"hpx.scheduler=local-priority-lifo",       // Use LIFO scheduler by default
 			"hpx.parcel.mpi.zero_copy_optimization!=0" // Disable the usage of zero copy optimization for MPI...
