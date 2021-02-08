@@ -69,7 +69,7 @@ int hpx_main(int argc, char* argv[]) {
 
     // hpx::kokkos::ScopeGuard g(argc, argv);
 
-	std::cerr "###########################################################" << std::endl;
+	std::cerr << "###########################################################" << std::endl;
 #if defined(__AVX512F__)
 	std::cerr << "Compiled for AVX512 SIMD architectures." << std::endl;
 #elif defined(__AVX2__)
