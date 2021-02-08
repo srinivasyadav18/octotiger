@@ -75,7 +75,7 @@ endif()
 find_package(HPX REQUIRED NO_CMAKE_PACKAGE_REGISTRY)
 find_package(CPPuddle REQUIRED)
 find_package(Silo REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost COMPONENTS system filesystem program_options REQUIRED)
 if(NOT MSVC)
   find_package(Threads REQUIRED)  # Required by target gen_rotating_star_init
 endif()
