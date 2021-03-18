@@ -120,9 +120,9 @@ if(OCTOTIGER_WITH_KOKKOS)
   )
   FetchContent_MakeAvailable(kokkossimd)
 
-  if(Kokkos_ENABLE_CUDA)
-    enable_language(CUDA)
-  endif()
+  #if(Kokkos_ENABLE_CUDA)
+  #  enable_language(CUDA)
+  #endif()
 endif()
 
 
@@ -339,12 +339,12 @@ if(OCTOTIGER_WITH_CUDA)
   if(OCTOTIGER_WITH_KOKKOS)
     set_source_files_properties(${source_files} ${header_files} PROPERTIES COMPILE_FLAGS " -expt-relaxed-constexpr")
     #set_source_files_properties(${hydro_source_files} ${cu_source_files} PROPERTIES COMPILE_FLAGS " -expt-relaxed-constexpr -Xptxas=-v,-fmad=true,--opt-level=4")
-    set_source_files_properties(${hydro_source_files} ${cu_source_files} PROPERTIES COMPILE_FLAGS " -xcuda --cuda-gpu-arch=sm_80")
+    set_source_files_properties(${hydro_source_files} ${cu_source_files} PROPERTIES COMPILE_FLAGS " -xcuda --cuda-gpu-arch=sm_50")
   else()
     #set_source_files_properties(${cu_source_files} ${hydro_cu_source_files} PROPERTIES LANGUAGE CUDA)
 
     # TODO From what I can tell -fno-fast-math is only required for the sqrt in the multipole kernels - remove flag from other files
-    set_source_files_properties(${cu_source_files} ${hydro_cu_source_files} PROPERTIES COMPILE_FLAGS " -xcuda -fno-fast-math -ffp-contract=fast --cuda-gpu-arch=sm_80")
+    set_source_files_properties(${cu_source_files} ${hydro_cu_source_files} PROPERTIES COMPILE_FLAGS " -xcuda -fno-fast-math -ffp-contract=fast --cuda-gpu-arch=sm_50")
   endif()
 endif()
 
@@ -360,6 +360,30 @@ add_hpx_library(
 )
 
 if(OCTOTIGER_WITH_KOKKOS)
+  # Add symbols
+  target_compile_definitions(octolib PUBLIC OCTOTIGER_HAVE_KOKKOS)
+  target_compile_definitions(hydrolib PUBLIC OCTOTIGER_HAVE_KOKKOS)
+
+  if(OCTOTIGER_WITH_MONOPOLE_HOST_HPX_EXECUTOR)
+    target_compile_definitions(octolib PUBLIC OCTOTIGER_MONOPOLE_HOST_HPX_EXECUTOR)
+  endif()
+  if(OCTOTIGER_WITH_MULTIPOLE_HOST_HPX_EXECUTOR)
+    target_compile_definitions(octolib PUBLIC OCTOTIGER_MULTIPOLE_HOST_HPX_EXECUTOR)
+  endif()
+  if(OCTOTIGER_WITH_FORCE_SCALAR_KOKKOS_SIMD)
+    target_compile_definitions(octolib PUBLIC OCTOTIGER_FORCE_SCALAR_KOKKOS_SIMD)
+  endif()
+  # Add simd library
+  message(INFO "Compiling with Kokkos SIMD! Path:")
+  message(INFO ${kokkossimd_SOURCE_DIR})
+  target_include_directories(octolib PUBLIC ${kokkossimd_SOURCE_DIR})
+  # Use this include when actively developing simd-math itself and the source changes often
+  # You are responsible for checking out the simd-math source at the correct directory in this case
+  #target_include_directories(octolib PUBLIC ${PROJECT_SOURCE_DIR}/../simd-math)
+
+endif()
+
+if(OCTOTIGER_WITH_KOKKOS AND NOT(CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
   # Deal with the incompatibility of Kokkos+Cuda and Vc, HPX actions and general constexpr problems
   set(host_only_source_files
     # Source files that need Vc
@@ -405,29 +429,9 @@ if(OCTOTIGER_WITH_KOKKOS)
   )
   message(INFO " Host-only list set!")
   set_source_files_properties(${host_only_source_files} ${host_only_header_files} PROPERTIES COMPILE_FLAGS " -isystem ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} --host-only")
-
-  # Add symbols
-  target_compile_definitions(octolib PUBLIC OCTOTIGER_HAVE_KOKKOS)
-  target_compile_definitions(octolib PUBLIC HPX_WITH_CUDA) # workaround for the kokkos hpx include
-  target_compile_definitions(hydrolib PUBLIC OCTOTIGER_HAVE_KOKKOS)
   target_compile_definitions(hydrolib PUBLIC HPX_WITH_CUDA) # workaround for the kokkos hpx include
+  target_compile_definitions(octolib PUBLIC HPX_WITH_CUDA) # workaround for the kokkos hpx include
 
-  if(OCTOTIGER_WITH_MONOPOLE_HOST_HPX_EXECUTOR)
-    target_compile_definitions(octolib PUBLIC OCTOTIGER_MONOPOLE_HOST_HPX_EXECUTOR)
-  endif()
-  if(OCTOTIGER_WITH_MULTIPOLE_HOST_HPX_EXECUTOR)
-    target_compile_definitions(octolib PUBLIC OCTOTIGER_MULTIPOLE_HOST_HPX_EXECUTOR)
-  endif()
-  if(OCTOTIGER_WITH_FORCE_SCALAR_KOKKOS_SIMD)
-    target_compile_definitions(octolib PUBLIC OCTOTIGER_FORCE_SCALAR_KOKKOS_SIMD)
-  endif()
-  # Add simd library
-  message(INFO "Compiling with Kokkos SIMD! Path:")
-  message(INFO ${kokkossimd_SOURCE_DIR})
-  target_include_directories(octolib PUBLIC ${kokkossimd_SOURCE_DIR})
-  # Use this include when actively developing simd-math itself and the source changes often
-  # You are responsible for checking out the simd-math source at the correct directory in this case
-  #target_include_directories(octolib PUBLIC ${PROJECT_SOURCE_DIR}/../simd-math)
 endif()
 
 # Enable exported functions
@@ -582,9 +586,9 @@ if(OCTOTIGER_WITH_CUDA)
   message(INFO " CUDA support is turned on!")
   target_compile_definitions(octolib PUBLIC OCTOTIGER_HAVE_CUDA)
   target_compile_definitions(hydrolib PUBLIC OCTOTIGER_HAVE_CUDA)
-  #set_property(TARGET octolib PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+  set_property(TARGET octolib PROPERTY CUDA_SEPARABLE_COMPILATION ON)
   #set_property(TARGET octolib PROPERTY INTERFACE_COMPILE_OPTIONS "${MY_CUDA_FLAGS}")
-  #set_property(TARGET hydrolib PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+  set_property(TARGET hydrolib PROPERTY CUDA_SEPARABLE_COMPILATION ON)
   #set_property(TARGET hydrolib PROPERTY INTERFACE_COMPILE_OPTIONS "${MY_CUDA_FLAGS}")
 
 

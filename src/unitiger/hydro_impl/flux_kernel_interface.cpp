@@ -1,9 +1,22 @@
+
+#pragma message ("Starting to compile flux interface...")
+#include "octotiger/cuda_util/cuda_helper.hpp"
 #include "octotiger/unitiger/hydro_impl/flux_kernel_interface.hpp"
 
 #ifdef OCTOTIGER_HAVE_CUDA
-#include "octotiger/cuda_util/cuda_helper.hpp"
-#include <hpx/apply.hpp>
+#include <cuda_runtime.h>
+#include <hpx/execution.hpp>
 #include <hpx/synchronization/once.hpp>
+
+#include <hpx/config.hpp>
+#ifdef HPX_COMPUTE_HOST_CODE
+#pragma message("Host pass!!")
+#elif defined(HPX_COMPUTE_DEVICE_CODE)
+#pragma message("Device pass!!")
+#else
+#pragma message("ERROR pass!!")
+#endif
+#ifdef HPX_COMPUTE_HOST_CODE
 
 hpx::lcos::local::once_flag flag1;
 
@@ -19,7 +32,7 @@ __host__ const bool* get_gpu_masks(void) {
     return masks;
 }
 
-timestep_t launch_flux_cuda(stream_interface<hpx::cuda::experimental::cuda_executor, pool_strategy>& executor,
+__host__ timestep_t launch_flux_cuda(stream_interface<hpx::cuda::experimental::cuda_executor, pool_strategy>& executor,
     double* device_q,
     std::vector<double, recycler::recycle_allocator_cuda_host<double>> &combined_f,
     std::vector<double, recycler::recycle_allocator_cuda_host<double>> &combined_x, double* device_x,
@@ -52,20 +65,34 @@ timestep_t launch_flux_cuda(stream_interface<hpx::cuda::experimental::cuda_execu
     std::vector<double, recycler::recycle_allocator_cuda_host<double>> amax(7 * NDIM * (1 + 2 * nf_));
     std::vector<int, recycler::recycle_allocator_cuda_host<int>> amax_indices(7 * NDIM);
     std::vector<int, recycler::recycle_allocator_cuda_host<int>> amax_d(7 * NDIM);
-    hpx::apply(static_cast<hpx::cuda::experimental::cuda_executor>(executor),
+    cudaStream_t stream1;
+    cudaError_t result;
+    result = cudaStreamCreate(&stream1);
+       cudaMemcpyAsync(amax.data(),
+       device_amax.device_side_buffer, (7 * NDIM * (1 + 2 * nf_)) * sizeof(double),
+       cudaMemcpyDeviceToHost, stream1);
+    /*hpx::apply(static_cast<hpx::cuda::experimental::cuda_executor>(executor),
                cudaMemcpyAsync, amax.data(),
+               device_amax.device_side_buffer, (7 * NDIM * (1 + 2 * nf_)) * sizeof(double),
+               cudaMemcpyDeviceToHost);*/
+    //cudaError_t (*my_memcpy)(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind, cudaStream_t stream);
+    cudaError_t (*my_memcpy)(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind, cudaStream_t stream);
+    my_memcpy = cudaMemcpyAsync;
+    std::cout << typeid(my_memcpy).name() << std::endl;
+    hpx::apply(static_cast<hpx::cuda::experimental::cuda_executor>(executor),
+               my_memcpy, amax.data(),
                device_amax.device_side_buffer, (7 * NDIM * (1 + 2 * nf_)) * sizeof(double),
                cudaMemcpyDeviceToHost);
     hpx::apply(static_cast<hpx::cuda::experimental::cuda_executor>(executor),
-               cudaMemcpyAsync, amax_indices.data(),
+               my_memcpy, amax_indices.data(),
                device_amax_indices.device_side_buffer, 7 * NDIM * sizeof(int),
                cudaMemcpyDeviceToHost);
     hpx::apply(static_cast<hpx::cuda::experimental::cuda_executor>(executor),
-               cudaMemcpyAsync, amax_d.data(),
+               my_memcpy, amax_d.data(),
                device_amax_d.device_side_buffer, 7 * NDIM * sizeof(int),
                cudaMemcpyDeviceToHost);
     auto fut = hpx::async(static_cast<hpx::cuda::experimental::cuda_executor>(executor),
-               cudaMemcpyAsync, combined_f.data(), device_f.device_side_buffer,
+               my_memcpy, combined_f.data(), device_f.device_side_buffer,
                (NDIM * nf_ * 1000 + 32) * sizeof(double), cudaMemcpyDeviceToHost);
     fut.get();
 
@@ -98,35 +125,36 @@ timestep_t launch_flux_cuda(stream_interface<hpx::cuda::experimental::cuda_execu
 }
 #endif
 
+#endif
 
 // Scalar kernel
 template <>
-inline void select_wrapper<double, bool>(
+CUDA_GLOBAL_METHOD inline void select_wrapper<double, bool>(
     double_t& target, const bool cond, const double& tmp1, const double& tmp2) {
     target = cond ? tmp1 : tmp2;
 }
 template <>
-inline double max_wrapper<double>(const double& tmp1, const double& tmp2) {
+CUDA_GLOBAL_METHOD inline double max_wrapper<double>(const double& tmp1, const double& tmp2) {
     return std::max(tmp1, tmp2);
 }
 template <>
-inline double min_wrapper<double>(const double& tmp1, const double& tmp2) {
+CUDA_GLOBAL_METHOD inline double min_wrapper<double>(const double& tmp1, const double& tmp2) {
     return std::min(tmp1, tmp2);
 }
 template <>
-inline double sqrt_wrapper<double>(const double& tmp1) {
+CUDA_GLOBAL_METHOD inline double sqrt_wrapper<double>(const double& tmp1) {
     return std::sqrt(tmp1);
 }
 template <>
-inline double pow_wrapper<double>(const double& tmp1, const double& tmp2) {
+CUDA_GLOBAL_METHOD inline double pow_wrapper<double>(const double& tmp1, const double& tmp2) {
     return std::pow(tmp1, tmp2);
 }
 template <>
-inline double asin_wrapper<double>(const double& tmp1) {
+CUDA_GLOBAL_METHOD inline double asin_wrapper<double>(const double& tmp1) {
     return std::asin(tmp1);
 }
 template <>
-inline bool skippable<double>(const double& tmp1) {
+CUDA_GLOBAL_METHOD inline bool skippable<double>(const double& tmp1) {
     return !tmp1;
 }
 
@@ -235,3 +263,5 @@ timestep_t flux_kernel_interface(const hydro::recon_type<NDIM>& Q, hydro::flux_t
     ts.dim = current_dim;
     return ts;
 }
+#pragma message("Finished pass!!")
+
