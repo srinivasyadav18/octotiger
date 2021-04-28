@@ -1,9 +1,10 @@
 #pragma once
-#include <string>
-#include <silo.h>
-#include <vector>
 #include <map>
+#include <string>
 #include <unordered_map>
+#include <vector>
+
+#include <silo.h>
 
 #define SILO_DRIVER DB_HDF5
 static const int HOST_NAME_LEN = 100;

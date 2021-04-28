@@ -6,7 +6,9 @@
  */
 
 #include "./silo_convert.hpp"
+
 #include <cstring>
+
 #include <sys/stat.h>
 
 split_silo::split_silo(const std::string filename, int _num_groups) {

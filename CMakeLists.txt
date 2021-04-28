@@ -6,8 +6,8 @@
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 project(octotiger CXX)
 
-cmake_minimum_required(VERSION 3.12.4)
-cmake_policy(VERSION 3.12.4)
+cmake_minimum_required(VERSION 3.17)
+cmake_policy(VERSION 3.17)
 
 # Libraries linked via full path no longer produce linker search paths.
 cmake_policy(SET CMP0003 NEW)
@@ -15,7 +15,7 @@ cmake_policy(SET CMP0074 NEW)
 
 # Search path for CMake modules to be loaded by include() and find_package()
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 ################################################################################
 # Options
 ################################################################################
@@ -68,7 +68,7 @@ endif()
 ################################################################################
 find_package(HPX REQUIRED NO_CMAKE_PACKAGE_REGISTRY)
 find_package(Silo REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost COMPONENTS program_options REQUIRED)
 if(NOT MSVC)
   find_package(Threads REQUIRED)  # Required by target gen_rotating_star_init
 endif()

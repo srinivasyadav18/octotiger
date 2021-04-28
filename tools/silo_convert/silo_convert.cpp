@@ -6,7 +6,8 @@
  */
 
 #include <boost/program_options.hpp>
-#include <stdio.h>
+
+#include <cstdio>
 #include <iostream>
 #include <map>
 

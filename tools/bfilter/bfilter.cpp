@@ -4,15 +4,16 @@
  *  Created on: Jul 25, 2019
  *      Author: dmarce1
  */
-#include <stdio.h>
-#include <ctype.h>
-#include <stdlib.h>
+#include <boost/program_options.hpp>
+
+#include <cctype>
+#include <cmath>
+#include <complex>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
 #include <map>
 #include <vector>
-#include <math.h>
-#include <iostream>
-#include <complex>
-#include <boost/program_options.hpp>
 
 auto band_filter(double t, double Ps, double Pc) {
 	const auto x = 2.0 * M_PI * t / Pc;

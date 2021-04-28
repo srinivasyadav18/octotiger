@@ -1,5 +1,6 @@
 #include "./silo_convert.hpp"
-#include <string.h>
+
+#include <cstring>
 
 plain_silo::plain_silo(const std::string filename) {
 	db = DBCreateReal(filename.c_str(), DB_CLOBBER, DB_LOCAL, "Octo-Tiger", SILO_DRIVER);
