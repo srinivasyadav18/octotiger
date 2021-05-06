@@ -3,6 +3,9 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#include <hpx/config/compiler_specific.hpp> 
+#ifndef HPX_COMPUTE_DEVICE_CODE
+
 #include "octotiger/future.hpp"
 #include "octotiger/node_server.hpp"
 #include "octotiger/options.hpp"
@@ -73,3 +76,4 @@ void node_client::report_timing() const {
 	   hpx::async<typename node_server::report_timing_action>(get_gid()).get();
 	}
 
+# endif

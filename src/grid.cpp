@@ -1,3 +1,4 @@
+
 //  Copyright (c) 2019 AUTHORS
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -31,6 +32,8 @@
 #include <cmath>
 #include <string>
 #include <unordered_map>
+
+#ifndef HPX_COMPUTE_DEVICE_CODE
 
 #include "octotiger/unitiger/hydro_impl/flux_kernel_interface.hpp"
 #include "octotiger/unitiger/hydro_impl/reconstruct_kernel_interface.hpp"
@@ -2403,3 +2406,4 @@ std::vector<real> grid::conserved_outflows() const {
 	return Uret;
 }
 
+#endif
