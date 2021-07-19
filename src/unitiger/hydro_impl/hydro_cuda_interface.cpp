@@ -134,6 +134,18 @@ timestep_t launch_hydro_cuda_kernels(const hydro_computer<NDIM, INX, physics<NDI
     recycler::cuda_device_buffer<int> device_disc_detect(hydro.get_nf());
     recycler::cuda_device_buffer<int> device_smooth_field(hydro.get_nf());
     recycler::cuda_device_buffer<double> device_AM(NDIM * q_inx * q_inx * q_inx + 128);
+    hpx::apply(static_cast<hpx::cuda::experimental::cuda_executor>(executor),
+        cudaMemsetAsync, device_q.device_side_buffer, 0,
+        (hydro.get_nf() * 27 * q_inx * q_inx * q_inx + 128) * sizeof(double));
+    hpx::apply(static_cast<hpx::cuda::experimental::cuda_executor>(executor),
+        cudaMemsetAsync, device_f.device_side_buffer, 0,
+        (NDIM * hydro.get_nf() * q_inx3 + 128) * sizeof(double));
+    hpx::apply(static_cast<hpx::cuda::experimental::cuda_executor>(executor),
+        cudaMemsetAsync, device_P.device_side_buffer, 0,
+        (H_N3 + 128) * sizeof(double));
+    hpx::apply(static_cast<hpx::cuda::experimental::cuda_executor>(executor),
+        cudaMemsetAsync, device_AM.device_side_buffer, 0,
+        (NDIM * q_inx * q_inx * q_inx + 128) * sizeof(double));
 
     // Host buffers
     std::vector<double, recycler::recycle_allocator_cuda_host<double>> combined_x(NDIM * q_inx3 + 128);
