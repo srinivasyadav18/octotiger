@@ -62,10 +62,6 @@ namespace fmm {
                 if (device_type == interaction_device_kernel_type::KOKKOS_HIP) {
 #else
                 {
-                    std::cerr << "Trying to call multipole Kokkos kernel with no or the wrong kokkos "
-                                 "device backend active! Aborting..."
-                              << std::endl;
-                    abort();
 #endif
 #if defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_CUDA)
                     bool avail =
@@ -78,6 +74,11 @@ namespace fmm {
                             use_root_stencil);
                         return;
                     }
+#else
+                    std::cerr << "Trying to call multipole Kokkos kernel with no or the wrong kokkos "
+                                 "device backend active! Aborting..."
+                              << std::endl;
+                    abort();
 #endif
                 }
                 if (device_type == interaction_device_kernel_type::CUDA) {

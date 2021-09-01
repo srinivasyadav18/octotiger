@@ -61,10 +61,6 @@ namespace fmm {
                 if (device_type == interaction_device_kernel_type::KOKKOS_HIP) {
 #else
                 {
-                    std::cerr << "Trying to call P2P Kokkos kernel with no or the wrong kokkos device "
-                                 "backend active! Aborting..."
-                              << std::endl;
-                    abort();
 #endif
 #if defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_CUDA)
                     bool avail =
@@ -82,6 +78,11 @@ namespace fmm {
                             contains_multipole_neighbor);
                         return;
                     }
+#else
+                    std::cerr << "Trying to call monopole Kokkos kernel with no or the wrong kokkos device "
+                                 "backend active! Aborting..."
+                              << std::endl;
+                    abort();
 #endif
                 }
                 if (device_type == interaction_device_kernel_type::CUDA) {

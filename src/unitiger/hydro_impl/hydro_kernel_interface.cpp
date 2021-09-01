@@ -43,10 +43,6 @@ timestep_t launch_hydro_kernels(hydro_computer<NDIM, INX, physics<NDIM>>& hydro,
         if (device_type == interaction_device_kernel_type::KOKKOS_HIP) {
 #else
         {
-            std::cerr << "Trying to call multipole Kokkos kernel with no or the wrong kokkos device backend active! "
-                         "Aborting..."
-                      << std::endl;
-            abort();
 #endif
 #if defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_CUDA)
             bool avail = false;
@@ -58,6 +54,11 @@ timestep_t launch_hydro_kernels(hydro_computer<NDIM, INX, physics<NDIM>>& hydro,
                     hydro, U, X, omega, opts().n_species, executor, F);
                 return max_lambda;
             }
+#else
+            std::cerr << "Trying to call multipole Kokkos kernel with no or the wrong kokkos device backend active! "
+                         "Aborting..."
+                      << std::endl;
+            abort();
 #endif
         }
         if (device_type == interaction_device_kernel_type::CUDA) {
