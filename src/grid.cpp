@@ -1849,6 +1849,12 @@ timestep_t grid::compute_fluxes() {
 					abort();
 				}
 			}
+			for( int dim = 0; dim < NDIM; dim++) {
+				if( std::isnan( X[dim][hindex(i, j, k)] ) ) {
+					print( "NaN found in X dim = %i i = %i j = %i k = %i\n", dim, i, j, k );
+					abort();
+				}
+			}
 		}
 	}
    }
