@@ -2244,8 +2244,8 @@ void grid::next_u(integer rk, real t, real dt) {
 				const integer iii0 = h0index(i - H_BW, j - H_BW, k - H_BW);
 				const integer iii = hindex(i, j, k);
 				dUdt[egas_i][iii0] += (dphi_dt[iii0] * U[rho_i][iii]) * HALF;
-					if( std::isnan(dUdt[egas_i][iii]) ) {
-						print( "NaN in %s on %i index %i\n", __FILE__, __LINE__, iii );
+					if( std::isnan(dUdt[egas_i][iii0]) ) {
+						print( "NaN in %s on %i index %i\n", __FILE__, __LINE__, iii0 );
 						abort();
 					}
 			}
