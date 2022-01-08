@@ -83,6 +83,8 @@ int hpx_main(int argc, char* argv[]) {
 	printf("Compiled for AVX SIMD architectures.\n");
 #elif defined(__SSE2__ )
 	printf("Compiled for SSE2 SIMD architectures.\n");
+#elif defined(__ARM_NEON )
+	printf("Compiled for NEON SIMD architectures.\n");
 #else
 	printf("Not compiled for a known SIMD architecture.\n");
 #endif
