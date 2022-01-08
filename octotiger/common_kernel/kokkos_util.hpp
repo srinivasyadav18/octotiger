@@ -144,7 +144,18 @@ using host_simd_mask_t = SIMD_NAMESPACE::simd_mask<double, SIMD_NAMESPACE::simd_
 using host_simd_t = SIMD_NAMESPACE::simd<double, SIMD_NAMESPACE::simd_abi::avx>;
 using host_simd_mask_t = SIMD_NAMESPACE::simd_mask<double, SIMD_NAMESPACE::simd_abi::avx>;
 #warning "Using AVX SIMD types"
+#elif defined(__ARM_NEON)
+#include <neon.hpp>
+using host_simd_t = SIMD_NAMESPACE::simd<double, SIMD_NAMESPACE::simd_abi::neon>;
+using host_simd_mask_t = SIMD_NAMESPACE::simd_mask<double, SIMD_NAMESPACE::simd_abi::neon>;
+#warning "Using NEON SIMD types"
 #else
+#if defined(__ARM_FEATURE_SVE)
+#error "SVE is supported1"
+#endif
+#if defined(__ARM_FEATURE_SVE_BITS) 
+#error "SVE is supported2"
+#endif
 #error "Could not detect any supported SIMD instruction set. Define OCTOTIGER_FORCE_SCALAR_KOKKOS_SIMD to continue anyway (or fix your arch flags if your platform supports AVX)!"
 #endif
 #else

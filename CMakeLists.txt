@@ -60,7 +60,7 @@ option(OCTOTIGER_WITH_FORCE_SCALAR_KOKKOS_SIMD
 option(OCTOTIGER_WITH_POLLING_EXECUTORS  
   "Use the polling executors, not the callback ones" ON)
 
-option(eCTOTIGER_ARCH_FLAG
+option(OCTOTIGER_ARCH_FLAG
   "Arch flag for compilations" "-march=native")
 option(OCTOTIGER_CUDA_ARCH
   "Compile for this CUDA arch" sm_50)
@@ -446,9 +446,9 @@ if(OCTOTIGER_WITH_CUDA)
   endif()
 else()
   if (OCTOTIGER_WITH_FAST_FP_CONTRACT)
-        set_source_files_properties(src/unitiger/hydro_impl/hydro_kernel_interface.cpp PROPERTIES COMPILE_FLAGS "-march=native -ffp-contract=fast")
+	  set_source_files_properties(src/unitiger/hydro_impl/hydro_kernel_interface.cpp PROPERTIES COMPILE_FLAGS "${OCTOTIGER_ARCH_FLAG} -ffp-contract=fast")
   else()
-        set_source_files_properties(src/unitiger/hydro_impl/hydro_kernel_interface.cpp PROPERTIES COMPILE_FLAGS "-march=native -ffp-contract=off")
+        set_source_files_properties(src/unitiger/hydro_impl/hydro_kernel_interface.cpp PROPERTIES COMPILE_FLAGS "${OCTOTIGER_ARCH_FLAG} -ffp-contract=off")
   endif()
 endif()
 
