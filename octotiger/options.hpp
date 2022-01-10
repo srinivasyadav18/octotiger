@@ -51,6 +51,7 @@ public:
 	bool correct_am_hydro;
 	bool rotating_star_amr;
 	bool idle_rates;
+	bool verbose;
 
 	integer scf_output_frequency;
 	integer silo_num_groups;

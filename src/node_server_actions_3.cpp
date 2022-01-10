@@ -496,9 +496,15 @@ void node_server::refined_step() {
 	timings::scope ts(timings_, timings::time_computation);
 	const real dx = TWO * grid::get_scaling_factor() / real(INX << my_location.level());
 	real cfl0 = opts().cfl;
-
+	const bool verbose = opts().verbose && (my_location.level() == 0);
 	real a = std::numeric_limits<real>::min();
+	if( verbose ) {
+		print( "begin all_hydro_bounds()\n");
+	}
 	all_hydro_bounds();
+	if( verbose ) {
+		print( "end all_hydro_bounds()\n");
+	}
 	timestep_t tstep;
 	tstep.dt = std::numeric_limits<real>::max();
 	local_timestep_channels[NCHILD].set_value(tstep);
@@ -508,18 +514,63 @@ void node_server::refined_step() {
 
 		{
 			timings::scope ts(timings_, timings::time_fmm);
+			if( verbose ) {
+				print( "begin compute_fmm(DRHODT, false), rk = %i\n", rk);
+			}
 			compute_fmm(DRHODT, false);
+			if( verbose ) {
+				print( "end compute_fmm(DRHODT, false), rk = %i\n", rk);
+				print( "begin compute_fmm(RHO, true), rk = %i\n", rk);
+			}
 			compute_fmm(RHO, true);
+			if( verbose ) {
+				print( "end compute_fmm(RHO, true), rk = %i\n", rk);
+			}
 		}
-		rk == NRK - 1 ? energy_hydro_bounds() : all_hydro_bounds();
+		if( rk == NRK - 1 ) {
+			if( verbose ) {
+				print( "begin energy_hydro_bounds(), rk = %i\n", rk);
+			}
+			energy_hydro_bounds();
+			if( verbose ) {
+				print( "end energy_hydro_bounds(), rk = %i\n", rk);
+			}
+		} else {
+			if( verbose ) {
+				print( "begin all_hydro_bounds(), rk = %i\n", rk);
+			}
+			all_hydro_bounds();
+			if( verbose ) {
+				print( "end all_hydro_bounds(), rk = %i\n", rk);
+			}
+		}
 
 	}
-
+	if( verbose ) {
+		print( "begin GET(dt_fut)\n");
+	}
 	dt_ = GET(dt_fut);
+	if( verbose ) {
+		print( "end GET(dt_fut)\n");
+		print( "begin update\n");
+	}
 	update();
+	if( verbose ) {
+		print( "end update\n");
+	}
 	if (opts().radiation) {
+		if( verbose ) {
+			print( "begin compute_radiation(dt_.dt, grid_ptr->get_omega())\n", rk);
+		}
 		compute_radiation(dt_.dt, grid_ptr->get_omega());
+		if( verbose ) {
+			print( "end compute_radiation(dt_.dt, grid_ptr->get_omega())\n", rk);
+			print( "begin all_hydro_bounds(), rk = %i\n", rk);
+		}
 		all_hydro_bounds();
+		if( verbose ) {
+			print( "end all_hydro_bounds(), rk = %i\n", rk);
+		}
 	}
 
 }
