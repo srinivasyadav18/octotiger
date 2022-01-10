@@ -560,16 +560,16 @@ void node_server::refined_step() {
 	}
 	if (opts().radiation) {
 		if( verbose ) {
-			print( "begin compute_radiation(dt_.dt, grid_ptr->get_omega())\n", rk);
+			print( "begin compute_radiation(dt_.dt, grid_ptr->get_omega())\n");
 		}
 		compute_radiation(dt_.dt, grid_ptr->get_omega());
 		if( verbose ) {
-			print( "end compute_radiation(dt_.dt, grid_ptr->get_omega())\n", rk);
-			print( "begin all_hydro_bounds(), rk = %i\n", rk);
+			print( "end compute_radiation(dt_.dt, grid_ptr->get_omega())\n");
+			print( "begin all_hydro_bounds()\n");
 		}
 		all_hydro_bounds();
 		if( verbose ) {
-			print( "end all_hydro_bounds(), rk = %i\n", rk);
+			print( "end all_hydro_bounds()\n");
 		}
 	}
 
