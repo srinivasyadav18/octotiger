@@ -118,8 +118,8 @@ using normal_device_buffer = kokkos_device_array<T>;
 #include <simd.hpp>
 using device_simd_t = SIMD_NAMESPACE::simd<double, SIMD_NAMESPACE::simd_abi::scalar>;
 using device_simd_mask_t = SIMD_NAMESPACE::simd_mask<double, SIMD_NAMESPACE::simd_abi::scalar>;
-#if !defined(HPX_COMPUTE_DEVICE_CODE) && !defined(OCTOTIGER_FORCE_SCALAR_KOKKOS_SIMD)
-#if defined(__VSX__)
+#if !defined(HPX_COMPUTE_DEVICE_CODE) && !defined(OCTOTIGER_SIMD_SCALAR)
+#if (defined(__VSX__) && defined(OCTOTIGER_SIMD_AUTOMATIC_DISCOVERY)) || defined(OCTOTIGER_SIMD_VSX)
 // NVCC does not play fair with Altivec! See another project with similar issues:
 // See https://github.com/dealii/dealii/issues/7328
 #ifdef __CUDACC__ // hence: Use scalar when using nvcc
@@ -134,17 +134,22 @@ using host_simd_t = SIMD_NAMESPACE::simd<double, SIMD_NAMESPACE::simd_abi::vsx>;
 using host_simd_mask_t = SIMD_NAMESPACE::simd_mask<double, SIMD_NAMESPACE::simd_abi::vsx>;
 #warning "Using VSX SIMD types"
 #endif
-#elif defined(__AVX512F__)
+#elif (defined(__AVX512F__) && defined(OCTOTIGER_SIMD_AUTOMATIC_DISCOVERY)) || defined(OCTOTIGER_SIMD_AVX512)
 #include <avx512.hpp>
 using host_simd_t = SIMD_NAMESPACE::simd<double, SIMD_NAMESPACE::simd_abi::avx512>;
 using host_simd_mask_t = SIMD_NAMESPACE::simd_mask<double, SIMD_NAMESPACE::simd_abi::avx512>;
 #warning "Using AVX512 SIMD types"
-#elif defined(__AVX2__) || defined(__AVX__)
+#elif ((defined(__AVX2__) || defined(__AVX__)) && defined(OCTOTIGER_SIMD_AUTOMATIC_DISCOVERY)) || defined(OCTOTIGER_SIMD_AVX)
 #include <avx.hpp>
 using host_simd_t = SIMD_NAMESPACE::simd<double, SIMD_NAMESPACE::simd_abi::avx>;
 using host_simd_mask_t = SIMD_NAMESPACE::simd_mask<double, SIMD_NAMESPACE::simd_abi::avx>;
 #warning "Using AVX SIMD types"
-#elif defined(__ARM_NEON)
+#elif (defined(__ARM_FEATURE_SVE)  && defined(OCTOTIGER_SIMD_AUTOMATIC_DISCOVERY)) || defined(OCTOTIGER_SIMD_SVE)
+#include <vector_size.hpp>
+using host_simd_t = SIMD_NAMESPACE::simd<double, SIMD_NAMESPACE::simd_abi::vector_size<64>>;
+using host_simd_mask_t = SIMD_NAMESPACE::simd_mask<double, SIMD_NAMESPACE::simd_abi::vector_size<64>>;
+#warning "Using SVE SIMD types"
+#elif (defined(__ARM_NEON) && defined(OCTOTIGER_SIMD_AUTOMATIC_DISCOVERY)) || defined(OCTOTIGER_SIMD_NEON)
 #include <neon.hpp>
 using host_simd_t = SIMD_NAMESPACE::simd<double, SIMD_NAMESPACE::simd_abi::neon>;
 using host_simd_mask_t = SIMD_NAMESPACE::simd_mask<double, SIMD_NAMESPACE::simd_abi::neon>;
