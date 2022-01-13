@@ -2,39 +2,19 @@
 
 def buildbadge = addEmbeddableBadgeConfiguration(id: "devbuild", subject: "Dev-Environment Tests", status: "skipped")
 
-if (currentBuild.getBuildCauses().toString().contains('BranchIndexingCause')) {
-    print "INFO: Build on ${env.BRANCH_NAME}/${env.BUILD_NUMBER}  triggered by branch indexing..."
-    if (env.BRANCH_NAME != "master") {
-        if (env.BUILD_NUMBER != "1") { // Always execute first build to load this configuration and thus the triggers
-            print "INFO: Build on ${env.BRANCH_NAME}/${env.BUILD_NUMBER} skipped due being triggered by Branch Indexing instead of SCM change!"
-            buildbadge.setStatus('skipped')
-            currentBuild.result = 'ABORTED'
-            return // early exit to avoid redundant builds 
-        }
-    }
-} else {
-    print "INFO: Build on ${env.BRANCH_NAME}/${env.BUILD_NUMBER} triggered by SCM change..."
-    print "Proceeding!"
-}
-
-
 pipeline {
     agent { label 'pcsgs05' }
 
     options {
         buildDiscarder(
             logRotator(
-                daysToKeepStr: "21",
-                numToKeepStr: "50",
-                artifactDaysToKeepStr: "21",
-                artifactNumToKeepStr: "50"
+                daysToKeepStr: "28",
+                numToKeepStr: "100",
+                artifactDaysToKeepStr: "28",
+                artifactNumToKeepStr: "100"
             )
         )
         disableConcurrentBuilds()
-    }
-    triggers {
-        githubPush() // Trigger by push to respective github branch
-        pollSCM 'H/30 * * * *' // Fallback polling solution as some pushes are somehow lost
     }
     environment {
         GITHUB_TOKEN = credentials('GITHUB_TOKEN_OCTOTIGER')
@@ -44,10 +24,10 @@ pipeline {
     stages {
         stage('init') {
             steps {
-                scmSkip(deleteBuild: false, skipPattern:'.*\\[ci skip\\].*')
                 script {
                     buildbadge.setStatus('running')
                 }
+                // notify github about test starting and send an email to whomever is in ${MAINTAINER_MAIL}
                 dir('octotiger') {
                     sh '''
                         github_token=$(echo ${GITHUB_TOKEN} | cut -f2 -d':')
@@ -69,6 +49,7 @@ pipeline {
         }
         stage('checkout') {
             steps {
+                // Get buildscripts for this machine and the test-data
                 dir('octotiger') {
                     sh '''
 		    echo "Currently in $(pwd)"
@@ -94,9 +75,10 @@ pipeline {
         }
         stage('gcc-build') {
             steps {
+                // Build with preinstalled gcc on this machine 
                 dir('octotiger') {
                     sh '''
-                    module load cuda
+                    module load cuda/11.2.2 
 		    cd OctoTigerBuildChain
 		    sed -i 's/OCTOTIGER_WITH_BLAST_TEST=OFF/OCTOTIGER_WITH_BLAST_TEST=ON/' build-octotiger.sh
 		    sed -i 's/OCTOTIGER_WITH_FAST_FP_CONTRACT=OFF/OCTOTIGER_WITH_FAST_FP_CONTRACT=ON/' build-octotiger.sh
@@ -107,11 +89,17 @@ pipeline {
         }
         stage('gcc-ctest') {
             steps {
+                // Basic gcc test - only GRIDDIM=8 and hydro-off rotating star tests
                 dir('octotiger') {
                     sh '''
-                    module load cuda
+                    module load cuda/11.2.2 
 		    cd OctoTigerBuildChain/build/octotiger/build
-		    ctest --output-on-failure
+		    ctest --output-on-failure -R marshak
+		    ctest --output-on-failure -R blast
+		    ctest --output-on-failure -R sphere
+		    ctest --output-on-failure -R hydro_off.rotating_star
+		    ctest --output-on-failure -R eos_wd
+		    ctest --output-on-failure -R sod
                     '''
                 }
             }
@@ -135,6 +123,7 @@ pipeline {
         }
         stage('clang-build') {
             steps {
+                // Build with preinstalled clang on this machine (Note CUDA actually does not work with this clang as it is too old -> deactivated for this test)
                 dir('octotiger') {
                     sh '''
 		    cd OctoTigerBuildChain
@@ -148,15 +137,22 @@ pipeline {
         }
         stage('clang-ctest') {
             steps {
+                // Basic clang test - only GRIDDIM=8 and without cuda
                 dir('octotiger') {
                     sh '''
 		    cd OctoTigerBuildChain/build/octotiger/build
 		    ctest --output-on-failure
+		    ctest --output-on-failure -R marshak
+		    ctest --output-on-failure -R sphere
+		    ctest --output-on-failure -R rotating_star
+		    ctest --output-on-failure -R eos_wd
+		    ctest --output-on-failure -R sod
                     '''
                 }
             }
         }
     }
+    // notify github about test starting and send an email to whomever is in ${MAINTAINER_MAIL}
     post {
         success {
             script {
