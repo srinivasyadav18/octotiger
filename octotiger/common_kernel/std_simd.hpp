@@ -45,12 +45,12 @@ using host_simd_mask_t = SIMD_NAMESPACE::simd_mask<double, SIMD_NAMESPACE::simd_
 static_assert(host_simd_t::size() == 2);
 static_assert(host_simd_mask_t::size() == 2);
 #elif defined(OCTOTIGER_KOKKOS_SIMD_SVE)
-// Use custom sve types from Srinivas
-#include <sve/sve.hpp> 
-#warning "SVE build"
-namespace SIMD_NAMESPACE = sve::experimental::parallelism_v2;
-using host_simd_t = sve::experimental::native_simd<double>;
-using host_simd_mask_t = sve::experimental::native_simd_mask<double>;
+// Use GCC 14.2 std::experimental::simd types for SVE
+#include <experimental/simd>
+#warning "SVE build GCC14.2 std::experimental::simd"
+namespace SIMD_NAMESPACE = std::experimental::parallelism_v2;
+using host_simd_t = std::experimental::native_simd<double>;
+using host_simd_mask_t = std::experimental::native_simd_mask<double>;
 static_assert(host_simd_t::size() == 8 || host_simd_t::size() == 4 || host_simd_t::size() == 2);
 static_assert(host_simd_mask_t::size() == 8 || host_simd_mask_t::size() == 4 ||
     host_simd_mask_t::size() == 2);

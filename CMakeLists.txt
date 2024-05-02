@@ -170,13 +170,6 @@ FetchContent_Declare(
   GIT_TAG        c845b7d9d8da461457cc5aa88fdda5923773a4bf
 )
 FetchContent_MakeAvailable(kokkossimd)
-set(SVE_LENGTH ${OCTOTIGER_SVE_LEN})
-FetchContent_Declare(
-  svesimd
-  GIT_REPOSITORY https://github.com/srinivasyadav18/sve.git
-  GIT_TAG        a0582754c96f265b10e3c19d4fbd3e8d6debc321
-)
-FetchContent_MakeAvailable(svesimd)
 
 ################################################################################
 # Set up Octo-Tiger target
@@ -788,10 +781,6 @@ elseif (${OCTOTIGER_KOKKOS_SIMD_LIBRARY} STREQUAL STD)
   target_compile_definitions(optionslib PUBLIC OCTOTIGER_HAVE_STD_EXPERIMENTAL_SIMD)
   target_compile_definitions(octolib PUBLIC OCTOTIGER_HAVE_STD_EXPERIMENTAL_SIMD)
   target_compile_definitions(hydrolib PUBLIC OCTOTIGER_HAVE_STD_EXPERIMENTAL_SIMD)
-  target_include_directories(octotiger PUBLIC ${svesimd_SOURCE_DIR}/include)
-  target_include_directories(optionslib PUBLIC ${svesimd_SOURCE_DIR}/include)
-  target_include_directories(hydrolib PUBLIC ${svesimd_SOURCE_DIR}/include)
-  target_include_directories(octolib PUBLIC ${svesimd_SOURCE_DIR}/include)
 else()
   message(FATAL_ERROR "Invalid value for OCTOTIGER_KOKKOS_SIMD_LIBRARY! Choose one out of KOKKOS (for kokkos simd types) an STD (for std::experimental::simd)")
 endif()
@@ -837,10 +826,6 @@ elseif(${OCTOTIGER_KOKKOS_SIMD_EXTENSION} STREQUAL SVE)
     if(OCTOTIGER_WITH_CXX17)
       message(FATAL_ERROR "SVE builds with std::experimental::simd require C++20. Please set OCTOTIGER_WITH_CXX20=ON")
     endif()
-    target_compile_definitions(octotiger PUBLIC SVE_LEN=${OCTOTIGER_SVE_LEN})
-    target_compile_definitions(optionslib PUBLIC SVE_LEN=${OCTOTIGER_SVE_LEN})
-    target_compile_definitions(octolib PUBLIC SVE_LEN=${OCTOTIGER_SVE_LEN})
-    target_compile_definitions(hydrolib PUBLIC SVE_LEN=${OCTOTIGER_SVE_LEN})
     target_compile_options(hydrolib PUBLIC "-msve-vector-bits=${OCTOTIGER_SVE_LEN}")
     target_compile_options(octolib PUBLIC "-msve-vector-bits=${OCTOTIGER_SVE_LEN}")
     target_compile_options(optionslib PUBLIC "-msve-vector-bits=${OCTOTIGER_SVE_LEN}")
